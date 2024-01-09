@@ -578,7 +578,7 @@ static uint8_t add_archives_to_search_path()
 	uint8_t content_updated{};
 	// find files in Searchpath ...
 	// if found, add them...
-	const auto s{PHYSFSX_findFiles("", archive_exts)};
+	const auto s{PHYSFSX_findFiles("**/*", archive_exts)};
 	if (!s)
 		return content_updated;
 	for (const auto i : s)
