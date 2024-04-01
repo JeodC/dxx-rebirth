@@ -272,10 +272,9 @@ void draw_object_tmap_rod(grs_canvas &canvas, const d_level_unique_light_state *
 	const auto delta{vm_vec_copy_scale(obj->orient.uvec, obj->size)};
 
 	const auto top_v = vm_vec_add(obj->pos,delta);
-	const auto bot_v = vm_vec_sub(obj->pos,delta);
 
 	const auto top_p = g3_rotate_point(top_v);
-	const auto bot_p = g3_rotate_point(bot_v);
+	const auto bot_p{g3_rotate_point(vm_vec_sub(obj->pos, delta))};
 
 	if (LevelUniqueLightState)
 	{
@@ -897,10 +896,10 @@ void reset_player_object(object_base &ConsoleObject)
 {
 	//Init physics
 
-	vm_vec_zero(ConsoleObject.mtype.phys_info.velocity);
-	vm_vec_zero(ConsoleObject.mtype.phys_info.thrust);
-	vm_vec_zero(ConsoleObject.mtype.phys_info.rotvel);
-	vm_vec_zero(ConsoleObject.mtype.phys_info.rotthrust);
+	ConsoleObject.mtype.phys_info.velocity = {};
+	ConsoleObject.mtype.phys_info.thrust = {};
+	ConsoleObject.mtype.phys_info.rotvel = {};
+	ConsoleObject.mtype.phys_info.rotthrust = {};
 	ConsoleObject.mtype.phys_info.turnroll = 0;
 	ConsoleObject.mtype.phys_info.mass = Player_ship->mass;
 	ConsoleObject.mtype.phys_info.drag = Player_ship->drag;
@@ -1454,8 +1453,8 @@ static void set_camera_pos(vms_vector &camera_pos, const vcobjptridx_t objp)
 		//	Camera is too close to player object, so move it away.
 		fvi_info		hit_data;
 
-		auto player_camera_vec = vm_vec_sub(camera_pos, objp->pos);
-		if ((player_camera_vec.x == 0) && (player_camera_vec.y == 0) && (player_camera_vec.z == 0))
+		auto player_camera_vec{vm_vec_sub(camera_pos, objp->pos)};
+		if (player_camera_vec == vms_vector{})
 			player_camera_vec.x += F1_0/16;
 
 		auto hit_type = fvi_hit_type::Wall;
@@ -1528,7 +1527,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 		// the following line uncommented by WraithX, 4-12-00
 		if (time_dead < DEATH_SEQUENCE_EXPLODE_TIME + F1_0 * 2)
 		{
-			const auto fvec = vm_vec_sub(ConsoleObject->pos, Dead_player_camera->pos);
+			const auto fvec{vm_vec_sub(ConsoleObject->pos, Dead_player_camera->pos)};
 			vm_vector_to_matrix(Dead_player_camera->orient, fvec);
 			Dead_player_camera->mtype.phys_info = ConsoleObject->mtype.phys_info;
 
@@ -1672,8 +1671,8 @@ static void start_player_death_sequence(object &player)
 	PaletteRedAdd = 40;
 	Player_dead_state = player_dead_state::yes;
 
-	vm_vec_zero(player.mtype.phys_info.rotthrust);
-	vm_vec_zero(player.mtype.phys_info.thrust);
+	player.mtype.phys_info.rotthrust = {};
+	player.mtype.phys_info.thrust = {};
 
 	const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_CAMERA, 0, vmsegptridx(player.segnum), player.pos, &player.orient, 0, object::control_type::None, object::movement_type::None, render_type::RT_NONE);
 	Viewer_save = Viewer;

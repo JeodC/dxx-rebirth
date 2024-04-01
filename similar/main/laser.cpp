@@ -343,7 +343,7 @@ static imobjptridx_t create_weapon_object(int weapon_type,const vmsegptridx_t se
 
 	obj->mtype.phys_info.mass = Weapon_info[weapon_type].mass;
 	obj->mtype.phys_info.drag = Weapon_info[weapon_type].drag;
-	vm_vec_zero(obj->mtype.phys_info.thrust);
+	obj->mtype.phys_info.thrust = {};
 
 	const auto bounce{Weapon_info[weapon_type].bounce};
 	if (bounce == weapon_info::bounce_type::always)
@@ -1638,8 +1638,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 
 				if (track_goal != object_none)
 				{
-					vms_vector vector_to_object;
-					vm_vec_sub(vector_to_object, track_goal->pos, obj->pos);
+					auto vector_to_object{vm_vec_sub(track_goal->pos, obj->pos)};
 					vm_vec_normalize_quick(vector_to_object);
 					auto &&[speed_magnitude, temp_vec] = vm_vec_normalize_quick_with_magnitude(obj->mtype.phys_info.velocity);
 					fix speed{speed_magnitude};
@@ -1700,8 +1699,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 
 			if (track_goal != object_none)
 			{
-				vms_vector vector_to_object;
-				vm_vec_sub(vector_to_object, track_goal->pos, obj->pos);
+				auto vector_to_object{vm_vec_sub(track_goal->pos, obj->pos)};
 				vm_vec_normalize_quick(vector_to_object);
 				temp_vec = obj->mtype.phys_info.velocity;
 				speed = vm_vec_normalize_quick(temp_vec);

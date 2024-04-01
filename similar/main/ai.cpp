@@ -1782,7 +1782,7 @@ static void compute_vis_and_vec(const d_robot_info_array &Robot_info, const vmob
 		} else {
 			//	Compute expensive stuff -- vec_to_player and player_visibility
 			vm_vec_normalized_dir_quick(player_visibility.vec_to_player, Believed_player_pos, pos);
-			if (player_visibility.vec_to_player.x == 0 && player_visibility.vec_to_player.y == 0 && player_visibility.vec_to_player.z == 0)
+			if (player_visibility.vec_to_player == vms_vector{})
 			{
 				player_visibility.vec_to_player.x = F1_0;
 			}
@@ -1861,7 +1861,7 @@ static void compute_buddy_vis_vec(const vmobjptridx_t buddy_obj, const vms_vecto
 	auto &plrobj = *Objects.vcptr(plr.objnum);
 	/* Buddy ignores cloaking */
 	vm_vec_normalized_dir_quick(player_visibility.vec_to_player, plrobj.pos, buddy_pos);
-	if (player_visibility.vec_to_player.x == 0 && player_visibility.vec_to_player.y == 0 && player_visibility.vec_to_player.z == 0)
+	if (player_visibility.vec_to_player == vms_vector{})
 		player_visibility.vec_to_player.x = F1_0;
 
 	fvi_info hit_data;
@@ -2413,8 +2413,7 @@ static void teleport_boss(const d_robot_info_array &Robot_info, const d_vclip_ar
 	BossUniqueState.Last_teleport_time = {GameTime64};
 
 	//	make boss point right at player
-	const auto boss_dir = vm_vec_sub(target_pos, objp->pos);
-	vm_vector_to_matrix(objp->orient, boss_dir);
+	vm_vector_to_matrix(objp->orient, vm_vec_sub(target_pos, objp->pos));
 
 	digi_link_sound_to_pos(Vclip[vclip_index::morphing_robot].sound_num, rand_segp, sidenum_t::WLEFT, objp->pos, 0, F1_0);
 	digi_kill_sound_linked_to_object( objp);

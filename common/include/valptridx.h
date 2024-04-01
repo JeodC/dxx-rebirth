@@ -47,7 +47,7 @@ protected:
 	 */
 	using count_type = typename std::conditional<(array_size <= UINT8_MAX), uint8_t, typename std::conditional<(array_size <= UINT16_MAX), uint16_t, void>::type>::type;
 	union {
-		count_type count;
+		count_type count{};
 		/*
 		 * Use DXX_VALPTRIDX_FOR_EACH_PPI_TYPE to generate empty union
 		 * members based on basic_{i,v}val_member_factory
@@ -59,10 +59,14 @@ protected:
 		DXX_VALPTRIDX_FOR_EACH_PPI_TYPE(DXX_VALPTRIDX_DEFINE_MEMBER_FACTORIES, managed_type,,);
 #undef DXX_VALPTRIDX_DEFINE_MEMBER_FACTORIES
 	};
+#if __GNUC__ >= 13
+	constexpr array_base_count_type() = default;	// requires fix for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98423 (>=gcc-13)
+#else
 	constexpr array_base_count_type() :
-		count(0)
+		count{}
 	{
 	}
+#endif
 public:
 	count_type get_count() const
 	{
@@ -341,8 +345,8 @@ class valptridx<managed_type>::partial_policy::apply_cv_policy
 		using apply_cv_qualifier = typename policy<T>::type;
 public:
 	using array_managed_type = apply_cv_qualifier<valptridx<managed_type>::array_managed_type>;
-	using pointer_type = apply_cv_qualifier<managed_type> *;
-	using reference_type = apply_cv_qualifier<managed_type> &;
+	using pointer = apply_cv_qualifier<managed_type> *;
+	using reference = apply_cv_qualifier<managed_type> &;
 };
 
 template <typename managed_type>
@@ -460,7 +464,7 @@ protected:
 		m_idx{i}
 	{
 	}
-	idx(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS typename policy::pointer_type p, array_managed_type &a) :
+	idx(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS typename policy::pointer p, array_managed_type &a) :
 		m_idx{check_index_range_size<index_range_error_type<array_managed_type>>(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS p - &a.front(), &a)}
 	{
 	}
@@ -528,8 +532,8 @@ public:
 	using mutable_pointer_type = typename containing_type::mutable_pointer_type;
 	using allow_none_construction = typename containing_type::allow_none_construction;
 	using typename policy::array_managed_type;
-	using typename policy::pointer_type;
-	using typename policy::reference_type;
+	using typename policy::pointer;
+	using typename policy::reference;
 
 	ptr() = delete;
 	/* Override template matches to make same-type copy/move trivial */
@@ -540,8 +544,8 @@ public:
 	ptr &operator=(const ptr &) && = delete;
 	ptr &operator=(ptr &&) && = delete;
 
-	pointer_type get_unchecked_pointer() const { return m_ptr; }
-	pointer_type get_nonnull_pointer(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_N_DECL_VARS) const
+	pointer get_unchecked_pointer() const { return m_ptr; }
+	pointer get_nonnull_pointer(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_N_DECL_VARS) const
 	{
 		/* If !allow_nullptr, assume nullptr was caught at construction.  */
 		const auto p = m_ptr;
@@ -551,7 +555,7 @@ public:
 			DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_N_VOID_VARS();
 		return p;
 	}
-	reference_type get_checked_reference(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_N_DECL_VARS) const
+	reference get_checked_reference(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_N_DECL_VARS) const
 	{
 		return *get_nonnull_pointer(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VA());
 	}
@@ -580,7 +584,7 @@ public:
 	}
 	template <typename rpolicy>
 		requires(
-			(std::convertible_to<typename ptr<rpolicy>::pointer_type, pointer_type>) &&
+			(std::convertible_to<typename ptr<rpolicy>::pointer, pointer>) &&
 			(policy::allow_nullptr || !ptr<rpolicy>::allow_nullptr)
 		)
 		ptr(const ptr<rpolicy> &rhs) :
@@ -589,7 +593,7 @@ public:
 	}
 	template <typename rpolicy>
 		requires(
-			(std::convertible_to<typename ptr<rpolicy>::pointer_type, pointer_type>) &&
+			(std::convertible_to<typename ptr<rpolicy>::pointer, pointer>) &&
 			!(policy::allow_nullptr || !ptr<rpolicy>::allow_nullptr)
 		)
 		ptr(const ptr<rpolicy> &rhs DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_L_DECL_VARS) :
@@ -599,7 +603,7 @@ public:
 	}
 	template <typename rpolicy>
 		requires(
-			(std::convertible_to<typename ptr<rpolicy>::pointer_type, pointer_type>) &&
+			(std::convertible_to<typename ptr<rpolicy>::pointer, pointer>) &&
 			(policy::allow_nullptr || !ptr<rpolicy>::allow_nullptr)	// cannot move from allow_invalid to require_valid
 		)
 		ptr(ptr<rpolicy> &&rhs) :
@@ -623,8 +627,8 @@ public:
 		m_ptr{&a[i]}
 	{
 	}
-	ptr(pointer_type p) = delete;
-	ptr(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS pointer_type p, array_managed_type &a) :
+	ptr(pointer p) = delete;
+	ptr(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS pointer p, array_managed_type &a) :
 		/* No array consistency check here, since some code incorrectly
 		 * defines instances of `object` outside the Objects array, then
 		 * passes pointers to those instances to this function.
@@ -634,11 +638,11 @@ public:
 		if constexpr (!allow_nullptr)
 			check_null_pointer<null_pointer_error_type<array_managed_type>>(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS p, a);
 	}
-	ptr(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS reference_type r, array_managed_type &a) :
+	ptr(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS reference r, array_managed_type &a) :
 		m_ptr{(check_implicit_index_range_ref<index_mismatch_error_type<array_managed_type>, index_range_error_type<array_managed_type>>(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS r, a), &r)}
 	{
 	}
-	ptr(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS reference_type r, index_type i, array_managed_type &a) :
+	ptr(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS reference r, index_type i, array_managed_type &a) :
 		m_ptr{(check_explicit_index_range_ref<index_mismatch_error_type<array_managed_type>, index_range_error_type<array_managed_type>>(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS r, i, a), &r)}
 	{
 	}
@@ -656,15 +660,15 @@ public:
 		 */
 		return ptr(std::move(rhs), typename containing_type::rebind_policy{});
 	}
-	pointer_type operator->() const &
+	pointer operator->() const &
 	{
 		return get_nonnull_pointer();
 	}
-	operator reference_type() const &
+	operator reference() const &
 	{
 		return get_checked_reference();
 	}
-	reference_type operator*() const &
+	reference operator*() const &
 	{
 		return get_checked_reference();
 	}
@@ -672,17 +676,17 @@ public:
 	{
 		return !(*this == nullptr);
 	}
-	pointer_type operator->() const &&
+	pointer operator->() const &&
 	{
 		static_assert(!allow_nullptr, "operator-> not allowed with allow_invalid policy");
 		return operator->();
 	}
-	operator reference_type() const &&
+	operator reference() const &&
 	{
 		static_assert(!allow_nullptr, "implicit reference not allowed with allow_invalid policy");
 		return *this;
 	}
-	reference_type operator*() const &&
+	reference operator*() const &&
 	{
 		static_assert(!allow_nullptr, "operator* not allowed with allow_invalid policy");
 		return *this;
@@ -717,7 +721,7 @@ public:
 	template <typename R>
 		bool operator>=(R) const = delete;
 protected:
-	pointer_type m_ptr;
+	pointer m_ptr;
 	ptr &operator++()
 	{
 		++ m_ptr;
@@ -797,9 +801,9 @@ public:
 	using vptr_type = ptr<policy>;
 	using vidx_type = idx<policy>;
 	using typename vidx_type::array_managed_type;
-	using index_type = typename vidx_type::index_type;
+	using typename vidx_type::index_type;
 	using typename vidx_type::integral_type;
-	using typename vptr_type::pointer_type;
+	using typename vptr_type::pointer;
 	using vptr_type::allow_nullptr;
 	using vidx_type::operator==;
 	using vptr_type::operator==;
@@ -812,7 +816,7 @@ public:
 	ptridx(std::nullptr_t) = delete;
 	/* Prevent implicit conversion.  Require use of the factory function.
 	 */
-	ptridx(pointer_type p) = delete;
+	ptridx(pointer p) = delete;
 	template <typename rpolicy>
 		requires(
 			allow_nullptr || !ptridx<rpolicy>::allow_nullptr
@@ -871,7 +875,7 @@ public:
 		vidx_type{i, e}
 	{
 	}
-	ptridx(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS pointer_type p, array_managed_type &a) :
+	ptridx(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS pointer p, array_managed_type &a) :
 		/* Null pointer is never allowed when an index must be computed.
 		 * Check for null, then use the reference constructor for
 		 * vptr_type to avoid checking again.
@@ -880,7 +884,7 @@ public:
 		vidx_type{DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS p, a}
 	{
 	}
-	ptridx(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS pointer_type p, index_type i, array_managed_type &a) :
+	ptridx(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_DEFN_VARS pointer p, index_type i, array_managed_type &a) :
 		vptr_type{DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS (check_null_pointer<null_pointer_error_type<array_managed_type>>(DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS p, a), *p), i, a},
 		vidx_type{DXX_VALPTRIDX_REPORT_STANDARD_LEADER_COMMA_R_PASS_VARS i, a}
 	{

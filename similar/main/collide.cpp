@@ -340,7 +340,7 @@ static void bump_two_objects(const d_robot_info_array &Robot_info, const vmobjpt
 		return;
 	}
 
-	auto force = vm_vec_sub(obj0->mtype.phys_info.velocity,obj1->mtype.phys_info.velocity);
+	auto force{vm_vec_sub(obj0->mtype.phys_info.velocity, obj1->mtype.phys_info.velocity)};
 	vm_vec_scale2(force,2*fixmul(obj0->mtype.phys_info.mass,obj1->mtype.phys_info.mass),(obj0->mtype.phys_info.mass+obj1->mtype.phys_info.mass));
 
 	bump_this_object(Robot_info, obj1, obj0, force, damage_flag);
@@ -799,7 +799,8 @@ static window_event_result collide_weapon_and_wall(
 		}
 	#endif
 
-	if ((weapon->mtype.phys_info.velocity.x == 0) && (weapon->mtype.phys_info.velocity.y == 0) && (weapon->mtype.phys_info.velocity.z == 0)) {
+	if (weapon->mtype.phys_info.velocity == vms_vector{})
+	{
 		Int3();	//	Contact Matt: This is impossible.  A weapon with 0 velocity hit a wall, which doesn't move.
 		return window_event_result::ignored;
 	}
@@ -1310,7 +1311,7 @@ static void collide_weapon_and_controlcen(const d_robot_info_array &Robot_info, 
 
 		if ( Weapon_info[get_weapon_id(weapon)].damage_radius )
 		{
-			const auto obj2weapon = vm_vec_sub(collision_point, controlcen->pos);
+			const auto obj2weapon{vm_vec_sub(collision_point, controlcen->pos)};
 			const auto mag = vm_vec_mag(obj2weapon);
 			if(mag < controlcen->size && mag > 0) // FVI code does not necessarily update the collision point for object2object collisions. Do that now.
 			{
@@ -1706,7 +1707,7 @@ static void collide_robot_and_weapon(const d_robot_info_array &Robot_info, const
 	weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 	if ( wi->damage_radius )
 	{
-		const auto obj2weapon = vm_vec_sub(collision_point, robot->pos);
+		const auto obj2weapon{vm_vec_sub(collision_point, robot->pos)};
 		const auto mag = vm_vec_mag(obj2weapon);
 		if(mag < robot->size && mag > 0) // FVI code does not necessarily update the collision point for object2object collisions. Do that now.
 		{
@@ -2216,7 +2217,7 @@ static void collide_player_and_weapon(const d_robot_info_array &Robot_info, cons
 	object_create_explosion_without_damage(Vclip, player_segp, collision_point, i2f(10) / 2, vclip_index::player_hit);
 	if ( Weapon_info[get_weapon_id(weapon)].damage_radius )
 	{
-		const auto obj2weapon = vm_vec_sub(collision_point, playerobj->pos);
+		const auto obj2weapon{vm_vec_sub(collision_point, playerobj->pos)};
 		const auto mag = vm_vec_mag(obj2weapon);
 		if(mag > 0) // FVI code does not necessarily update the collision point for object2object collisions. Do that now.
 		{

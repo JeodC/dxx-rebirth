@@ -365,7 +365,7 @@ static void assign_uvs_to_side(fvcvertptr &vcvertptr, const vmsegptridx_t segp, 
 	//		forward vector = vlo:vhi
 	//		  right vector = vlo:(vhi+2) % 4
 	const auto &&vp0 = vcvertptr(v0);
-	const auto &vv1v0 = vm_vec_sub(vcvertptr(v1), vp0);
+	const auto &vv1v0{vm_vec_sub(vcvertptr(v1), vp0)};
 	mag01 = vm_vec_mag(vv1v0);
 	mag01 = fixmul(mag01, (va == side_relative_vertnum::_0 || va == side_relative_vertnum::_2) ? Stretch_scale_x : Stretch_scale_y);
 
@@ -375,8 +375,7 @@ static void assign_uvs_to_side(fvcvertptr &vcvertptr, const vmsegptridx_t segp, 
 		struct frvec {
 			vms_vector fvec, rvec;
 			frvec(const vms_vector &tfvec, const vms_vector &trvec) {
-				if ((tfvec.x == 0 && tfvec.y == 0 && tfvec.z == 0) ||
-					(trvec.x == 0 && trvec.y == 0 && trvec.z == 0))
+				if (tfvec == vms_vector{} || trvec == vms_vector{})
 				{
 					fvec = vmd_identity_matrix.fvec;
 					rvec = vmd_identity_matrix.rvec;
@@ -390,7 +389,7 @@ static void assign_uvs_to_side(fvcvertptr &vcvertptr, const vmsegptridx_t segp, 
 				vm_vec_negate(rvec);
 			}
 		};
-		const auto &vv3v0 = vm_vec_sub(vcvertptr(v3), vp0);
+		const auto &vv3v0{vm_vec_sub(vcvertptr(v3), vp0)};
 		const frvec fr{
 			vv1v0,
 			vv3v0
@@ -993,7 +992,7 @@ static void cast_light_from_side(const vmsegptridx_t segp, const sidenum_t light
 									fvi_info	hit_data;
 									fvi_hit_type hit_type;
 
-									const auto r_vector_to_center = vm_vec_sub(r_segment_center, vert_location);
+									const auto r_vector_to_center{vm_vec_sub(r_segment_center, vert_location)};
 									const auto inverse_segment_magnitude = fixdiv(F1_0/3, vm_vec_mag(r_vector_to_center));
 									const auto vert_location_1{vm_vec_scale_add(vert_location, r_vector_to_center, inverse_segment_magnitude)};
 									vert_location = vert_location_1;
@@ -1003,7 +1002,8 @@ static void cast_light_from_side(const vmsegptridx_t segp, const sidenum_t light
 										hash_info	*hashp = &fvi_cache[hash_value];
 										while (1) {
 											if (hashp->flag) {
-												if ((hashp->vector.x == vector_to_light.x) && (hashp->vector.y == vector_to_light.y) && (hashp->vector.z == vector_to_light.z)) {
+												if (hashp->vector == vector_to_light)
+												{
 													hit_type = hashp->hit_type;
 													Hash_hits++;
 													break;
@@ -1092,8 +1092,7 @@ static void cast_light_from_side_to_center(const vmsegptridx_t segp, const siden
 	{
 		const auto light_vertex_num = segp->verts[lightnum];
 		auto &vert_light_location = *vcvertptr(light_vertex_num);
-		const auto vector_to_center = vm_vec_sub(segment_center, vert_light_location);
-		const auto light_location{vm_vec_scale_add(vert_light_location, vector_to_center, F1_0 / 64)};
+		const auto light_location{vm_vec_scale_add(vert_light_location, /* vector_to_center = */ vm_vec_sub(segment_center, vert_light_location), F1_0 / 64)};
 
 		for (const csmusegment &&rsegp : vmsegptr)
 		{
