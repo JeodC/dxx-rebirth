@@ -10,7 +10,6 @@
  * 
  */
 
-#include "dxxsconf.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -202,7 +201,7 @@ struct UDP_frame_info : prohibit_void_ptr<UDP_frame_info>
 	quaternionpos			qpp;
 };
 
-enum class join_netgame_status_code : uint8_t
+enum class join_netgame_status_code : unsigned
 {
 	game_in_disallowed_state,
 	game_has_capacity,
@@ -863,7 +862,7 @@ static void reset_UDP_MyPort()
 static bool convert_text_portstring(const std::array<char, 6> &portstring, uint16_t &outport, bool allow_privileged, bool silent)
 {
 	char *porterror;
-	unsigned long myport = strtoul(portstring.data(), &porterror, 10);
+	unsigned long myport = strtoul(&portstring[0], &porterror, 10);
 	if (*porterror || static_cast<uint16_t>(myport) != myport || (!allow_privileged && myport < 1024))
 	{
 		if (!silent)
@@ -1206,15 +1205,15 @@ struct manual_join_menu_items : direct_join, manual_join_user_inputs
 		if (s_last_inputs.hostaddrbuf[0])
 			hostaddrbuf = s_last_inputs.hostaddrbuf;
 		else
-			snprintf(hostaddrbuf.data(), hostaddrbuf.size(), "%s", CGameArg.MplUdpHostAddr.c_str());
+			snprintf(&hostaddrbuf[0], hostaddrbuf.size(), "%s", CGameArg.MplUdpHostAddr.c_str());
 		if (s_last_inputs.hostportbuf[0])
 			hostportbuf = s_last_inputs.hostportbuf;
 		else
-			snprintf(hostportbuf.data(), hostportbuf.size(), "%hu", CGameArg.MplUdpHostPort ? CGameArg.MplUdpHostPort : UDP_PORT_DEFAULT);
+			snprintf(&hostportbuf[0], hostportbuf.size(), "%hu", CGameArg.MplUdpHostPort ? CGameArg.MplUdpHostPort : UDP_PORT_DEFAULT);
 		if (s_last_inputs.guestportbuf[0])
 			guestportbuf = s_last_inputs.guestportbuf;
 		else
-			snprintf(guestportbuf.data(), guestportbuf.size(), "%hu", UDP_MyPort);
+			snprintf(&guestportbuf[0], guestportbuf.size(), "%hu", UDP_MyPort);
 		nm_set_item_text(m[label_host_address], "GAME ADDRESS OR HOSTNAME:");
 		nm_set_item_text(m[label_host_port], "GAME PORT:");
 		nm_set_item_text(m[label_guest_port], "MY PORT:");
@@ -1259,8 +1258,8 @@ struct netgame_list_game_menu_items
 
 		for (auto &&[i, lj, mi] : enumerate(zip(ljtext, unchecked_partial_range(menus, header_rows + 0u, menus.size() - 1)), 1u))
 		{
-			snprintf(lj.data(), lj.size(), "%u.                                                                      ", i);
-			nm_set_item_menu(mi, lj.data());
+			snprintf(&lj[0], lj.size(), "%u.                                                                      ", i);
+			nm_set_item_menu(mi, &lj[0]);
 		}
 		nm_set_item_text(menus.back(), "\t");
 	}
@@ -1414,7 +1413,7 @@ window_event_result manual_join_menu::event_handler(const d_event &event)
 			if (!convert_text_portstring(hostportbuf, hostport, true, false))
 				return window_event_result::handled;
 			// Resolve address
-			if (udp_dns_filladdr(host_addr, hostaddrbuf.data(), hostport, false, false) < 0)
+			if (udp_dns_filladdr(host_addr, &hostaddrbuf[0], hostport, false, false) < 0)
 				return window_event_result::handled;
 			else
 			{
@@ -1650,7 +1649,7 @@ window_event_result netgame_list_game_menu::event_handler(const d_event &event)
 		if ((i+(NLPage*UDP_NETGAMES_PPAGE)) >= num_active_udp_games)
 		{
 			auto &p = ljtext[i];
-			snprintf(p.data(), p.size(), "%d.                                                                      ", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1);
+			snprintf(&p[0], p.size(), "%d.                                                                      ", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1);
 			continue;
 		}
 
@@ -1685,7 +1684,7 @@ window_event_result netgame_list_game_menu::event_handler(const d_event &event)
 		{
 			if (augi.RefusePlayers)
 				status = "RESTRICT";
-			else if ((augi.game_flag & netgame_rule_flags::closed) != netgame_rule_flags::None)
+			else if (augi.game_flag.closed)
 				status = "CLOSED  ";
 			else
 				status = "OPEN    ";
@@ -1695,7 +1694,7 @@ window_event_result netgame_list_game_menu::event_handler(const d_event &event)
 		
 		const auto gamemode = underlying_value(augi.gamemode);
 		auto &p = ljtext[i];
-		snprintf(p.data(), p.size(), "%d.\t%.24s \t%.7s \t%3u/%u \t%.24s \t %s \t%s", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1, GameName.data(), (gamemode < std::size(GMNamesShrt)) ? GMNamesShrt[gamemode] : "INVALID", nplayers, augi.max_numplayers, MissName.data(), levelname, status);
+		snprintf(&p[0], p.size(), "%d.\t%.24s \t%.7s \t%3u/%u \t%.24s \t %s \t%s", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1, GameName.data(), (gamemode < std::size(GMNamesShrt)) ? GMNamesShrt[gamemode] : "INVALID", nplayers, augi.max_numplayers, MissName.data(), levelname, status);
 	}
 	return newmenu::event_handler(event);
 }
@@ -1877,16 +1876,18 @@ static join_netgame_status_code net_udp_can_join_netgame(const netgame_info *con
 
 	const unsigned num_players = game->numplayers;
 
-	if ((game->game_flag & netgame_rule_flags::closed) == netgame_rule_flags::None)
-	{
+	if (!(game->game_flag.closed)) {
 		// Look for player that is not connected
 		
 		if (game->numconnected==game->max_numplayers)
 			return join_netgame_status_code::game_is_full;
+		
 		if (game->RefusePlayers)
 			return join_netgame_status_code::game_refuses_players;
+		
 		if (num_players < game->max_numplayers)
 			return join_netgame_status_code::game_has_capacity;
+
 		if (game->numconnected<num_players)
 			return join_netgame_status_code::game_has_capacity;
 	}
@@ -2042,7 +2043,7 @@ static void net_udp_welcome_player(const UDP_sequence_request_packet &their, con
 	{
 		// Player is new to this game
 
-		if ((Netgame.game_flag & netgame_rule_flags::closed) != netgame_rule_flags::None)
+		if (Netgame.game_flag.closed)
 		{
 			// Slots are open but game is closed
 			multi::udp::dispatch->kick_player(udp_addr, kick_player_reason::closed);
@@ -2768,15 +2769,16 @@ void net_udp_update_netgame()
 
 	if (HoardEquipped())
 	{
-		const auto is_hoard_game{game_mode_hoard()};
-		const auto game_flag_no_hoard{Netgame.game_flag & ~(netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)};
-		Netgame.game_flag = is_hoard_game
-			? (
-				(Game_mode & GM_TEAM)
-				? (game_flag_no_hoard | netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)
-				: (game_flag_no_hoard | netgame_rule_flags::hoard)
-			)
-			: game_flag_no_hoard;
+		if (game_mode_hoard())
+		{
+			Netgame.game_flag.hoard = 1;
+			Netgame.game_flag.team_hoard = !!(Game_mode & GM_TEAM);
+		}
+		else
+		{
+			Netgame.game_flag.hoard = 0;
+			Netgame.game_flag.team_hoard = 0;
+		}
 	}
 #endif
 	if (Network_status == network_state::starting)
@@ -2899,7 +2901,7 @@ static std::span<const uint8_t> net_udp_prepare_light_game_info(const d_level_un
 	buf[len] = underlying_value(tmpvar);								len++;
 	buf[len] = Netgame.numconnected;						len++;
 	buf[len] = Netgame.max_numplayers;						len++;
-	buf[len] = underlying_value(Netgame.game_flag);							len++;
+	buf[len] = pack_game_flags(&Netgame.game_flag).value;							len++;
 	len += copy_from_ntstring(buf, len, Netgame.game_name);
 	len += copy_from_ntstring(buf, len, Netgame.mission_title);
 	len += copy_from_ntstring(buf, len, Netgame.mission_name);
@@ -2939,7 +2941,7 @@ static std::span<const uint8_t> net_udp_prepare_heavy_game_info(const d_level_un
 	buf[len] = Netgame.numplayers;							len++;
 	buf[len] = Netgame.max_numplayers;						len++;
 	buf[len] = Netgame.numconnected;						len++;
-	buf[len] = underlying_value(Netgame.game_flag);							len++;
+	buf[len] = pack_game_flags(&Netgame.game_flag).value;							len++;
 	buf[len] = Netgame.team_vector;							len++;
 	PUT_INTEL_INT(&buf[len], underlying_value(Netgame.AllowedItems));					len += 4;
 	/* In cooperative games, never shuffle. */
@@ -3113,38 +3115,42 @@ static void net_udp_process_game_info_light(const std::span<const uint8_t> buf, 
 		recv_game.game_status = *game_status;						len++;
 		recv_game.numconnected = data[len];						len++;
 		recv_game.max_numplayers = data[len];						len++;
-		recv_game.game_flag = netgame_rule_flags{data[len]};						len++;
+		packed_game_flags p;
+		p.value = data[len];
+		recv_game.game_flag = unpack_game_flags(&p);						len++;
 		copy_to_ntstring(data, len, recv_game.game_name);
 		copy_to_ntstring(data, len, recv_game.mission_title);
 		copy_to_ntstring(data, len, recv_game.mission_name);
 #if DXX_USE_TRACKER
 		recv_game.TrackerGameID = TrackerGameID;
 #endif
+	
 		menu->num_active_udp_changed = 1;
+		
 		auto r = partial_range(menu->Active_udp_games, menu->num_active_udp_games);
 		const auto &&i = ranges::find_if(r, [&recv_game](const UDP_netgame_info_lite &g) { return !d_stricmp(g.game_name.data(), recv_game.game_name.data()) && g.GameID == recv_game.GameID; });
 		if (i == menu->Active_udp_games.end())
 		{
 			return;
 		}
+		
 		*i = std::move(recv_game);
 #if defined(DXX_BUILD_DESCENT_II)
 		// See if this is really a Hoard game
 		// If so, adjust all the data accordingly
 		if (HoardEquipped())
 		{
-			if (const auto game_flag{i->game_flag}; (game_flag & netgame_rule_flags::hoard) != netgame_rule_flags::None)
+			if (i->game_flag.hoard)
 			{
-				i->gamemode = (game_flag & netgame_rule_flags::team_hoard) != netgame_rule_flags::None
-					? network_game_type::team_hoard
-					: network_game_type::hoard;
-				i->game_status = (game_flag & netgame_rule_flags::really_endlevel) != netgame_rule_flags::None
-					? network_state::endlevel
-					: (
-						(game_flag & netgame_rule_flags::really_forming) != netgame_rule_flags::None
-						? network_state::starting
-						: network_state::playing
-					);
+				i->gamemode = network_game_type::hoard;
+				i->game_status = network_state::playing;
+				
+				if (i->game_flag.team_hoard)
+					i->gamemode = network_game_type::team_hoard;
+				if (i->game_flag.endlevel)
+					i->game_status = network_state::endlevel;
+				if (i->game_flag.forming)
+					i->game_status = network_state::starting;
 			}
 		}
 #endif
@@ -3192,7 +3198,9 @@ static void net_udp_process_game_info_heavy(const uint8_t *data, uint_fast32_t, 
 		Netgame.numplayers = data[len];							len++;
 		Netgame.max_numplayers = data[len];						len++;
 		Netgame.numconnected = data[len];						len++;
-		Netgame.game_flag = netgame_rule_flags{data[len]};						len++;
+		packed_game_flags p;
+		p.value = data[len];
+		Netgame.game_flag = unpack_game_flags(&p);						len++;
 		Netgame.team_vector = data[len];						len++;
 		Netgame.AllowedItems = static_cast<netflag_flag>(GET_INTEL_INT(&data[len]));				len += 4;
 		Netgame.ShufflePowerupSeed = GET_INTEL_INT(&(data[len]));		len += 4;
@@ -3813,7 +3821,7 @@ constexpr std::integral_constant<unsigned, 5 * reactor_invul_time_mini_scale> re
 	DXX_MENUITEM(VERB, MENU, "Set Objects granted at spawn...", opt_setgrant)	\
 	DXX_MENUITEM(VERB, TEXT, "", blank_3)                                     \
 	DXX_MENUITEM(VERB, TEXT, "Misc. Options", misc_label)	                    \
-	DXX_MENUITEM(VERB, CHECK, TXT_SHOW_ON_MAP, opt_show_on_map, game_flag_show_all_players_on_automap)	\
+	DXX_MENUITEM(VERB, CHECK, TXT_SHOW_ON_MAP, opt_show_on_map, Netgame.game_flag.show_on_map)	\
 	D2X_UDP_MENU_OPTIONS(VERB)	                                        \
 	DXX_MENUITEM(VERB, CHECK, "Bright player ships", opt_bright, Netgame.BrightPlayers)	\
 	DXX_MENUITEM(VERB, CHECK, "Show enemy names on HUD", opt_show_names, Netgame.ShowEnemyNames)	\
@@ -3990,7 +3998,7 @@ public:
 	}
 	void update_portstring()
 	{
-		snprintf(portstring.data(), portstring.size(), "%hu", UDP_MyPort);
+		snprintf(&portstring[0], portstring.size(), "%hu", UDP_MyPort);
 	}
 	void update_reactor_life_string(unsigned t)
 	{
@@ -4019,8 +4027,7 @@ public:
 		DXX_UDP_MENU_OPTIONS(ENUM)
 	};
 	more_game_options_menu_items(const unsigned game_is_cooperative) :
-		game_is_cooperative(game_is_cooperative),
-		AutosaveInterval{build_human_readable_time(Netgame.MPGameplayOptions.AutosaveInterval)}
+		game_is_cooperative(game_is_cooperative)
 	{
 		const auto edifficulty = Netgame.difficulty;
 		const auto difficulty = underlying_value(edifficulty);
@@ -4046,7 +4053,7 @@ public:
 		const unsigned TrackerNATWarned = Netgame.TrackerNATWarned == TrackerNATHolePunchWarn::UserEnabledHP;
 #endif
 		const unsigned PlayTimeAllowed = std::chrono::duration_cast<std::chrono::duration<int, netgame_info::play_time_allowed_abi_ratio>>(Netgame.PlayTimeAllowed).count();
-		const auto game_flag_show_all_players_on_automap{underlying_value(Netgame.game_flag & netgame_rule_flags::show_all_players_on_automap)};
+		format_human_readable_time(AutosaveInterval, Netgame.MPGameplayOptions.AutosaveInterval);
 		DXX_UDP_MENU_OPTIONS(ADD);
 #if DXX_USE_TRACKER
 		const auto &tracker_addr = CGameArg.MplTrackerAddr;
@@ -4074,14 +4081,9 @@ public:
 		unsigned TrackerNATWarned;
 #endif
 		unsigned PlayTimeAllowed;
-		uint8_t game_flag_show_all_players_on_automap;
 		DXX_UDP_MENU_OPTIONS(READ);
 		Netgame.difficulty = cast_clamp_difficulty(difficulty);
 		Netgame.PlayTimeAllowed = std::chrono::duration<int, netgame_info::play_time_allowed_abi_ratio>(PlayTimeAllowed);
-		if (game_flag_show_all_players_on_automap)
-			Netgame.game_flag |= netgame_rule_flags::show_all_players_on_automap;
-		else
-			Netgame.game_flag &= ~netgame_rule_flags::show_all_players_on_automap;
 		auto &items = Netgame.DuplicatePowerups;
 		items.set_primary_count(primary);
 		items.set_secondary_count(secondary);
@@ -4328,10 +4330,7 @@ static int net_udp_game_param_handler( newmenu *menu,const d_event &event, param
 			
 			if (menus[opt->coop].value)
 			{
-				/* In cooperative games, always show all players on the map,
-				 * regardless of what the host requested.
-				 */
-				Netgame.game_flag |= netgame_rule_flags::show_all_players_on_automap;
+				Netgame.game_flag.show_on_map = 1;
 
 				Netgame.PlayTimeAllowed = {};
 				Netgame.KillGoal = 0;
@@ -4385,10 +4384,7 @@ static int net_udp_game_param_handler( newmenu *menu,const d_event &event, param
 				else Int3(); // Invalid mode -- see Rob
 			}
 
-			if (menus[opt->closed].value)
-				Netgame.game_flag |= netgame_rule_flags::closed;
-			else
-				Netgame.game_flag &= ~netgame_rule_flags::closed;
+			Netgame.game_flag.closed = menus[opt->closed].value;
 			Netgame.RefusePlayers=menus[opt->refuse].value;
 			break;
 		}
@@ -4535,10 +4531,9 @@ window_event_result net_udp_setup_game()
 
 	nm_set_item_text(m[optnum], ""); optnum++;
 
-	const auto closed{underlying_value(Netgame.game_flag & netgame_rule_flags::closed)};
-	nm_set_item_radio(m[optnum], "Open game", !Netgame.RefusePlayers && closed, 1); optnum++;
+	nm_set_item_radio(m[optnum], "Open game",(!Netgame.RefusePlayers && !Netgame.game_flag.closed),1); optnum++;
 	opt.closed = optnum;
-	nm_set_item_radio(m[optnum], TXT_CLOSED_GAME, closed, 1); optnum++;
+	nm_set_item_radio(m[optnum], TXT_CLOSED_GAME,Netgame.game_flag.closed,1); optnum++;
 	opt.refuse = optnum;
 	nm_set_item_radio(m[optnum], "Restricted Game              ",Netgame.RefusePlayers,1); optnum++;
 
@@ -5983,10 +5978,10 @@ void net_udp_process_pdata(const std::span<const uint8_t> data, const _sockaddr 
 	pd.qpp.orient.z = GET_INTEL_SHORT(&data[len]);					len += 2;
 	pd.qpp.pos = multi_get_vector(data.subspan<3 + 8, 12>());
 	len += 12;
-	if (const auto s{vmsegidx_t::check_nothrow_index(GET_INTEL_SHORT(&data[len]))})
+	if (const auto s = segnum_t{GET_INTEL_SHORT(&data[len])}; vmsegidx_t::check_nothrow_index(s))
 	{
 		len += 2;
-		pd.qpp.segment = *s;
+		pd.qpp.segment = s;
 	}
 	else
 		return;
@@ -6658,7 +6653,7 @@ static void udp_tracker_verify_ack_timeout()
 	else if (TrackerAckStatus == TrackerAckState::TACK_INTERNAL)
 	{
 		con_puts(CON_NORMAL, "[Tracker] No external signal from game tracker.  Your game port does not seem to be reachable.");
-		con_puts(CON_NORMAL, Netgame.TrackerNATWarned == TrackerNATHolePunchWarn::UserEnabledHP ? std::span<const char>("Clients will attempt hole-punching to join your game.") : std::span<const char>("Clients will only be able to join your game if specifically configured in your router."));
+		con_puts(CON_NORMAL, Netgame.TrackerNATWarned == TrackerNATHolePunchWarn::UserEnabledHP ? "Clients will attempt hole-punching to join your game." : "Clients will only be able to join your game if specifically configured in your router.");
 	}
 	TrackerAckStatus = TrackerAckState::TACK_SEQCOMPL;
 }

@@ -31,10 +31,10 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <physfs.h>
 #include "d_array.h"
 #include "inferno.h"
 #include "pack.h"
-#include "physfsx.h"
 
 namespace dcx {
 
@@ -93,10 +93,10 @@ struct polymodel : prohibit_void_ptr<polymodel>
 class submodel_angles
 {
 	using array_type = const std::array<vms_angvec, MAX_SUBMODELS>;
-	array_type *p{};
+	array_type *p;
 public:
-	submodel_angles(std::nullptr_t) : p{nullptr} {}
-	submodel_angles(array_type &a) : p{&a} {}
+	submodel_angles(std::nullptr_t) : p(nullptr) {}
+	submodel_angles(array_type &a) : p(&a) {}
 	explicit operator bool() const { return p != nullptr; }
 	typename array_type::const_reference operator[](std::size_t i) const
 	{
@@ -151,15 +151,15 @@ namespace dcx {
 
 class alternate_textures
 {
-	std::span<const bitmap_index> p{};
+	const bitmap_index *p = nullptr;
 public:
-	constexpr alternate_textures() = default;
+	alternate_textures() = default;
+	alternate_textures(std::nullptr_t) : p(nullptr) {}
 	template <std::size_t N>
-		constexpr alternate_textures(const std::array<bitmap_index, N> &a) :
-			p{a}
+		alternate_textures(const std::array<bitmap_index, N> &a) : p(a.data())
 	{
 	}
-	constexpr operator std::span<const bitmap_index>() const { return p; }
+	operator const bitmap_index *() const { return p; }
 };
 
 }
@@ -167,8 +167,8 @@ public:
 #ifdef dsx
 namespace dsx {
 // draw a polygon model
-void draw_polygon_model(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &, grs_canvas &, tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polygon_model_index model_num, unsigned flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
-void draw_polygon_model(grs_canvas &, tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polymodel &model_num, unsigned flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
+void draw_polygon_model(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &, grs_canvas &, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polygon_model_index model_num, unsigned flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
+void draw_polygon_model(grs_canvas &, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polymodel &model_num, unsigned flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
 }
 #endif
 
@@ -202,7 +202,7 @@ void free_model(polymodel &po);
 /*
  * reads a polymodel structure from a PHYSFS_File
  */
-void polymodel_read(polymodel &pm, NamedPHYSFS_File fp);
+void polymodel_read(polymodel &pm, PHYSFS_File *fp);
 }
 #if 0
 void polymodel_write(PHYSFS_File *fp, const polymodel &pm);

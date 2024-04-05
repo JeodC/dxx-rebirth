@@ -11,7 +11,6 @@
  *
  */
 
-#include "dxxsconf.h"
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>

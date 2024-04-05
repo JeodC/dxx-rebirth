@@ -245,14 +245,13 @@ secondary_weapon_index_t read_update_which_proximity_mine_to_use(T &player_info)
 	//use the last one selected, unless there aren't any, in which case use
 	//the other if there are any
 	auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
-	const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index_t::PROXIMITY_INDEX);
-	const auto [bomb, alt_bomb] = (Secondary_last_was_super & mask)
-		? std::pair(secondary_weapon_index_t::SMART_MINE_INDEX, secondary_weapon_index_t::PROXIMITY_INDEX)
-		: std::pair(secondary_weapon_index_t::PROXIMITY_INDEX, secondary_weapon_index_t::SMART_MINE_INDEX);
+	const auto mask = 1 << PROXIMITY_INDEX;
+	const auto bomb = (Secondary_last_was_super & mask) ? SMART_MINE_INDEX : PROXIMITY_INDEX;
 	auto &secondary_ammo = player_info.secondary_ammo;
 	if (secondary_ammo[bomb])
 		/* Player has the requested bomb type available.  Use it. */
 		return bomb;
+	const auto alt_bomb = static_cast<secondary_weapon_index_t>(SMART_MINE_INDEX + PROXIMITY_INDEX - bomb);
 	if (secondary_ammo[alt_bomb])
 	{
 		/* Player has the alternate bomb type, but not the requested
@@ -347,15 +346,16 @@ static void do_weapon_n_item_stuff(object_array &Objects, control_info &Controls
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
 		auto &secondary_ammo = player_info.secondary_ammo;
 		int sound;
-		if (!secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX] && !secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX])
+		if (!secondary_ammo[PROXIMITY_INDEX] && !secondary_ammo[SMART_MINE_INDEX])
 		{
 			HUD_init_message_literal(HM_DEFAULT, "No bombs available!");
 			sound = SOUND_BAD_SELECTION;
 		}
 		else
 		{	
-			const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index_t::PROXIMITY_INDEX);
-			const auto &&[desc, bomb] = (Secondary_last_was_super & mask) ? std::pair("Proximity bombs", secondary_weapon_index_t::PROXIMITY_INDEX) : std::pair("Smart mines", secondary_weapon_index_t::SMART_MINE_INDEX);
+			const auto mask = (1 << PROXIMITY_INDEX);
+			const char *desc;
+			const auto bomb = (Secondary_last_was_super & mask) ? (desc = "Proximity bombs", PROXIMITY_INDEX) : (desc = "Smart mines", SMART_MINE_INDEX);
 			if (secondary_ammo[bomb] == 0)
 			{
 				HUD_init_message(HM_DEFAULT, "No %s available!", desc);
@@ -1182,7 +1182,7 @@ static void kill_all_robots(void)
 	//int	boss_index = -1;
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 
-	// Kill all bots except for Buddy bot and boss.  However, if only boss and buddy left, kill buddy.
+	// Kill all bots except for Buddy bot and boss.  However, if only boss and buddy left, kill boss.
 	range_for (const auto &&objp, vmobjptr)
 	{
 		if (objp->type == OBJ_ROBOT)
@@ -1263,7 +1263,7 @@ static void kill_and_so_forth(const d_robot_info_array &Robot_info, fvmobjptridx
 				{
 					const auto &&segp = vmsegptridx(w.segnum);
 					auto &vcvertptr = Vertices.vcptr;
-					ConsoleObject->pos = compute_segment_center(vcvertptr, segp);
+					compute_segment_center(vcvertptr, ConsoleObject->pos, segp);
 					obj_relink(vmobjptr, vmsegptr, vmobjptridx(ConsoleObject), segp);
 					return;
 				}
@@ -1589,7 +1589,7 @@ static window_event_result HandleTestKey(const d_level_shared_robot_info_state &
 struct cheat_code
 {
 	const char string[CHEAT_MAX_LEN];
-	int8_t game_cheats::*stateptr;
+	int game_cheats::*stateptr;
 };
 
 constexpr cheat_code cheat_codes[] = {
@@ -1694,6 +1694,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
 	auto &vmobjptridx = Objects.vmptridx;
+	int game_cheats::*gotcha;
 
 	if (Game_mode & GM_MULTI)
 		return window_event_result::ignored;
@@ -1701,7 +1702,6 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 	static std::array<char, CHEAT_MAX_LEN> cheat_buffer;
 	std::move(std::next(cheat_buffer.begin()), cheat_buffer.end(), cheat_buffer.begin());
 	cheat_buffer.back() = key_ascii();
-	int8_t game_cheats::*gotcha;
 	for (unsigned i = 0;; i++)
 	{
 		if (i >= std::size(cheat_codes))
@@ -1715,10 +1715,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 			if (!cheats.enabled && gotcha != &game_cheats::enabled)
 				return window_event_result::ignored;
 			if (!cheats.enabled)
-			{
-				const auto &&m = TXT_CHEATS_ENABLED;
-				HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-			}
+				HUD_init_message_literal(HM_DEFAULT, TXT_CHEATS_ENABLED);
 #endif
 			cheats.*gotcha = !(cheats.*gotcha);
 			cheats.enabled = 1;
@@ -1733,10 +1730,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 #if defined(DXX_BUILD_DESCENT_I)
 	if (gotcha == &game_cheats::wowie)
 	{
-		{
-			const auto &&m = TXT_WOWIE_ZOWIE;
-			HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-		}
+		HUD_init_message_literal(HM_DEFAULT, TXT_WOWIE_ZOWIE);
 
 		player_info.primary_weapon_flags |= (HAS_LASER_FLAG | HAS_VULCAN_FLAG | HAS_SPREADFIRE_FLAG);
 
@@ -1781,10 +1775,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 	if (gotcha == &game_cheats::wowie)
 	{
-		{
-			const auto &&m = TXT_WOWIE_ZOWIE;
-			HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-		}
+		HUD_init_message_literal(HM_DEFAULT, TXT_WOWIE_ZOWIE);
 
 		if (Piggy_hamfile_version < pig_hamfile_version::_3) // SHAREWARE
 		{
@@ -1801,9 +1792,9 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 		if (Piggy_hamfile_version < pig_hamfile_version::_3) // SHAREWARE
 		{
-			secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] = 0;
-			secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] = 0;
-			secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] = 0;
+			secondary_ammo[SMISSILE4_INDEX] = 0;
+			secondary_ammo[SMISSILE5_INDEX] = 0;
+			secondary_ammo[MEGA_INDEX] = 0;
 		}
 
 		if (Newdemo_state == ND_STATE_RECORDING)
@@ -1824,10 +1815,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 	if (gotcha == &game_cheats::allkeys)
 	{
-		{
-			const auto &&m = TXT_ALL_KEYS;
-			HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-		}
+		HUD_init_message_literal(HM_DEFAULT, TXT_ALL_KEYS);
 		player_info.powerup_flags |= PLAYER_FLAGS_BLUE_KEY | PLAYER_FLAGS_RED_KEY | PLAYER_FLAGS_GOLD_KEY;
 	}
 
@@ -1841,10 +1829,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 	if (gotcha == &game_cheats::shields)
 	{
-		{
-			const auto &&m = TXT_FULL_SHIELDS;
-			HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-		}
+		HUD_init_message_literal(HM_DEFAULT, TXT_FULL_SHIELDS);
 		plrobj.shields = MAX_SHIELDS;
 	}
 
@@ -1890,7 +1875,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 #if defined(DXX_BUILD_DESCENT_II)
 	if (gotcha == &game_cheats::fullautomap)
-		HUD_init_message_literal(HM_DEFAULT, cheats.fullautomap ? std::span<const char>("FULL MAP!") : std::span<const char>("REGULAR MAP"));
+		HUD_init_message_literal(HM_DEFAULT, cheats.fullautomap ? "FULL MAP!" : "REGULAR MAP");
 #endif
 
 	if (gotcha == &game_cheats::ghostphysics)
@@ -1938,12 +1923,12 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 	if (gotcha == &game_cheats::robotskillrobots)
 	{
-		HUD_init_message_literal(HM_DEFAULT, cheats.robotskillrobots ? std::span<const char>("Rabid robots!") : std::span<const char>("Kill the player!"));
+		HUD_init_message_literal(HM_DEFAULT, cheats.robotskillrobots?"Rabid robots!":"Kill the player!");
 	}
 
 	if (gotcha == &game_cheats::monsterdamage)
 	{
-		HUD_init_message_literal(HM_DEFAULT, cheats.monsterdamage ? std::span<const char>("Oh no, there goes Tokyo!") : std::span<const char>("What have you done, I'm shrinking!!"));
+		HUD_init_message_literal(HM_DEFAULT, cheats.monsterdamage?"Oh no, there goes Tokyo!":"What have you done, I'm shrinking!!");
 	}
 
 	if (gotcha == &game_cheats::buddyclone)
@@ -1970,7 +1955,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 	if (gotcha == &game_cheats::acid)
 	{
-		HUD_init_message_literal(HM_DEFAULT, cheats.acid ? std::span<const char>("Going up!") : std::span<const char>("Coming down!"));
+		HUD_init_message_literal(HM_DEFAULT, cheats.acid?"Going up!":"Coming down!");
 	}
 
 	return window_event_result::handled;
@@ -2068,7 +2053,7 @@ public:
 	DXX_MENUITEM(VERB, TEXT, TXT_SCORE, opt_txt_score)	\
 	DXX_MENUITEM(VERB, INPUT, score_text, opt_score)	\
 	DXX_MENUITEM(VERB, NUMBER, "Laser Level", opt_laser_level, menu_number_bias_wrapper<1>(plr_laser_level), static_cast<uint8_t>(laser_level::_1) + 1, static_cast<uint8_t>(DXX_MAXIMUM_LASER_LEVEL) + 1)	\
-	DXX_MENUITEM(VERB, NUMBER, "Concussion", opt_concussion, pl_info.secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX], 0, 200)	\
+	DXX_MENUITEM(VERB, NUMBER, "Concussion", opt_concussion, pl_info.secondary_ammo[CONCUSSION_INDEX], 0, 200)	\
 
 struct wimp_menu_items
 {

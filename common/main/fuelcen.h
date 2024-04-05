@@ -32,7 +32,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "fwd-segment.h"
 #include "fwd-vecmat.h"
 #include "d_array.h"
-#include "physfsx.h"
 
 //------------------------------------------------------------
 // A refueling center is one segment... to identify it in the
@@ -128,7 +127,7 @@ fix repaircen_give_shields(const shared_segment &segp, fix MaxAmountCanTake);
 namespace dsx {
 #if defined(DXX_BUILD_DESCENT_I)
 typedef d1_matcen_info matcen_info;
-void matcen_info_read(NamedPHYSFS_File fp, matcen_info &ps, int version);
+void matcen_info_read(PHYSFS_File *fp, matcen_info &ps, int version);
 #elif defined(DXX_BUILD_DESCENT_II)
 struct matcen_info : public prohibit_void_ptr<matcen_info>
 {
@@ -137,7 +136,7 @@ struct matcen_info : public prohibit_void_ptr<matcen_info>
 	station_number fuelcen_num;    // Index in fuelcen array.
 };
 
-void matcen_info_read(NamedPHYSFS_File fp, matcen_info &ps);
+void matcen_info_read(PHYSFS_File *fp, matcen_info &ps);
 #endif
 
 #if DXX_USE_EDITOR
@@ -170,7 +169,7 @@ void fuelcen_check_for_hoard_goal(object &plrobj, const shared_segment &segp);
 /*
  * reads an d1_matcen_info structure from a PHYSFS_File
  */
-void d1_matcen_info_read(NamedPHYSFS_File fp, matcen_info &mi);
+void d1_matcen_info_read(PHYSFS_File *fp, matcen_info &mi);
 #endif
 
 void matcen_info_write(PHYSFS_File *fp, const matcen_info &mi, short version);
@@ -181,7 +180,7 @@ extern const fix EnergyToCreateOneRobot;
 }
 #endif
 
-void fuelcen_read(NamedPHYSFS_File fp, FuelCenter &fc);
+void fuelcen_read(PHYSFS_File *fp, FuelCenter &fc);
 void fuelcen_write(PHYSFS_File *fp, const FuelCenter &fc);
 
 #endif

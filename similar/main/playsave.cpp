@@ -23,7 +23,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
-#include "dxxsconf.h"
 #include <stdexcept>
 #include <stdio.h>
 #include <string.h>
@@ -220,7 +219,7 @@ static void check_weapon_reorder(std::array<weapon_type_out, N> &wo, const std::
 			m |= 1 << i;
 		else
 			break;
-		w = weapon_type_out{static_cast<uint8_t>(i)};
+		w = i;
 	}
 	/* If `m` is equal to the value below, then every desired element appeared
 	 * in the input sequence.  If the input sequence contained duplicates or
@@ -229,9 +228,9 @@ static void check_weapon_reorder(std::array<weapon_type_out, N> &wo, const std::
 	 */
 	if (m != ((1 << N) | ((1 << (N - 1)) - 1)))
 	{
-		wo[0] = weapon_type_out{cycle_never_autoselect_below};
-		for (const uint8_t i : xrange(N - 1))
-			wo[i + 1] = weapon_type_out{i};
+		wo[0] = cycle_never_autoselect_below;
+		range_for (const uint_fast32_t i, xrange(1u, N))
+			wo[i] = i - 1;
 	}
 }
 }
@@ -644,11 +643,11 @@ static void plyr_read_stats_v(int *k, int *d)
 				*k=atoi(value);
 		}
 		if (!PHYSFS_eof(f) && PHYSFSX_fgets(line, f))
-		{
+                {
 			 const char *value=splitword(line,':');
 			 if(!strcmp(line,"deaths") && value)
 				*d=atoi(value);
-		}
+		 }
 		if (!PHYSFS_eof(f) && PHYSFSX_fgets(line, f))
 		{
 			 const char *value=splitword(line,':');
@@ -776,11 +775,8 @@ static int write_player_dxx(const char *filename)
 #endif
 			);
 #if defined(DXX_BUILD_DESCENT_I)
-		PHYSFSX_printf(fout,
-					WEAPON_REORDER_PRIMARY_NAME_TEXT "=" WEAPON_REORDER_PRIMARY_VALUE_TEXT "\n"
-					WEAPON_REORDER_SECONDARY_NAME_TEXT "=" WEAPON_REORDER_SECONDARY_VALUE_TEXT "\n",
-					underlying_value(PlayerCfg.PrimaryOrder[0]), underlying_value(PlayerCfg.PrimaryOrder[1]), underlying_value(PlayerCfg.PrimaryOrder[2]), underlying_value(PlayerCfg.PrimaryOrder[3]), underlying_value(PlayerCfg.PrimaryOrder[4]), underlying_value(PlayerCfg.PrimaryOrder[5]),
-					underlying_value(PlayerCfg.SecondaryOrder[0]), underlying_value(PlayerCfg.SecondaryOrder[1]), underlying_value(PlayerCfg.SecondaryOrder[2]), underlying_value(PlayerCfg.SecondaryOrder[3]), underlying_value(PlayerCfg.SecondaryOrder[4]), underlying_value(PlayerCfg.SecondaryOrder[5]));
+		PHYSFSX_printf(fout,WEAPON_REORDER_PRIMARY_NAME_TEXT "=" WEAPON_REORDER_PRIMARY_VALUE_TEXT "\n",PlayerCfg.PrimaryOrder[0], PlayerCfg.PrimaryOrder[1], PlayerCfg.PrimaryOrder[2],PlayerCfg.PrimaryOrder[3], PlayerCfg.PrimaryOrder[4], PlayerCfg.PrimaryOrder[5]);
+		PHYSFSX_printf(fout,WEAPON_REORDER_SECONDARY_NAME_TEXT "=" WEAPON_REORDER_SECONDARY_VALUE_TEXT "\n",PlayerCfg.SecondaryOrder[0], PlayerCfg.SecondaryOrder[1], PlayerCfg.SecondaryOrder[2],PlayerCfg.SecondaryOrder[3], PlayerCfg.SecondaryOrder[4], PlayerCfg.SecondaryOrder[5]);
 #endif
 		PHYSFSX_puts_literal(fout,
 #if defined(DXX_BUILD_DESCENT_I)
@@ -1237,7 +1233,7 @@ int read_player_file()
 		if (player_file_version >= 24) 
 		{
 			PHYSFSX_gets_line_t<128> buf;
-			if (PHYSFSX_fgets(buf, file))			// Just read it in for DPS.
+			if (PHYSFSX_fgets(buf, file))			// Just read it in fpr DPS.
 			{
 				/* Nothing to do.  Buffer contents are ignored.  This is only
 				 * read for its side effect on the file position.
@@ -1624,9 +1620,9 @@ static int get_lifetime_checksum (int a,int b)
 #endif
 
 template <uint_fast32_t shift, uint_fast32_t width>
-static void convert_duplicate_powerup_integer(packed_netduplicate_items &d, auto &&value)
+static void convert_duplicate_powerup_integer(packed_netduplicate_items &d, const char *value)
 {
-	if (const auto r{convert_integer<unsigned>(std::move(value))}; !r)
+	if (auto r = convert_integer<unsigned>(value); !r)
 		return;
 	else if (const auto i = *r; !(i & ~((1 << width) - 1)))
 		d.set_sub_field<shift, width>(i);
@@ -1648,105 +1644,104 @@ void read_netgame_profile(netgame_info *ng)
 
 	ng->MPGameplayOptions.AutosaveInterval = std::chrono::minutes(10);
 	// NOTE that we do not set any defaults here or even initialize netgame_info. For flexibility, leave that to the function calling this.
-	for (PHYSFSX_gets_line_t<50> line; const auto rc{PHYSFSX_fgets(line, file)};)
+	for (PHYSFSX_gets_line_t<50> line; const char *const eol = PHYSFSX_fgets(line, file);)
 	{
-		const auto eol{rc.end()};
-		const auto lb{rc.begin()};
-		const auto eq{std::ranges::find(lb, eol, '=')};
+		const auto lb = line.begin();
+		auto eq = std::find(lb, eol, '=');
 		if (eq == eol)
 			continue;
-		const auto value{std::next(eq)};
-		if (const std::ranges::subrange name{lb, eq}; compare_nonterminated_name(name, GameNameStr))
+		auto value = std::next(eq);
+		if (cmp(lb, eq, GameNameStr))
 			convert_string(ng->game_name, value, eol);
-		else if (compare_nonterminated_name(name, GameModeStr))
+		else if (cmp(lb, eq, GameModeStr))
 		{
 			if (auto gamemode = convert_integer<uint8_t>(value))
 				ng->gamemode = network_game_type{*gamemode};
 		}
-		else if (compare_nonterminated_name(name, RefusePlayersStr))
+		else if (cmp(lb, eq, RefusePlayersStr))
 			convert_integer(ng->RefusePlayers, value);
-		else if (compare_nonterminated_name(name, DifficultyStr))
+		else if (cmp(lb, eq, DifficultyStr))
 		{
 			if (auto difficulty = convert_integer<uint8_t>(value))
 				ng->difficulty = cast_clamp_difficulty(*difficulty);
 		}
-		else if (compare_nonterminated_name(name, GameFlagsStr))
+		else if (cmp(lb, eq, GameFlagsStr))
 		{
 			if (auto r = convert_integer<uint8_t>(value))
-				ng->game_flag = netgame_rule_flags{*r};
+			{
+				const packed_game_flags p{*r};
+				ng->game_flag = unpack_game_flags(&p);
+			}
 		}
-		else if (compare_nonterminated_name(name, AllowedItemsStr))
+		else if (cmp(lb, eq, AllowedItemsStr))
 		{
 			if (auto r = convert_integer<std::underlying_type<netflag_flag>::type>(value))
 				ng->AllowedItems = netflag_flag{*r};
 		}
-		else if (compare_nonterminated_name(name, SpawnGrantedItemsStr))
+		else if (cmp(lb, eq, SpawnGrantedItemsStr))
 		{
 			if (auto r = convert_integer<std::underlying_type<netgrant_flag>::type>(value))
 				ng->SpawnGrantedItems.mask = netgrant_flag{*r};
 		}
-		else if (compare_nonterminated_name(name, DuplicatePrimariesStr))
+		else if (cmp(lb, eq, DuplicatePrimariesStr))
 			convert_duplicate_powerup_integer<packed_netduplicate_items::primary_shift, packed_netduplicate_items::primary_width>(ng->DuplicatePowerups, value);
-		else if (compare_nonterminated_name(name, DuplicateSecondariesStr))
+		else if (cmp(lb, eq, DuplicateSecondariesStr))
 			convert_duplicate_powerup_integer<packed_netduplicate_items::secondary_shift, packed_netduplicate_items::secondary_width>(ng->DuplicatePowerups, value);
 #if defined(DXX_BUILD_DESCENT_II)
-		else if (compare_nonterminated_name(name, DuplicateAccessoriesStr))
+		else if (cmp(lb, eq, DuplicateAccessoriesStr))
 			convert_duplicate_powerup_integer<packed_netduplicate_items::accessory_shift, packed_netduplicate_items::accessory_width>(ng->DuplicatePowerups, value);
-		else if (compare_nonterminated_name(name, AllowMarkerViewStr))
+		else if (cmp(lb, eq, AllowMarkerViewStr))
 			convert_integer(ng->Allow_marker_view, value);
-		else if (compare_nonterminated_name(name, AlwaysLightingStr))
+		else if (cmp(lb, eq, AlwaysLightingStr))
 			convert_integer(ng->AlwaysLighting, value);
-		else if (compare_nonterminated_name(name, ThiefAbsenceFlagStr))
+		else if (cmp(lb, eq, ThiefAbsenceFlagStr))
 		{
-			if (const auto o{convert_integer<uint8_t>(value)}; o && *o)
+			if (strtoul(value, 0, 10))
 				ng->ThiefModifierFlags |= ThiefModifier::Absent;
 		}
-		else if (compare_nonterminated_name(name, ThiefNoEnergyWeaponsFlagStr))
+		else if (cmp(lb, eq, ThiefNoEnergyWeaponsFlagStr))
 		{
-			if (const auto o{convert_integer<uint8_t>(value)}; o && *o)
+			if (strtoul(value, 0, 10))
 				ng->ThiefModifierFlags |= ThiefModifier::NoEnergyWeapons;
 		}
-		else if (compare_nonterminated_name(name, AllowGuidebotStr))
+		else if (cmp(lb, eq, AllowGuidebotStr))
 			convert_integer(ng->AllowGuidebot, value);
 #endif
-		else if (compare_nonterminated_name(name, ShufflePowerupsStr))
+		else if (cmp(lb, eq, ShufflePowerupsStr))
 			convert_integer(ng->ShufflePowerupSeed, value);
-		else if (compare_nonterminated_name(name, ShowEnemyNamesStr))
+		else if (cmp(lb, eq, ShowEnemyNamesStr))
 			convert_integer(ng->ShowEnemyNames, value);
-		else if (compare_nonterminated_name(name, BrightPlayersStr))
+		else if (cmp(lb, eq, BrightPlayersStr))
 			convert_integer(ng->BrightPlayers, value);
-		else if (compare_nonterminated_name(name, InvulAppearStr))
+		else if (cmp(lb, eq, InvulAppearStr))
 			convert_integer(ng->InvulAppear, value);
-		else if (compare_nonterminated_name(name, KillGoalStr))
+		else if (cmp(lb, eq, KillGoalStr))
 			convert_integer(ng->KillGoal, value);
-		else if (compare_nonterminated_name(name, PlayTimeAllowedStr))
+		else if (cmp(lb, eq, PlayTimeAllowedStr))
 		{
 			if (const auto r = convert_integer<int>(value))
 				ng->PlayTimeAllowed = std::chrono::duration<int, netgame_info::play_time_allowed_abi_ratio>(*r);
 		}
-		else if (compare_nonterminated_name(name, ControlInvulTimeStr))
+		else if (cmp(lb, eq, ControlInvulTimeStr))
 			convert_integer(ng->control_invul_time, value);
-		else if (compare_nonterminated_name(name, PacketsPerSecStr))
+		else if (cmp(lb, eq, PacketsPerSecStr))
 			convert_integer(ng->PacketsPerSec, value);
-		else if (compare_nonterminated_name(name, NoFriendlyFireStr))
+		else if (cmp(lb, eq, NoFriendlyFireStr))
 			convert_integer(ng->NoFriendlyFire, value);
-		else if (compare_nonterminated_name(name, MouselookFlagsStr))
+		else if (cmp(lb, eq, MouselookFlagsStr))
 			convert_integer(ng->MouselookFlags, value);
-		else if (compare_nonterminated_name(name, PitchLockFlagsStr))
+		else if (cmp(lb, eq, PitchLockFlagsStr))
 			convert_integer(ng->PitchLockFlags, value);
-		else if (compare_nonterminated_name(name, AutosaveIntervalStr))
+		else if (cmp(lb, eq, AutosaveIntervalStr))
 		{
 			if (const auto r = convert_integer<uint16_t>(value))
 				ng->MPGameplayOptions.AutosaveInterval = std::chrono::seconds(*r);
 		}
 #if DXX_USE_TRACKER
-		else if (compare_nonterminated_name(name, TrackerStr))
+		else if (cmp(lb, eq, TrackerStr))
 			convert_integer(ng->Tracker, value);
-		else if (compare_nonterminated_name(name, TrackerNATHPStr))
-		{
-			if (const auto r{convert_integer<uint8_t>(value)})
-				ng->TrackerNATWarned = TrackerNATHolePunchWarn{*r};
-		}
+		else if (cmp(lb, eq, TrackerNATHPStr))
+			ng->TrackerNATWarned = static_cast<TrackerNATHolePunchWarn>(strtoul(value, 0, 10));
 #endif
 	}
 }
@@ -1764,7 +1759,7 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, GameModeStr "=%i\n", underlying_value(ng->gamemode));
 	PHYSFSX_printf(file, RefusePlayersStr "=%i\n", ng->RefusePlayers);
 	PHYSFSX_printf(file, DifficultyStr "=%i\n", underlying_value(ng->difficulty));
-	PHYSFSX_printf(file, GameFlagsStr "=%i\n", underlying_value(ng->game_flag));
+	PHYSFSX_printf(file, GameFlagsStr "=%i\n", pack_game_flags(&ng->game_flag).value);
 	PHYSFSX_printf(file, AllowedItemsStr "=%i\n", underlying_value(ng->AllowedItems));
 	PHYSFSX_printf(file, SpawnGrantedItemsStr "=%i\n", underlying_value(ng->SpawnGrantedItems.mask));
 	PHYSFSX_printf(file, DuplicatePrimariesStr "=%" PRIuFAST32 "\n", ng->DuplicatePowerups.get_primary_count());

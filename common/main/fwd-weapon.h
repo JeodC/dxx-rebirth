@@ -37,6 +37,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #ifdef dsx
 #if defined(DXX_BUILD_DESCENT_II)
+#define LASER_HELIX_MASK        7   // must match number of bits in flags
 #define MAX_SUPER_LASER_LEVEL   laser_level::_6   // Note, laser levels are numbered from 0.
 #endif
 
@@ -47,8 +48,6 @@ void weapon_info_write(PHYSFS_File *, const weapon_info &);
 
 namespace dcx {
 enum class laser_level : uint8_t;
-enum class has_primary_weapon_result : uint8_t;
-enum class has_secondary_weapon_result : bool;
 }
 
 namespace dsx {
@@ -87,8 +86,8 @@ enum class pig_hamfile_version : uint8_t;
 extern pig_hamfile_version Piggy_hamfile_version;
 #endif
 
-enum class primary_weapon_index_t : uint8_t;
-enum class secondary_weapon_index_t : uint8_t;
+enum primary_weapon_index_t : uint8_t;
+enum secondary_weapon_index_t : uint8_t;
 
 extern const enumerated_array<weapon_id_type, MAX_PRIMARY_WEAPONS, primary_weapon_index_t> Primary_weapon_to_weapon_info;
 //for each primary weapon, what kind of powerup gives weapon
@@ -102,11 +101,15 @@ extern const enumerated_array<uint8_t, MAX_SECONDARY_WEAPONS, secondary_weapon_i
  */
 using weapon_info_array = std::array<weapon_info, MAX_WEAPON_TYPES>;
 extern weapon_info_array Weapon_info;
-void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_File fp,
+void weapon_info_read_n(weapon_info_array &wi, std::size_t count, PHYSFS_File *fp,
 #if defined(DXX_BUILD_DESCENT_II)
 						pig_hamfile_version file_version,
 #endif
 						std::size_t offset);
+
+//given a weapon index, return the flag value
+#define  HAS_PRIMARY_FLAG(index)  (1<<(index))
+#define  HAS_SECONDARY_FLAG(index)  (1<<(index))
 
 // Weapon flags, if player->weapon_flags & WEAPON_FLAG is set, then the player has this weapon
 #define HAS_LASER_FLAG      HAS_PRIMARY_FLAG(primary_weapon_index_t::LASER_INDEX)
@@ -125,21 +128,10 @@ void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_Fi
 #define HAS_PHOENIX_FLAG   HAS_PRIMARY_FLAG(primary_weapon_index_t::PHOENIX_INDEX)
 #define HAS_OMEGA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::OMEGA_INDEX)
 #define SUPER_WEAPON        5
-
-static constexpr bool is_super_weapon(const primary_weapon_index_t i)
-{
-	return static_cast<unsigned>(i) >= SUPER_WEAPON;
-}
-
-static constexpr bool is_super_weapon(const secondary_weapon_index_t i)
-{
-	return static_cast<unsigned>(i) >= SUPER_WEAPON;
-}
-
 //flags whether the last time we use this weapon, it was the 'super' version
 #endif
 //for each Secondary weapon, which gun it fires out of
-extern const enumerated_array<gun_num_t, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t> Secondary_weapon_to_gun_num;
+extern const std::array<gun_num_t, MAX_SECONDARY_WEAPONS> Secondary_weapon_to_gun_num;
 }
 
 namespace dcx {
@@ -182,13 +174,14 @@ void do_primary_weapon_select(player_info &, primary_weapon_index_t weapon_num);
 void do_secondary_weapon_select(player_info &, secondary_weapon_index_t weapon_num);
 void auto_select_primary_weapon(player_info &);
 void auto_select_secondary_weapon(player_info &);
-void set_primary_weapon(player_info &, primary_weapon_index_t weapon_num);
-void select_primary_weapon(player_info &, const char *weapon_name, primary_weapon_index_t weapon_num, int wait_for_rearm);
+void set_primary_weapon(player_info &, uint_fast32_t weapon_num);
+void select_primary_weapon(player_info &, const char *weapon_name, uint_fast32_t weapon_num, int wait_for_rearm);
 void set_secondary_weapon_to_concussion(player_info &);
-void select_secondary_weapon(player_info &, const char *weapon_name, secondary_weapon_index_t weapon_num, int wait_for_rearm);
+void select_secondary_weapon(player_info &, const char *weapon_name, uint_fast32_t weapon_num, int wait_for_rearm);
 
 }
 #endif
+class has_weapon_result;
 
 //-----------------------------------------------------------------------------
 // Return:
@@ -198,8 +191,8 @@ void select_secondary_weapon(player_info &, const char *weapon_name, secondary_w
 //      HAS_AMMO_FLAG
 #ifdef dsx
 namespace dsx {
-has_primary_weapon_result player_has_primary_weapon(const player_info &, primary_weapon_index_t weapon_num);
-has_secondary_weapon_result player_has_secondary_weapon(const player_info &, secondary_weapon_index_t weapon_num);
+has_weapon_result player_has_primary_weapon(const player_info &, primary_weapon_index_t weapon_num);
+has_weapon_result player_has_secondary_weapon(const player_info &, secondary_weapon_index_t weapon_num);
 
 //called when one of these weapons is picked up
 //when you pick up a secondary, you always get the weapon & ammo for it
@@ -216,7 +209,7 @@ int pick_up_secondary(player_info &, secondary_weapon_index_t weapon_index, int 
 namespace dsx {
 int pick_up_vulcan_ammo(player_info &player_info, uint_fast32_t ammo_count, bool change_weapon = true);
 //this function is for when the player intentionally drops a powerup
-imobjptridx_t spit_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, const object_base &spitter, powerup_type_t id, unsigned seed);
+imobjptridx_t spit_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, const object_base &spitter, unsigned id, unsigned seed);
 
 #if defined(DXX_BUILD_DESCENT_II)
 void attempt_to_steal_item(vmobjptridx_t objp, const robot_info &, object &playerobjp);

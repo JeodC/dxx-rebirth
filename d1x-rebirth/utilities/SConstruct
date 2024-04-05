@@ -7,7 +7,7 @@ import SCons.Util
 
 PROGRAM_NAME = 'MacD1Extract'
 
-print ('\n===== ' + PROGRAM_NAME + ' =====\n')
+print '\n===== ' + PROGRAM_NAME + ' =====\n'
 
 # source files
 sources = [
@@ -25,34 +25,34 @@ env["ARCOMSTR"]     = "Archiving $TARGET ..."
 env["RANLIBCOMSTR"] = "Indexing $TARGET ..."
 
 # Get traditional compiler environment variables
-if 'CC' in os.environ:
+if os.environ.has_key('CC'):
 	env['CC'] = os.environ['CC']
-if 'CFLAGS' in os.environ:
+if os.environ.has_key('CFLAGS'):
 	env['CCFLAGS'] += SCons.Util.CLVar(os.environ['CFLAGS'])
-if 'CXX' in os.environ:
+if os.environ.has_key('CXX'):
 	env['CXX'] = os.environ['CXX']
-if 'CXXFLAGS' in os.environ:
+if os.environ.has_key('CXXFLAGS'):
 	env['CXXFLAGS'] += SCons.Util.CLVar(os.environ['CXXFLAGS'])
-if 'LDFLAGS' in os.environ:
+if os.environ.has_key('LDFLAGS'):
 	env['LINKFLAGS'] += SCons.Util.CLVar(os.environ['LDFLAGS'])
 
 # windows or *nix?
 if sys.platform == 'win32':
-	print("compiling on Windows")
+	print "compiling on Windows"
 	winlibs = ['winmm', 'mingw32']		# are these even needed?
 	libs = winlibs
 	lflags = '-mwindows'
 elif sys.platform == 'darwin':
-	print("compiling on Mac OS X")
+	print "compiling on Mac OS X"
 	libs = ''
 	lflags = ''
 else:
-	print("compiling on *NIX")
+	print "compiling on *NIX"
 	libs = ''
 	lflags = ''
 
 target = 'macd1extract'
-print ('\n')
+print '\n'
 
 # building program...
 env.Program(target=str(target), source = sources, LIBS = libs, LINKFLAGS = str(lflags))

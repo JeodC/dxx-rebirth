@@ -17,7 +17,7 @@ AND AGREES TO THE TERMS HEREIN AND ACCEPTS THE SAME BY USE OF THIS FILE.
 COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 */
 
-#include "dxxsconf.h"
+
 #include <algorithm>
 #include <stdexcept>
 #include <stdlib.h>
@@ -623,12 +623,12 @@ void digi_sync_sounds()
 			if ( s.flags & SOF_LINK_TO_POS )	{
 				digi_update_sound_loc(viewer->orient, viewer->pos, vcsegptridx(viewer->segnum), s.link_type.pos.position, vcsegptridx(s.link_type.pos.segnum), s);
 			} else if ( s.flags & SOF_LINK_TO_OBJ )	{
-				const object &objp = [&vcobjptr, &s]() {
+				const object &objp = [&vcobjptr, &s]{
 					if (Newdemo_state != ND_STATE_PLAYBACK)
 						return vcobjptr(s.link_type.obj.objnum);
 					auto objnum = newdemo_find_object(s.link_type.obj.objsignature);
 					if (objnum != object_none)
-						return vcobjptr_t{objnum};
+						return static_cast<vcobjptr_t>(objnum);
 					return vcobjptr(object_first);
 				}();
 

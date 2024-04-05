@@ -94,7 +94,7 @@ static fix compute_player_light_emission_intensity(const object_base &objp)
 	const auto drag = phys_info.drag;
 	const fix k = fixmuldiv(phys_info.mass, drag, (F1_0 - drag));
 	// smooth thrust value like set_thrust_from_velocity()
-	const auto sthrust{vm_vec_copy_scale(phys_info.velocity, k)};
+	const auto sthrust = vm_vec_copy_scale(phys_info.velocity, k);
 	return std::max(static_cast<fix>(vm_vec_mag_quick(sthrust) / 4), F2_0) + F0_5;
 }
 
@@ -165,7 +165,7 @@ static void apply_light(fvmsegptridx &vmsegptridx, const g3s_lrgb obj_light_emis
 						{
 							fvi_info		hit_data;
 
-							const auto tvec{vm_vec_scale_add(obj.pos, obj.orient.fvec, F1_0 * 200)};
+							const auto tvec = vm_vec_scale_add(obj.pos, obj.orient.fvec, F1_0*200);
 							const auto fate = find_vector_intersection(fvi_query{
 								obj.pos,
 								tvec,
@@ -462,16 +462,16 @@ static g3s_lrgb compute_light_emission(const d_robot_info_array &Robot_info, d_l
 		{
 			switch (get_powerup_id(objp))
 			{
-				case powerup_type_t::POW_EXTRA_LIFE:
-				case powerup_type_t::POW_ENERGY:
-				case powerup_type_t::POW_SHIELD_BOOST:
-				case powerup_type_t::POW_KEY_BLUE:
-				case powerup_type_t::POW_KEY_RED:
-				case powerup_type_t::POW_KEY_GOLD:
-				case powerup_type_t::POW_CLOAK:
-				case powerup_type_t::POW_INVULNERABILITY:
+				case POW_EXTRA_LIFE:
+				case POW_ENERGY:
+				case POW_SHIELD_BOOST:
+				case POW_KEY_BLUE:
+				case POW_KEY_RED:
+				case POW_KEY_GOLD:
+				case POW_CLOAK:
+				case POW_INVULNERABILITY:
 #if defined(DXX_BUILD_DESCENT_II)
-				case powerup_type_t::POW_HOARD_ORB:
+				case POW_HOARD_ORB:
 #endif
 					compute_color = 1;
 					break;

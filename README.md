@@ -1,10 +1,5 @@
-```
-                         __________
-__________/ DXX-Rebirth /
-```
-
-https://www.dxx-rebirth.com
-
+## COMPATIBILITY BRANCH
+This branch contains compatibility fixes for retro handheld devices running on RK3326 and RK3566 processors. Some of these devices use operating systems that rely on older GLIBs and GCC compiler rules. This branch is manually maintained with new commits slowly synced and builds tested.
 
 ## 0. Introduction:
 

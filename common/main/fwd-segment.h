@@ -17,7 +17,6 @@
 #include "cpp-valptridx.h"
 #include "d_array.h"
 #include "d_crange.h"
-#include "physfsx.h"
 
 namespace dcx {
 constexpr std::integral_constant<std::size_t, 9000> MAX_SEGMENTS{};
@@ -167,10 +166,10 @@ void clear_light_subtracted();
 
 void segment2_write(const cscusegment s2, PHYSFS_File *fp);
 
-void delta_light_read(delta_light *dl, NamedPHYSFS_File fp);
+void delta_light_read(delta_light *dl, PHYSFS_File *fp);
 void delta_light_write(const delta_light *dl, PHYSFS_File *fp);
 
-void dl_index_read(dl_index *di, NamedPHYSFS_File fp);
+void dl_index_read(dl_index *di, PHYSFS_File *fp);
 void dl_index_write(const dl_index *di, PHYSFS_File *fp);
 enum class dlindexnum_t : uint16_t;
 }
@@ -184,6 +183,10 @@ int add_light(const d_level_shared_destructible_light_state &LevelSharedDestruct
 #endif
 
 namespace dcx {
+
+template <unsigned bits>
+class visited_segment_mask_t;
+using visited_segment_bitarray_t = visited_segment_mask_t<1>;
 
 constexpr std::integral_constant<int, -1> edge_none{};
 

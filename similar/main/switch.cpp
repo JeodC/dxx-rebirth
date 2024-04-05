@@ -206,7 +206,8 @@ static int do_change_walls(const trigger &t, const uint8_t new_wall_type)
 					if ((TmapInfo[get_texture_index(segp->unique_segment::sides[side].tmap_num)].flags & tmapinfo_flag::force_field))
 					{
 						ret |= 2;
-						digi_link_sound_to_pos(sound_effect::SOUND_FORCEFIELD_OFF, segp, side, compute_center_point_on_side(vcvertptr, segp, side), 0, F1_0);
+						const auto &&pos = compute_center_point_on_side(vcvertptr, segp, side);
+						digi_link_sound_to_pos( SOUND_FORCEFIELD_OFF, segp, side, pos, 0, F1_0 );
 						digi_kill_sound_linked_to_segment(segp,side,SOUND_FORCEFIELD_HUM);
 						wall0.type = new_wall_type;
 						if (wall1)
@@ -224,7 +225,8 @@ static int do_change_walls(const trigger &t, const uint8_t new_wall_type)
 					{
 						ret |= 2;
 						{
-							digi_link_sound_to_pos(sound_effect::SOUND_FORCEFIELD_HUM, segp, side, compute_center_point_on_side(vcvertptr, segp, side), 1, F1_0 / 2);
+						const auto &&pos = compute_center_point_on_side(vcvertptr, segp, side);
+						digi_link_sound_to_pos(SOUND_FORCEFIELD_HUM,segp,side,pos,1, F1_0/2);
 						}
 					case trigger_action::illusory_wall:
 						wall0.type = new_wall_type;
@@ -290,7 +292,8 @@ static void do_il_off(fvcsegptridx &vcsegptridx, fvcvertptr &vcvertptr, fvmwallp
 {
 	const auto &&op = [&vcvertptr, &vmwallptr](const vcsegptridx_t seg, const sidenum_t side) {
 		wall_illusion_off(vmwallptr, seg, side);
-		digi_link_sound_to_pos(sound_effect::SOUND_WALL_REMOVED, seg, side, compute_center_point_on_side(vcvertptr, seg, side), 0, F1_0);
+		const auto &&cp = compute_center_point_on_side(vcvertptr, seg, side);
+		digi_link_sound_to_pos(SOUND_WALL_REMOVED, seg, side, cp, 0, F1_0);
 	};
 	trigger_wall_op(t, vcsegptridx, op);
 }
@@ -572,7 +575,7 @@ window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side,
  * reads a v29_trigger structure from a PHYSFS_File
  */
 #if defined(DXX_BUILD_DESCENT_I)
-void v26_trigger_read(const NamedPHYSFS_File fp, trigger &t)
+void v26_trigger_read(PHYSFS_File *fp, trigger &t)
 {
 	switch (const auto type = static_cast<trigger_action>(PHYSFSX_readByte(fp)))
 	{
@@ -602,9 +605,12 @@ void v26_trigger_read(const NamedPHYSFS_File fp, trigger &t)
 		t.flags |= TRIGGER_ONE_SHOT;
 	t.num_links = PHYSFSX_readShort(fp);
 	t.value = PHYSFSX_readInt(fp);
-	PHYSFSX_skipBytes<4>(fp);
+	PHYSFSX_readInt(fp);
 	for (unsigned i=0; i < MAX_WALLS_PER_LINK; i++ )
-		t.seg[i] = read_untrusted_segnum_le16(fp);
+	{
+		const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(fp))};
+		t.seg[i] = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+	}
 	for (unsigned i=0; i < MAX_WALLS_PER_LINK; i++ )
 	{
 		auto s = build_sidenum_from_untrusted(PHYSFSX_readShort(fp));
@@ -612,22 +618,26 @@ void v26_trigger_read(const NamedPHYSFS_File fp, trigger &t)
 	}
 }
 
-void v25_trigger_read(const NamedPHYSFS_File fp, trigger *t)
+void v25_trigger_read(PHYSFS_File *fp, trigger *t)
 #elif defined(DXX_BUILD_DESCENT_II)
-void v29_trigger_read(v29_trigger *t, const NamedPHYSFS_File fp)
+void v29_trigger_read(v29_trigger *t, PHYSFS_File *fp)
 #endif
 {
 #if defined(DXX_BUILD_DESCENT_I)
-	PHYSFSX_skipBytes<1>(fp);
+	PHYSFSX_readByte(fp);
 #elif defined(DXX_BUILD_DESCENT_II)
 	t->type = PHYSFSX_readByte(fp);
 #endif
 	t->flags = PHYSFSX_readShort(fp);
 	t->value = PHYSFSX_readFix(fp);
-	PHYSFSX_skipBytes<5>(fp);
+	PHYSFSX_readFix(fp);
+	PHYSFSX_readByte(fp);
 	t->num_links = PHYSFSX_readShort(fp);
 	for (unsigned i=0; i<MAX_WALLS_PER_LINK; i++ )
-		t->seg[i] = read_untrusted_segnum_le16(fp);
+	{
+		const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(fp))};
+		t->seg[i] = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+	}
 	for (unsigned i=0; i<MAX_WALLS_PER_LINK; i++ )
 	{
 		auto s = build_sidenum_from_untrusted(PHYSFSX_readShort(fp));
@@ -639,15 +649,18 @@ void v29_trigger_read(v29_trigger *t, const NamedPHYSFS_File fp)
 /*
  * reads a v30_trigger structure from a PHYSFS_File
  */
-void v30_trigger_read(v30_trigger *t, const NamedPHYSFS_File fp)
+extern void v30_trigger_read(v30_trigger *t, PHYSFS_File *fp)
 {
 	t->flags = PHYSFSX_readShort(fp);
 	t->num_links = PHYSFSX_readByte(fp);
 	t->pad = PHYSFSX_readByte(fp);
 	t->value = PHYSFSX_readFix(fp);
-	PHYSFSX_skipBytes<4>(fp);
+	PHYSFSX_readFix(fp);
 	for (unsigned i=0; i<MAX_WALLS_PER_LINK; i++ )
-		t->seg[i] = read_untrusted_segnum_le16(fp);
+	{
+		const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(fp))};
+		t->seg[i] = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+	}
 	for (unsigned i=0; i<MAX_WALLS_PER_LINK; i++ )
 		t->side[i] = build_sidenum_from_untrusted(PHYSFSX_readShort(fp)).value_or(sidenum_t::WLEFT);
 }
@@ -696,7 +709,7 @@ static void v30_trigger_to_v31_trigger(trigger &t, const v30_trigger &trig)
 	}
 }
 
-static void v29_trigger_read_as_v30(const NamedPHYSFS_File fp, v30_trigger &trig)
+static void v29_trigger_read_as_v30(PHYSFS_File *fp, v30_trigger &trig)
 {
 	v29_trigger trig29;
 	v29_trigger_read(&trig29, fp);
@@ -710,14 +723,14 @@ static void v29_trigger_read_as_v30(const NamedPHYSFS_File fp, v30_trigger &trig
 
 }
 
-void v29_trigger_read_as_v31(const NamedPHYSFS_File fp, trigger &t)
+void v29_trigger_read_as_v31(PHYSFS_File *fp, trigger &t)
 {
 	v30_trigger trig;
 	v29_trigger_read_as_v30(fp, trig);
 	v30_trigger_to_v31_trigger(t, trig);
 }
 
-void v30_trigger_read_as_v31(const NamedPHYSFS_File fp, trigger &t)
+void v30_trigger_read_as_v31(PHYSFS_File *fp, trigger &t)
 {
 	v30_trigger trig;
 	v30_trigger_read(&trig, fp);
@@ -778,7 +791,7 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(trigger, t, (t.type, t.flags, t.num_links, serial::
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(trigger, 52);
 #endif
 
-void trigger_read(const NamedPHYSFS_File fp, trigger &t)
+void trigger_read(PHYSFS_File *fp, trigger &t)
 {
 	PHYSFSX_serialize_read(fp, t);
 }

@@ -90,15 +90,14 @@ class nesting_depth_exceeded
 {
 };
 
-[[nodiscard]]
-static Arglist BuildArglistFromIni(const char *filename)
+static void AppendIniArgs(const char *filename, Arglist &Args)
 {
-	Arglist Args;
 	if (auto f = PHYSFSX_openReadBuffered(filename).first)
 	{
-		for (PHYSFSX_gets_line_t<1024> line; Args.size() < MAX_ARGS && PHYSFSX_fgets(line, f);)
+		PHYSFSX_gets_line_t<1024> line;
+		while (Args.size() < MAX_ARGS && PHYSFSX_fgets(line, f))
 		{
-			auto &separator = " \t";
+			const auto separator = " \t";
 			for(char *token = strtok(line, separator); token != NULL; token = strtok(NULL, separator))
 			{
 				if (*token == ';')
@@ -107,7 +106,6 @@ static Arglist BuildArglistFromIni(const char *filename)
 			}
 		}
 	}
-	return Args;
 }
 
 static std::string &&arg_string(Arglist::iterator &pp, Arglist::const_iterator end)
@@ -187,15 +185,17 @@ static void InitGameArg()
 	::dcx::InitGameArg();
 }
 
-static void ReadCmdArgs(Inilist &ini, Arglist &&Args);
+static void ReadCmdArgs(Inilist &ini, Arglist &Args);
 
 static void ReadIniArgs(Inilist &ini)
 {
-	ReadCmdArgs(ini, BuildArglistFromIni(ini.back().filename.c_str()));
+	Arglist Args;
+	AppendIniArgs(ini.back().filename.c_str(), Args);
+	ReadCmdArgs(ini, Args);
 	ini.pop_back();
 }
 
-static void ReadCmdArgs(Inilist &ini, Arglist &&Args)
+static void ReadCmdArgs(Inilist &ini, Arglist &Args)
 {
 	for (Arglist::iterator pp = Args.begin(), end = Args.end(); pp != end; ++pp)
 	{
@@ -497,7 +497,7 @@ static std::string ConstructIniStackExplanation(const Inilist &ini)
 
 namespace dsx {
 
-bool InitArgs(std::span<char *> argv)
+bool InitArgs( int argc,char **argv )
 {
 	InitGameArg();
 
@@ -513,7 +513,13 @@ bool InitArgs(std::span<char *> argv)
 			ini.emplace_back(INI_FILENAME);
 			ReadIniArgs(ini);
 		}
-		ReadCmdArgs(ini, {argv.begin(), argv.end()});
+		{
+			Arglist Args;
+			Args.reserve(argc);
+			range_for (auto &i, unchecked_partial_range(argv, 1u, static_cast<unsigned>(argc)))
+				Args.push_back(i);
+			ReadCmdArgs(ini, Args);
+		}
 		PostProcessGameArg();
 		return true;
 	} catch(const missing_parameter& e) {

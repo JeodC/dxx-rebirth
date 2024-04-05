@@ -15,7 +15,7 @@ struct vms_vector;
 
 class vm_distance;
 class vm_magnitude;
-enum class vm_distance_squared : fix64;
+class vm_distance_squared;
 enum class vm_magnitude_squared : uint64_t;
 struct vms_angvec;
 struct vms_matrix;
@@ -36,6 +36,9 @@ void vm_vec_add2 (vms_vector &dest, const vms_vector &src);
 void vm_vec_sub2 (vms_vector &dest, const vms_vector &src);
 vms_vector &vm_vec_scale (vms_vector &dest, fix s);
 
+#define vm_vec_copy_scale(A,B,...)	vm_vec_copy_scale(A, ## __VA_ARGS__, B)
+vms_vector &vm_vec_copy_scale (vms_vector &dest, const vms_vector &src, fix s);
+void vm_vec_scale_add (vms_vector &dest, const vms_vector &src1, const vms_vector &src2, fix k);
 void vm_vec_scale_add2 (vms_vector &dest, const vms_vector &src, fix k);
 void vm_vec_scale2 (vms_vector &dest, fix n, fix d);
 
@@ -83,9 +86,7 @@ void vm_angles_2_matrix (vms_matrix &m, const vms_angvec &a);
 void vm_vec_ang_2_matrix (vms_matrix &m, const vms_vector &v, fixang a);
 #endif
 
-void vm_vector_to_matrix_r(vms_matrix &m, const vms_vector &fvec, const vms_vector &rvec);
-void vm_vector_to_matrix_u(vms_matrix &m, const vms_vector &fvec, const vms_vector &uvec);
-void vm_vector_to_matrix(vms_matrix &m, const vms_vector &fvec);
+void vm_vector_2_matrix (vms_matrix &m, const vms_vector &fvec, const vms_vector *uvec, const vms_vector *rvec);
 void vm_vec_rotate (vms_vector &dest, const vms_vector &src, const vms_matrix &m);
 void _vm_matrix_x_matrix (vms_matrix &dest, const vms_matrix &src0, const vms_matrix &src1);
 [[nodiscard]]

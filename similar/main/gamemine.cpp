@@ -93,7 +93,7 @@ static station_number build_station_number_from_untrusted(uint8_t untrusted)
 /*
  * reads a segment2 structure from a PHYSFS_File
  */
-static void segment2_read(const msmusegment s2, const NamedPHYSFS_File fp)
+static void segment2_read(const msmusegment s2, PHYSFS_File *fp)
 {
 	s2.s.special = build_segment_special_from_untrusted(PHYSFSX_readByte(fp));
 	s2.s.matcen_num = build_materialization_center_number_from_untrusted(PHYSFSX_readByte(fp));
@@ -400,34 +400,32 @@ struct me mine_editor;
 
 namespace {
 
-static void read_children(shared_segment &segp, const sidemask_t bit_mask, const NamedPHYSFS_File LoadFile)
+static void read_children(shared_segment &segp, const sidemask_t bit_mask, PHYSFS_File *const LoadFile)
 {
 	for (const auto bit : MAX_SIDES_PER_SEGMENT)
 	{
 		if (bit_mask & build_sidemask(bit))
 		{
-			const segnum_t child_segment{PHYSFSX_readULE16(LoadFile)};
-			segp.children[bit] = unlikely(child_segment == segment_exit)
-				? child_segment
-				: vmsegidx_t::check_nothrow_index(child_segment).value_or(segment_none);
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(LoadFile))};
+			segp.children[bit] = (imsegidx_t::check_nothrow_index(s) || s == segment_exit) ? s : segment_none;
 		} else
 			segp.children[bit] = segment_none;
 	}
 }
 
-static void read_verts(shared_segment &segp, const NamedPHYSFS_File LoadFile)
+static void read_verts(shared_segment &segp, PHYSFS_File *const LoadFile)
 {
 	// Read short Segments[segnum].verts[MAX_VERTICES_PER_SEGMENT]
 	range_for (auto &v, segp.verts)
 	{
-		const std::size_t i{PHYSFSX_readULE16(LoadFile)};
+		const std::size_t i = PHYSFSX_readShort(LoadFile);
 		if (i >= MAX_VERTICES)
 			throw std::invalid_argument("vertex number too large");
 		v = static_cast<vertnum_t>(i);
 	}
 }
 
-static void read_special(shared_segment &segp, const sidemask_t bit_mask, const NamedPHYSFS_File LoadFile)
+static void read_special(shared_segment &segp, const sidemask_t bit_mask, PHYSFS_File *const LoadFile)
 {
 	if (bit_mask & build_sidemask(MAX_SIDES_PER_SEGMENT))
 	{
@@ -448,7 +446,7 @@ static void read_special(shared_segment &segp, const sidemask_t bit_mask, const 
 
 namespace dsx {
 
-int load_mine_data_compiled(const NamedPHYSFS_File LoadFile, const char *const Gamesave_current_filename)
+int load_mine_data_compiled(PHYSFS_File *LoadFile, const char *const Gamesave_current_filename)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();

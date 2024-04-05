@@ -37,31 +37,6 @@ vms_vector vm_vec_divide(const vms_vector &src, const fix m)
 	};
 }
 
-static void vm_vector_to_matrix_f(vms_matrix &m)
-{
-	if (m.fvec.x == 0 && m.fvec.z == 0) {		//forward vec is straight up or down
-		m.rvec = vms_vector{
-			.x = F1_0,
-			.y = 0,
-			.z = 0
-		};
-		m.uvec = vms_vector{
-			.x = 0,
-			.y = 0,
-			.z = (m.fvec.y < 0) ? F1_0 : -F1_0
-		};
-	}
-	else { 		//not straight up or down
-		m.rvec = vms_vector{
-			.x = m.fvec.z,
-			.y = 0,
-			.z = -m.fvec.x
-		};
-		vm_vec_normalize(m.rvec);
-		m.uvec = vm_vec_cross(m.fvec, m.rvec);
-	}
-}
-
 }
 
 //adds two vectors, fills in dest, returns ptr to dest
@@ -122,28 +97,25 @@ vms_vector vm_vec_avg(const vms_vector &src0, const vms_vector &src1)
 //scales a vector in place.  returns ptr to vector
 vms_vector &vm_vec_scale(vms_vector &dest,fix s)
 {
-	return dest = vm_vec_copy_scale(dest, s);
+	return vm_vec_copy_scale(dest, dest, s);
 }
 
-//scales and copies a vector.  returns scaled result
-vms_vector vm_vec_copy_scale(const vms_vector src, const fix s)
+//scales and copies a vector.  returns ptr to dest
+vms_vector &vm_vec_copy_scale(vms_vector &dest,const vms_vector &src,fix s)
 {
-	return vms_vector{
-		.x = fixmul(src.x, s),
-		.y = fixmul(src.y, s),
-		.z = fixmul(src.z, s),
-	};
+	dest.x = fixmul(src.x,s);
+	dest.y = fixmul(src.y,s);
+	dest.z = fixmul(src.z,s);
+	return dest;
 }
 
-//scales a vector, adds it to another, and returns it
+//scales a vector, adds it to another, and stores in a 3rd vector
 //dest = src1 + k * src2
-vms_vector vm_vec_scale_add(const vms_vector &src1, const vms_vector &src2, const fix k)
+void vm_vec_scale_add(vms_vector &dest,const vms_vector &src1,const vms_vector &src2,fix k)
 {
-	return vms_vector{
-		.x = src1.x + fixmul(src2.x, k),
-		.y = src1.y + fixmul(src2.y, k),
-		.z = src1.z + fixmul(src2.z, k),
-	};
+	dest.x = src1.x + fixmul(src2.x,k);
+	dest.y = src1.y + fixmul(src2.y,k);
+	dest.z = src1.z + fixmul(src2.z,k);
 }
 
 //scales a vector and adds it to another
@@ -175,15 +147,27 @@ void vm_vec_scale2(vms_vector &dest,fix n,fix d)
 [[nodiscard]]
 static fix vm_vec_dot3(fix x,fix y,fix z,const vms_vector &v)
 {
-	const int64_t x0{x};
-	const int64_t x1{v.x};
-	const int64_t y0{y};
-	const int64_t y1{v.y};
-	const int64_t z0{z};
-	const int64_t z1{v.z};
-	const int64_t p{(x0 * x1) + (y0 * y1) + (z0 * z1)};
+#if 0
+	quadint q;
+
+	q.low = q.high = 0;
+
+	fixmulaccum(&q,x,v->x);
+	fixmulaccum(&q,y,v->y);
+	fixmulaccum(&q,z,v->z);
+
+	return fixquadadjust(&q);
+#else
+	int64_t x0 = x;
+	int64_t x1 = v.x;
+	int64_t y0 = y;
+	int64_t y1 = v.y;
+	int64_t z0 = z;
+	int64_t z1 = v.z;
+	int64_t p = (x0 * x1) + (y0 * y1) + (z0 * z1);
 	/* Convert back to fix and return. */
 	return p >> 16;
+#endif
 }
 
 fix vm_vec_dot(const vms_vector &v0,const vms_vector &v1)
@@ -201,7 +185,9 @@ vm_magnitude_squared vm_vec_mag2(const vms_vector &v)
 
 vm_magnitude vm_vec_mag(const vms_vector &v)
 {
-	return vm_magnitude{quad_sqrt(quadint{static_cast<int64_t>(vm_vec_mag2(v))})};
+	quadint q;
+	q.q = static_cast<uint64_t>(vm_vec_mag2(v));
+	return vm_magnitude{quad_sqrt(q)};
 }
 
 //computes the distance between two points. (does sub and mag)
@@ -212,7 +198,7 @@ vm_distance vm_vec_dist(const vms_vector &v0,const vms_vector &v1)
 
 vm_distance_squared vm_vec_dist2(const vms_vector &v0,const vms_vector &v1)
 {
-	return build_vm_distance_squared(vm_vec_mag2(vm_vec_sub(v0,v1)));
+	return vm_vec_mag2(vm_vec_sub(v0,v1));
 }
 
 //computes an approximation of the magnitude of the vector
@@ -303,17 +289,17 @@ vms_vector vm_vec_normal(const vms_vector &p0, const vms_vector &p1, const vms_v
 	return vm_vec_normalized(vm_vec_perp(p0, p1, p2));
 }
 
-namespace {
-
 //make sure a vector is reasonably sized to go into a cross product
-[[nodiscard]]
-static vms_vector check_vec(vms_vector v)
+static void check_vec(vms_vector *v)
 {
-	if (unlikely(v == vms_vector{}))
-		return v;
+	fix check;
 	int cnt = 0;
 
-	fix check = labs(v.x) | labs(v.y) | labs(v.z);
+	check = labs(v->x) | labs(v->y) | labs(v->z);
+	
+	if (check == 0)
+		return;
+
 	if (check & 0xfffc0000) {		//too big
 
 		while (check & 0xfff00000) {
@@ -326,9 +312,9 @@ static vms_vector check_vec(vms_vector v)
 			check >>= 2;
 		}
 
-		v.x >>= cnt;
-		v.y >>= cnt;
-		v.z >>= cnt;
+		v->x >>= cnt;
+		v->y >>= cnt;
+		v->z >>= cnt;
 	}
 	else												//maybe too small
 		if ((check & 0xffff8000) == 0) {		//yep, too small
@@ -343,13 +329,10 @@ static vms_vector check_vec(vms_vector v)
 				check <<= 2;
 			}
 
-			v.x >>= cnt;
-			v.y >>= cnt;
-			v.z >>= cnt;
+			v->x >>= cnt;
+			v->y >>= cnt;
+			v->z >>= cnt;
 		}
-	return v;
-}
-
 }
 
 //computes cross product of two vectors. 
@@ -359,26 +342,32 @@ static vms_vector check_vec(vms_vector v)
 //your inputs are ok.
 vms_vector vm_vec_cross(const vms_vector &src0, const vms_vector &src1)
 {
-	const auto qx0{fixmulaccum({}, src0.y, src1.z)};
-	const auto qx1{fixmulaccum(qx0, -src0.z, src1.y)};
+	quadint qx{};
+	quadint qy{};
+	quadint qz{};
 
-	const auto qy0{fixmulaccum({}, src0.z, src1.x)};
-	const auto qy1{fixmulaccum(qy0, -src0.x, src1.z)};
+	fixmulaccum(&qx, src0.y, src1.z);
+	fixmulaccum(&qx, -src0.z, src1.y);
 
-	const auto qz0{fixmulaccum({}, src0.x, src1.y)};
-	const auto qz1{fixmulaccum(qz0, -src0.y, src1.x)};
+	fixmulaccum(&qy, src0.z, src1.x);
+	fixmulaccum(&qy, -src0.x, src1.z);
+
+	fixmulaccum(&qz, src0.x, src1.y);
+	fixmulaccum(&qz, -src0.y, src1.x);
 	return vms_vector{
-		.x = fixquadadjust(qx1),
-		.y = fixquadadjust(qy1),
-		.z = fixquadadjust(qz1),
+		.x = fixquadadjust(&qx),
+		.y = fixquadadjust(&qy),
+		.z = fixquadadjust(&qz),
 	};
 }
 
 //computes non-normalized surface normal from three points. 
 vms_vector vm_vec_perp(const vms_vector &p0, const vms_vector &p1, const vms_vector &p2)
 {
-	auto t0{check_vec(vm_vec_sub(p1, p0))};
-	auto t1{check_vec(vm_vec_sub(p2, p1))};
+	auto t0 = vm_vec_sub(p1,p0);
+	auto t1 = vm_vec_sub(p2,p1);
+	check_vec(&t0);
+	check_vec(&t1);
 	return vm_vec_cross(t0, t1);
 }
 
@@ -462,50 +451,64 @@ void vm_vec_ang_2_matrix(vms_matrix &m,const vms_vector &v,fixang a)
 //the up vector is used.  If only the forward vector is passed, a bank of
 //zero is assumed
 //returns ptr to matrix
-void vm_vector_to_matrix(vms_matrix &m, const vms_vector &fvec)
+void vm_vector_2_matrix(vms_matrix &m,const vms_vector &fvec,const vms_vector *uvec,const vms_vector *rvec)
 {
-	if (!vm_vec_copy_normalize(m.fvec, fvec))
-	{
+	vms_vector &xvec=m.rvec,&yvec=m.uvec,&zvec=m.fvec;
+	if (!vm_vec_copy_normalize(zvec,fvec)) {
 		Int3();		//forward vec should not be zero-length
 		return;
 	}
-	vm_vector_to_matrix_f(m);
-}
+	if (uvec == NULL) {
+		if (rvec == NULL) {		//just forward vec
+bad_vector2:
+	;
+			if (zvec.x==0 && zvec.z==0) {		//forward vec is straight up or down
 
-void vm_vector_to_matrix_r(vms_matrix &m, const vms_vector &fvec, const vms_vector &rvec)
-{
-	if (!vm_vec_copy_normalize(m.fvec, fvec))
-	{
-		Int3();		//forward vec should not be zero-length
-		return;
-	}
-	if (!vm_vec_copy_normalize(m.rvec, rvec) ||
-		//normalize new perpendicular vector
-		!vm_vec_normalize(m.uvec = vm_vec_cross(m.fvec, m.rvec)))
-	{
-		vm_vector_to_matrix_f(m);
-		return;
-	}
-	//now recompute right vector, in case it wasn't entirely perpendicular
-	m.rvec = vm_vec_cross(m.uvec, m.fvec);
-}
+				m.rvec.x = f1_0;
+				m.uvec.z = (zvec.y < 0)?f1_0:-f1_0;
 
-void vm_vector_to_matrix_u(vms_matrix &m, const vms_vector &fvec, const vms_vector &uvec)
-{
-	if (!vm_vec_copy_normalize(m.fvec, fvec))
-	{
-		Int3();		//forward vec should not be zero-length
-		return;
+				m.rvec.y = m.rvec.z = m.uvec.x = m.uvec.y = 0;
+			}
+			else { 		//not straight up or down
+
+				xvec.x = zvec.z;
+				xvec.y = 0;
+				xvec.z = -zvec.x;
+
+				vm_vec_normalize(xvec);
+				yvec = vm_vec_cross(zvec, xvec);
+			}
+		}
+		else {						//use right vec
+
+			if (!vm_vec_copy_normalize(xvec,*rvec))
+				goto bad_vector2;
+
+			yvec = vm_vec_cross(zvec, xvec);
+
+			//normalize new perpendicular vector
+			if (!vm_vec_normalize(yvec))
+				goto bad_vector2;
+
+			//now recompute right vector, in case it wasn't entirely perpendiclar
+			xvec = vm_vec_cross(yvec, zvec);
+
+		}
 	}
-	if (!vm_vec_copy_normalize(m.uvec, uvec) ||
+	else {		//use up vec
+
+		if (!vm_vec_copy_normalize(yvec,*uvec))
+			goto bad_vector2;
+
+		xvec = vm_vec_cross(yvec, zvec);
+		
 		//normalize new perpendicular vector
-		!vm_vec_normalize(m.rvec = vm_vec_cross(m.uvec, m.fvec)))
-	{
-		vm_vector_to_matrix_f(m);
-		return;
+		if (!vm_vec_normalize(xvec))
+			goto bad_vector2;
+
+		//now recompute up vector, in case it wasn't entirely perpendiclar
+		yvec = vm_vec_cross(zvec, xvec);
 	}
-	//now recompute up vector, in case it wasn't entirely perpendicular
-	m.uvec = vm_vec_cross(m.fvec, m.rvec);
 }
 
 

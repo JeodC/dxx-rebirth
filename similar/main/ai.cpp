@@ -190,7 +190,7 @@ static robot_gun_number robot_advance_current_gun_prefer_second(const robot_info
 namespace dcx {
 namespace {
 constexpr std::integral_constant<int, F1_0 * 8> CHASE_TIME_LENGTH{};
-constexpr std::integral_constant<int, F1_0> Robot_sound_volume{};
+constexpr std::integral_constant<int, F0_5> Robot_sound_volume{};
 enum {
 	Flinch_scale = 4,
 	Attack_scale = 24,
@@ -762,7 +762,7 @@ void ai_turn_towards_vector(const vms_vector &goal_vector, object_base &objp, fi
 	}
 #endif
 
-	vm_vector_to_matrix_r(objp.orient, new_fvec, objp.orient.rvec);
+	vm_vector_2_matrix(objp.orient, new_fvec, nullptr, &objp.orient.rvec);
 }
 
 #if defined(DXX_BUILD_DESCENT_I)
@@ -1782,7 +1782,7 @@ static void compute_vis_and_vec(const d_robot_info_array &Robot_info, const vmob
 		} else {
 			//	Compute expensive stuff -- vec_to_player and player_visibility
 			vm_vec_normalized_dir_quick(player_visibility.vec_to_player, Believed_player_pos, pos);
-			if (player_visibility.vec_to_player == vms_vector{})
+			if (player_visibility.vec_to_player.x == 0 && player_visibility.vec_to_player.y == 0 && player_visibility.vec_to_player.z == 0)
 			{
 				player_visibility.vec_to_player.x = F1_0;
 			}
@@ -1861,7 +1861,7 @@ static void compute_buddy_vis_vec(const vmobjptridx_t buddy_obj, const vms_vecto
 	auto &plrobj = *Objects.vcptr(plr.objnum);
 	/* Buddy ignores cloaking */
 	vm_vec_normalized_dir_quick(player_visibility.vec_to_player, plrobj.pos, buddy_pos);
-	if (player_visibility.vec_to_player == vms_vector{})
+	if (player_visibility.vec_to_player.x == 0 && player_visibility.vec_to_player.y == 0 && player_visibility.vec_to_player.z == 0)
 		player_visibility.vec_to_player.x = F1_0;
 
 	fvi_info hit_data;
@@ -1904,7 +1904,7 @@ void move_towards_segment_center(const robot_info &robptr, const d_level_shared_
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &SSegments = LevelSharedSegmentState.get_segments();
-	const auto segment_center{compute_segment_center(Vertices.vcptr, SSegments.vcptr(segnum))};
+	const auto &&segment_center = compute_segment_center(Vertices.vcptr, SSegments.vcptr(segnum));
 	vm_vec_normalized_dir_quick(vec_to_center, segment_center, objp.pos);
 	move_towards_vector(robptr, objp, vec_to_center, 1);
 }
@@ -2133,7 +2133,7 @@ static imobjptridx_t create_gated_robot(const d_robot_info_array &Robot_info, co
 	}
 
 	auto &vcvertptr = Vertices.vcptr;
-	const auto object_pos{pos ? *pos : pick_random_point_in_seg(vcvertptr, segp, std::minstd_rand(d_rand()))};
+	const auto object_pos = pos ? *pos : pick_random_point_in_seg(vcvertptr, segp, std::minstd_rand(d_rand()));
 
 	//	See if legal to place object here.  If not, move about in segment and try again.
 	auto &robptr = Robot_info[object_id];
@@ -2222,8 +2222,8 @@ namespace {
 static const shared_segment *boss_intersects_wall(fvcvertptr &vcvertptr, const object_base &boss_objp, const vcsegptridx_t segp)
 {
 	const auto size = boss_objp.size;
-	const auto segcenter{compute_segment_center(vcvertptr, segp)};
-	const auto &&r{std::ranges::subrange(segp->verts)};
+	const auto &&segcenter = compute_segment_center(vcvertptr, segp);
+	const auto &&r = ranges::subrange(segp->verts);
 	const auto re = r.end();
 	auto pos = segcenter;
 	for (auto ri = r.begin();; ++ri)
@@ -2275,7 +2275,7 @@ void create_buddy_bot(const d_level_shared_robot_info_state &LevelSharedRobotInf
 		if (!ri.companion)
 			continue;
 		const auto &&segp = vmsegptridx(ConsoleObject->segnum);
-		const auto object_pos{compute_segment_center(Vertices.vcptr, segp)};
+		const auto &&object_pos = compute_segment_center(Vertices.vcptr, segp);
 		create_morph_robot(LevelSharedRobotInfoState.Robot_info, segp, object_pos, idx);
 		break;
 	}
@@ -2407,13 +2407,14 @@ static void teleport_boss(const d_robot_info_array &Robot_info, const d_vclip_ar
 	const auto &&rand_segp = vmsegptridx(rand_segnum);
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vcvertptr = Vertices.vcptr;
-	objp->pos = compute_segment_center(vcvertptr, rand_segp);
+	compute_segment_center(vcvertptr, objp->pos, rand_segp);
 	obj_relink(vmobjptr, vmsegptr, objp, rand_segp);
 
 	BossUniqueState.Last_teleport_time = {GameTime64};
 
 	//	make boss point right at player
-	vm_vector_to_matrix(objp->orient, vm_vec_sub(target_pos, objp->pos));
+	const auto boss_dir = vm_vec_sub(target_pos, objp->pos);
+	vm_vector_2_matrix(objp->orient, boss_dir, nullptr, nullptr);
 
 	digi_link_sound_to_pos(Vclip[vclip_index::morphing_robot].sound_num, rand_segp, sidenum_t::WLEFT, objp->pos, 0, F1_0);
 	digi_kill_sound_linked_to_object( objp);
@@ -4108,7 +4109,7 @@ _exit_cheat:
 					else
 					{
 						vm_vec_scale_add2(goal_vector, orient.rvec, (choice_count - selector) * F1_0);
-						goal_vector = vm_vec_copy_scale(orient.uvec, selector * F1_0);
+						vm_vec_copy_scale(goal_vector, orient.uvec, selector * F1_0);
 						vm_vec_normalize_quick(goal_vector);
 					}
 					if (vm_vec_dot(goal_vector, vec_to_player) > 0)
@@ -4206,7 +4207,7 @@ _exit_cheat:
 			if (!ai_multiplayer_awareness(obj, 62))
 				return;
 			auto &vcvertptr = Vertices.vcptr;
-			const auto center_point{compute_center_point_on_side(vcvertptr, vcsegptr(obj->segnum), aip->GOALSIDE)};
+			const auto &&center_point = compute_center_point_on_side(vcvertptr, vcsegptr(obj->segnum), aip->GOALSIDE);
 			const auto goal_vector = vm_vec_normalized_quick(vm_vec_sub(center_point, obj->pos));
 			ai_turn_towards_vector(goal_vector, obj, robptr.turn_time[Difficulty_level]);
 			move_towards_vector(robptr, obj, goal_vector, 0);
@@ -4835,11 +4836,11 @@ int ai_save_state(PHYSFS_File *fp)
 
 namespace dcx {
 
-static void PHYSFSX_readAngleVecX(PHYSFS_File *file, vms_angvec &v, const physfsx_endian swap)
+static void PHYSFSX_readAngleVecX(PHYSFS_File *file, vms_angvec &v, int swap)
 {
-	v.p = {PHYSFSX_readSXE16(file, swap)};
-	v.b = {PHYSFSX_readSXE16(file, swap)};
-	v.h = {PHYSFSX_readSXE16(file, swap)};
+	v.p = PHYSFSX_readSXE16(file, swap);
+	v.b = PHYSFSX_readSXE16(file, swap);
+	v.h = PHYSFSX_readSXE16(file, swap);
 }
 
 }
@@ -4847,7 +4848,7 @@ static void PHYSFSX_readAngleVecX(PHYSFS_File *file, vms_angvec &v, const physfs
 namespace dsx {
 namespace {
 
-static void ai_local_read_swap(ai_local *ail, const physfsx_endian swap, const NamedPHYSFS_File fp)
+static void ai_local_read_swap(ai_local *ail, int swap, PHYSFS_File *fp)
 {
 	{
 		fix tmptime32 = 0;
@@ -4859,10 +4860,14 @@ static void ai_local_read_swap(ai_local *ail, const physfsx_endian swap, const N
 		ail->mode = static_cast<ai_mode>(PHYSFSX_readByte(fp));
 		ail->previous_visibility = static_cast<player_visibility_state>(PHYSFSX_readByte(fp));
 		ail->rapidfire_count = PHYSFSX_readByte(fp);
-		ail->goal_segment = read_untrusted_segnum_xe16(fp, swap);
-		PHYSFSX_skipBytes<8>(fp);
-		ail->next_action_time = {PHYSFSX_readSXE32(fp, swap)};
-		ail->next_fire = {PHYSFSX_readSXE32(fp, swap)};
+		{
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readSXE16(fp, swap))};
+			ail->goal_segment = imsegidx_t::check_nothrow_index(s) ? s : segment_none;
+		}
+		PHYSFSX_readSXE32(fp, swap);
+		PHYSFSX_readSXE32(fp, swap);
+		ail->next_action_time = PHYSFSX_readSXE32(fp, swap);
+		ail->next_fire = PHYSFSX_readSXE32(fp, swap);
 #elif defined(DXX_BUILD_DESCENT_II)
 		ail->player_awareness_type = static_cast<player_awareness_type_t>(PHYSFSX_readSXE32(fp, swap));
 		ail->retry_count = PHYSFSX_readSXE32(fp, swap);
@@ -4870,19 +4875,22 @@ static void ai_local_read_swap(ai_local *ail, const physfsx_endian swap, const N
 		ail->mode = static_cast<ai_mode>(PHYSFSX_readSXE32(fp, swap));
 		ail->previous_visibility = static_cast<player_visibility_state>(PHYSFSX_readSXE32(fp, swap));
 		ail->rapidfire_count = PHYSFSX_readSXE32(fp, swap);
-		ail->goal_segment = read_untrusted_segnum_xe32(fp, swap);
-		ail->next_action_time = {PHYSFSX_readSXE32(fp, swap)};
-		ail->next_fire = {PHYSFSX_readSXE32(fp, swap)};
-		ail->next_fire2 = {PHYSFSX_readSXE32(fp, swap)};
+		{
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readSXE32(fp, swap))};
+			ail->goal_segment = imsegidx_t::check_nothrow_index(s) ? s : segment_none;
+		}
+		ail->next_action_time = PHYSFSX_readSXE32(fp, swap);
+		ail->next_fire = PHYSFSX_readSXE32(fp, swap);
+		ail->next_fire2 = PHYSFSX_readSXE32(fp, swap);
 #endif
-		ail->player_awareness_time = {PHYSFSX_readSXE32(fp, swap)};
-		tmptime32 = {PHYSFSX_readSXE32(fp, swap)};
+		ail->player_awareness_time = PHYSFSX_readSXE32(fp, swap);
+		tmptime32 = PHYSFSX_readSXE32(fp, swap);
 		ail->time_player_seen = static_cast<fix64>(tmptime32);
-		tmptime32 = {PHYSFSX_readSXE32(fp, swap)};
+		tmptime32 = PHYSFSX_readSXE32(fp, swap);
 		ail->time_player_sound_attacked = static_cast<fix64>(tmptime32);
-		tmptime32 = {PHYSFSX_readSXE32(fp, swap)};
+		tmptime32 = PHYSFSX_readSXE32(fp, swap);
 		ail->next_misc_sound_time = static_cast<fix64>(tmptime32);
-		ail->time_since_processed = {PHYSFSX_readSXE32(fp, swap)};
+		ail->time_since_processed = PHYSFSX_readSXE32(fp, swap);
 		
 		range_for (auto &j, ail->goal_angles)
 			PHYSFSX_readAngleVecX(fp, j, swap);
@@ -4901,11 +4909,11 @@ static void ai_local_read_swap(ai_local *ail, const physfsx_endian swap, const N
 
 namespace dcx {
 
-static void PHYSFSX_readVectorX(PHYSFS_File *file, vms_vector &v, const physfsx_endian swap)
+static void PHYSFSX_readVectorX(PHYSFS_File *file, vms_vector &v, int swap)
 {
-	v.x = {PHYSFSX_readSXE32(file, swap)};
-	v.y = {PHYSFSX_readSXE32(file, swap)};
-	v.z = {PHYSFSX_readSXE32(file, swap)};
+	v.x = PHYSFSX_readSXE32(file, swap);
+	v.y = PHYSFSX_readSXE32(file, swap);
+	v.z = PHYSFSX_readSXE32(file, swap);
 }
 
 }
@@ -4913,15 +4921,20 @@ static void PHYSFSX_readVectorX(PHYSFS_File *file, vms_vector &v, const physfsx_
 namespace dsx {
 namespace {
 
-static void ai_cloak_info_read_n_swap(ai_cloak_info *ci, int n, const physfsx_endian swap, const NamedPHYSFS_File fp)
+static void ai_cloak_info_read_n_swap(ai_cloak_info *ci, int n, int swap, PHYSFS_File *fp)
 {
 	int i;
+	fix tmptime32 = 0;
+	
 	for (i = 0; i < n; i++, ci++)
 	{
-		const fix tmptime32{PHYSFSX_readSXE32(fp, swap)};
-		ci->last_time = fix64{tmptime32};
+		tmptime32 = PHYSFSX_readSXE32(fp, swap);
+		ci->last_time = static_cast<fix64>(tmptime32);
 #if defined(DXX_BUILD_DESCENT_II)
-		ci->last_segment = read_untrusted_segnum_xe32(fp, swap);
+		{
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readSXE32(fp, swap))};
+			ci->last_segment = imsegidx_t::check_nothrow_index(s) ? s : segment_none;
+		}
 #endif
 		PHYSFSX_readVectorX(fp, ci->last_position, swap);
 	}
@@ -4929,7 +4942,7 @@ static void ai_cloak_info_read_n_swap(ai_cloak_info *ci, int n, const physfsx_en
 
 }
 
-int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_File fp, int version, const physfsx_endian swap)
+int ai_restore_state(const d_robot_info_array &Robot_info, PHYSFS_File *fp, int version, int swap)
 {
 	auto &BossUniqueState = LevelUniqueObjectState.BossState;
 #if defined(DXX_BUILD_DESCENT_II)
@@ -4939,9 +4952,10 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 #endif
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptridx = Objects.vmptridx;
+	fix tmptime32 = 0;
 
-	PHYSFSX_skipBytes<4>(fp);
-	Overall_agitation = {PHYSFSX_readSXE32(fp, swap)};
+	PHYSFSX_readSXE32(fp, swap);
+	Overall_agitation = PHYSFSX_readSXE32(fp, swap);
 	range_for (object &obj, Objects)
 	{
 		ai_local discard;
@@ -4949,9 +4963,11 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 	}
 	PHYSFSX_serialize_read(fp, Point_segs);
 	ai_cloak_info_read_n_swap(Ai_cloak_info.data(), Ai_cloak_info.size(), swap, fp);
-	BossUniqueState.Boss_cloak_start_time = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
-	PHYSFSX_skipBytes<4>(fp);
-	BossUniqueState.Last_teleport_time = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	BossUniqueState.Boss_cloak_start_time = static_cast<fix64>(tmptime32);
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	BossUniqueState.Last_teleport_time = static_cast<fix64>(tmptime32);
 
 	// If boss teleported, set the looping 'see' sound -kreatordxx
 	// Also make sure any bosses that were generated/released during the game have teleport segs
@@ -4973,33 +4989,40 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 			}
 		}
 	
-#if defined(DXX_BUILD_DESCENT_I)
-	PHYSFSX_skipBytes<12>(fp);
-#elif defined(DXX_BUILD_DESCENT_II)
-	LevelSharedBossState.Boss_teleport_interval = {PHYSFSX_readSXE32(fp, swap)};
-	LevelSharedBossState.Boss_cloak_interval = {PHYSFSX_readSXE32(fp, swap)};
-	PHYSFSX_skipBytes<4>(fp);
+#if defined(DXX_BUILD_DESCENT_II)
+	LevelSharedBossState.Boss_teleport_interval =
 #endif
-	BossUniqueState.Last_gate_time = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
-	GameUniqueState.Boss_gate_interval = {PHYSFSX_readSXE32(fp, swap)};
-	BossUniqueState.Boss_dying_start_time = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
+		PHYSFSX_readSXE32(fp, swap);
+#if defined(DXX_BUILD_DESCENT_II)
+	LevelSharedBossState.Boss_cloak_interval =
+#endif
+		PHYSFSX_readSXE32(fp, swap);
+	PHYSFSX_readSXE32(fp, swap);
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	BossUniqueState.Last_gate_time = static_cast<fix64>(tmptime32);
+	GameUniqueState.Boss_gate_interval = PHYSFSX_readSXE32(fp, swap);
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	BossUniqueState.Boss_dying_start_time = static_cast<fix64>(tmptime32);
 	BossUniqueState.Boss_dying = PHYSFSX_readSXE32(fp, swap);
 	BossUniqueState.Boss_dying_sound_playing = PHYSFSX_readSXE32(fp, swap);
 #if defined(DXX_BUILD_DESCENT_I)
 	(void)version;
 	BossUniqueState.Boss_hit_this_frame = PHYSFSX_readSXE32(fp, swap);
-	PHYSFSX_skipBytes<4>(fp);
+	PHYSFSX_readSXE32(fp, swap);
 #elif defined(DXX_BUILD_DESCENT_II)
-	BossUniqueState.Boss_hit_time = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	BossUniqueState.Boss_hit_time = static_cast<fix64>(tmptime32);
 
 	if (version >= 8) {
-		PHYSFSX_skipBytes<4>(fp);
-		BuddyState.Escort_last_path_created = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
+		PHYSFSX_readSXE32(fp, swap);
+		tmptime32 = PHYSFSX_readSXE32(fp, swap);
+		BuddyState.Escort_last_path_created = static_cast<fix64>(tmptime32);
 		BuddyState.Escort_goal_object = static_cast<escort_goal_t>(PHYSFSX_readSXE32(fp, swap));
 		BuddyState.Escort_special_goal = static_cast<escort_goal_t>(PHYSFSX_readSXE32(fp, swap));
-		if (const auto o{vcobjidx_t::check_nothrow_index(PHYSFSX_readUXE32(fp, swap))})
+		const int egi = PHYSFSX_readSXE32(fp, swap);
+		if (static_cast<unsigned>(egi) < Objects.size())
 		{
-			BuddyState.Escort_goal_objidx = *o;
+			BuddyState.Escort_goal_objidx = egi;
 			BuddyState.Escort_goal_reachable = d_unique_buddy_state::Escort_goal_reachability::reachable;
 		}
 		else
@@ -5018,7 +5041,7 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 		BuddyState.Escort_goal_objidx = object_none;
 		BuddyState.Escort_goal_reachable = d_unique_buddy_state::Escort_goal_reachability::unreachable;
 
-		LevelUniqueObjectState.ThiefState.Stolen_items.fill(LevelUniqueObjectState.ThiefState.stolen_item_type_none);
+		LevelUniqueObjectState.ThiefState.Stolen_items.fill(255);
 	}
 
 	if (version >= 15) {
@@ -5038,7 +5061,7 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 		for (const auto i : Num_boss_gate_segs)
 		{
 			(void)i;
-			const segnum_t s{PHYSFSX_readUXE16(fp, swap)};
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readSXE16(fp, swap))};
 			Boss_gate_segs.emplace_back(s);
 		}
 
@@ -5046,7 +5069,7 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 		for (const auto i : Num_boss_teleport_segs)
 		{
 			(void)i;
-			const segnum_t s{PHYSFSX_readUXE16(fp, swap)};
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readSXE16(fp, swap))};
 			Boss_teleport_segs.emplace_back(s);
 		}
 	}

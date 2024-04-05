@@ -391,9 +391,9 @@ void free_model(polymodel &po)
 
 namespace dsx {
 
-void draw_polygon_model(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &Polygon_models, grs_canvas &canvas, const tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polygon_model_index model_num, const unsigned flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
+void draw_polygon_model(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &Polygon_models, grs_canvas &canvas, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polygon_model_index model_num, const unsigned flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
 {
-	draw_polygon_model(canvas, tmap_drawer_ptr, pos, orient, anim_angles, Polygon_models[model_num], flags, light, glow_values, alt_textures);
+	draw_polygon_model(canvas, pos, orient, anim_angles, Polygon_models[model_num], flags, light, glow_values, alt_textures);
 }
 
 static polygon_model_index build_polygon_model_index_from_polygon_simpler_model_index(const polygon_simpler_model_index i)
@@ -401,7 +401,7 @@ static polygon_model_index build_polygon_model_index_from_polygon_simpler_model_
 	return static_cast<polygon_model_index>(underlying_value(i) - 1);
 }
 
-void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polymodel &pm, unsigned flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
+void draw_polygon_model(grs_canvas &canvas, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polymodel &pm, unsigned flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
 {
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	const polymodel *po = &pm;
@@ -423,9 +423,9 @@ void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_p
 		const unsigned n_textures = po->n_textures;
 		std::array<bitmap_index, MAX_POLYOBJ_TEXTURES> texture_list_index;
 		auto &&tlir = partial_range(texture_list_index, n_textures);
-		if (const std::span<const bitmap_index> a{alt_textures}; !a.empty())
+		if (alt_textures)
 		{
-			for (auto &&[at, tli] : zip(a.first(n_textures), tlir))
+			for (auto &&[at, tli] : zip(unchecked_partial_range(static_cast<const bitmap_index *>(alt_textures), n_textures), tlir))
 				tli = at;
 		}
 		else
@@ -451,7 +451,8 @@ void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_p
 	polygon_model_points robot_points;
 
 	if (flags == 0)		//draw entire object
-		g3_draw_polygon_model(texture_list.data(), robot_points, canvas, tmap_drawer_ptr, anim_angles, light, glow_values, po->model_data.get());
+
+		g3_draw_polygon_model(&texture_list[0], robot_points, canvas, anim_angles, light, glow_values, po->model_data.get());
 
 	else {
 		for (int i=0;flags;flags>>=1,i++)
@@ -460,7 +461,7 @@ void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_p
 
 				//if submodel, rotate around its center point, not pivot point
 				auto &&subctx = g3_start_instance_matrix();
-				g3_draw_polygon_model(texture_list.data(), robot_points, canvas, tmap_drawer_ptr, anim_angles, light, glow_values, &po->model_data[po->submodel_ptrs[i]]);
+				g3_draw_polygon_model(&texture_list[0], robot_points, canvas, anim_angles, light, glow_values, &po->model_data[po->submodel_ptrs[i]]);
 				g3_done_instance(subctx);
 			}	
 	}
@@ -608,7 +609,7 @@ void draw_model_picture(grs_canvas &canvas, const polymodel &mn, const vms_angve
 		temp_pos.z = DEFAULT_VIEW_DIST;
 
 	const auto &&temp_orient = vm_angles_2_matrix(orient_angles);
-	draw_polygon_model(canvas, draw_tmap, temp_pos, temp_orient, nullptr, mn, 0, lrgb, nullptr, alternate_textures{});
+	draw_polygon_model(canvas, temp_pos, temp_orient, nullptr, mn, 0, lrgb, nullptr, nullptr);
 	g3_end_frame();
 }
 
@@ -621,7 +622,7 @@ ASSERT_SERIAL_UDT_MESSAGE_SIZE(polymodel, 12 + (10 * 4) + (10 * 3 * sizeof(vms_v
 /*
  * reads a polymodel structure from a PHYSFS_File
  */
-void polymodel_read(polymodel &pm, const NamedPHYSFS_File fp)
+void polymodel_read(polymodel &pm, PHYSFS_File *fp)
 {
 	pm.model_data.reset();
 	PHYSFSX_serialize_read(fp, pm);

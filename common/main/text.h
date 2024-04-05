@@ -26,8 +26,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #pragma once
 
 #include "dxxsconf.h"
+
+#ifdef __cplusplus
 #include <array>
-#include <span>
 
 //Symbolic constants for all the strings
 
@@ -635,7 +636,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define TXT_ROBOT_PAINTING_ON 		dxx_gettext(620, "Robot painting with texture %d")
 
 #define N_TEXT_STRINGS_MIN				514
-#define N_TEXT_STRINGS                  621u
+#define N_TEXT_STRINGS                  621
 
 #elif defined(DXX_BUILD_DESCENT_II)
 #define TXT_COPYRIGHT           dxx_gettext(11, "Copyright (C) 1994-1996 Parallax Software Corporation")
@@ -1165,7 +1166,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 //hey: there's a lot of empty slots up from 173-192, where
 //the commandline help used to be.  Add new things there
 
-#define N_TEXT_STRINGS          649u
+#define N_TEXT_STRINGS          649
 #endif
 
 #define dxx_text_ensure_simple_expr(E,T)	((void)(E), (Int3()), (T))
@@ -1173,6 +1174,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #if defined(DXX_BUILD_DESCENT_I)
 #define _D2X_PRIMARY_SUPER_WEAPON_NAMES(u)
 #define _D2X_SECONDARY_SUPER_WEAPON_NAMES(u)
+#define _D2X_PRIMARY_SUPER_WEAPON_NAMES_SHORT(u)
+#define _D2X_SECONDARY_SUPER_WEAPON_NAMES_SHORT(u)
 #elif defined(DXX_BUILD_DESCENT_II)
 #define _D2X_PRIMARY_SUPER_WEAPON_NAMES(u)	\
 	((u) == primary_weapon_index_t::SUPER_LASER_INDEX) ? TXT_W_SLASER :	\
@@ -1182,11 +1185,25 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 	((u) == primary_weapon_index_t::OMEGA_INDEX) ? TXT_W_SFUSION :	\
 
 #define _D2X_SECONDARY_SUPER_WEAPON_NAMES(u)	\
-	((u) == secondary_weapon_index_t::SMISSILE1_INDEX) ? TXT_W_SMISSILE1 :	\
-	((u) == secondary_weapon_index_t::GUIDED_INDEX) ? TXT_W_SMISSILE2 :	\
-	((u) == secondary_weapon_index_t::SMART_MINE_INDEX) ? TXT_W_SMISSILE3 :	\
-	((u) == secondary_weapon_index_t::SMISSILE4_INDEX) ? TXT_W_SMISSILE4 :	\
-	((u) == secondary_weapon_index_t::SMISSILE5_INDEX) ? TXT_W_SMISSILE5 :	\
+	((u) == SMISSILE1_INDEX) ? TXT_W_SMISSILE1 :	\
+	((u) == GUIDED_INDEX) ? TXT_W_SMISSILE2 :	\
+	((u) == SMART_MINE_INDEX) ? TXT_W_SMISSILE3 :	\
+	((u) == SMISSILE4_INDEX) ? TXT_W_SMISSILE4 :	\
+	((u) == SMISSILE5_INDEX) ? TXT_W_SMISSILE5 :	\
+
+#define _D2X_PRIMARY_SUPER_WEAPON_NAMES_SHORT(u)	\
+	((u) == primary_weapon_index_t::SUPER_LASER_INDEX) ? TXT_W_SLASER_S :	\
+	((u) == primary_weapon_index_t::GAUSS_INDEX) ? TXT_W_SVULCAN_S :	\
+	((u) == primary_weapon_index_t::HELIX_INDEX) ? TXT_W_SSPREADFIRE_S :	\
+	((u) == primary_weapon_index_t::PHOENIX_INDEX) ? TXT_W_SPLASMA_S :	\
+	((u) == primary_weapon_index_t::OMEGA_INDEX) ? TXT_W_SFUSION_S :	\
+
+#define _D2X_SECONDARY_SUPER_WEAPON_NAMES_SHORT(u)	\
+	((u) == SMISSILE1_INDEX) ? TXT_W_SMISSILE1_S :	\
+	((u) == GUIDED_INDEX) ? TXT_W_SMISSILE2_S :	\
+	((u) == SMART_MINE_INDEX) ? TXT_W_SMISSILE3_S :	\
+	((u) == SMISSILE4_INDEX) ? TXT_W_SMISSILE4_S :	\
+	((u) == SMISSILE5_INDEX) ? TXT_W_SMISSILE5_S :	\
 
 #endif
 
@@ -1201,13 +1218,33 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 	)
 
 #define SECONDARY_WEAPON_NAMES(u)	(	\
-	((u) == secondary_weapon_index_t::CONCUSSION_INDEX) ? TXT_W_C_MISSILE :	\
-	((u) == secondary_weapon_index_t::HOMING_INDEX) ? TXT_W_H_MISSILE :	\
-	((u) == secondary_weapon_index_t::PROXIMITY_INDEX) ? TXT_W_P_BOMB :	\
-	((u) == secondary_weapon_index_t::SMART_INDEX) ? TXT_W_S_MISSILE :	\
-	((u) == secondary_weapon_index_t::MEGA_INDEX) ? TXT_W_M_MISSILE :	\
+	((u) == CONCUSSION_INDEX) ? TXT_W_C_MISSILE :	\
+	((u) == HOMING_INDEX) ? TXT_W_H_MISSILE :	\
+	((u) == PROXIMITY_INDEX) ? TXT_W_P_BOMB :	\
+	((u) == SMART_INDEX) ? TXT_W_S_MISSILE :	\
+	((u) == MEGA_INDEX) ? TXT_W_M_MISSILE :	\
 	_D2X_SECONDARY_SUPER_WEAPON_NAMES((u))	\
 	(dxx_text_ensure_simple_expr(&(u), TXT_W_C_MISSILE))	\
+	)
+
+#define PRIMARY_WEAPON_NAMES_SHORT(u)	(	\
+	((u) == primary_weapon_index_t::LASER_INDEX) ? TXT_W_LASER_S :	\
+	((u) == primary_weapon_index_t::VULCAN_INDEX) ? TXT_W_VULCAN_S :	\
+	((u) == primary_weapon_index_t::SPREADFIRE_INDEX) ? TXT_W_SPREADFIRE_S :	\
+	((u) == primary_weapon_index_t::PLASMA_INDEX) ? TXT_W_PLASMA_S :	\
+	((u) == primary_weapon_index_t::FUSION_INDEX) ? TXT_W_FUSION_S :	\
+	_D2X_PRIMARY_SUPER_WEAPON_NAMES_SHORT((u))	\
+	(dxx_text_ensure_simple_expr(&(u), TXT_W_LASER_S))	\
+	)
+
+#define SECONDARY_WEAPON_NAMES_SHORT(u)	(	\
+	((u) == CONCUSSION_INDEX) ? TXT_W_C_MISSILE_S :	\
+	((u) == HOMING_INDEX) ? TXT_W_H_MISSILE_S :	\
+	((u) == PROXIMITY_INDEX) ? TXT_W_P_BOMB_S :	\
+	((u) == SMART_INDEX) ? TXT_W_S_MISSILE_S :	\
+	((u) == MEGA_INDEX) ? TXT_W_M_MISSILE_S :	\
+	_D2X_SECONDARY_SUPER_WEAPON_NAMES_SHORT((u))	\
+	(dxx_text_ensure_simple_expr(&(u), TXT_W_C_MISSILE_S))	\
 	)
 
 #define MENU_DIFFICULTY_TEXT(u)	(	\
@@ -1221,7 +1258,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 	)
 
 void decode_text_line(char *text_line); // decryption for bitmaps.tbl
-void decode_text(std::span<char> text);  // decryption for briefings, etc.
+void decode_text(char *text, unsigned len);  // decryption for briefings, etc.
 #ifdef dsx
 namespace dsx {
 void load_text(void);
@@ -1251,4 +1288,6 @@ static constexpr const char *dxx_gettext(unsigned expr, const char *)
 #endif
 
 }
+#endif
+
 #endif

@@ -43,7 +43,8 @@ clipping_code g3_code_point(g3s_point &p)
 //rotates a point. returns codes.  does not check if already rotated
 clipping_code g3_rotate_point(g3s_point &dest,const vms_vector &src)
 {
-	vm_vec_rotate(dest.p3_vec, vm_vec_sub(src, View_position), View_matrix);
+	const auto tempv = vm_vec_sub(src,View_position);
+	vm_vec_rotate(dest.p3_vec,tempv,View_matrix);
 	dest.p3_flags = {};	//no projected
 	return g3_code_point(dest);
 }
@@ -122,26 +123,24 @@ void g3_project_point(g3s_point &p)
 #endif
 }
 
-#if DXX_USE_EDITOR
 //from a 2d point, compute the vector through that point
-vms_vector g3_point_2_vec(short sx,short sy)
+void g3_point_2_vec(vms_vector &v,short sx,short sy)
 {
-	vms_vector v;
-	vm_vec_rotate(v, vm_vec_normalized(
-			vms_vector{
-				.x =  fixmuldiv(fixdiv((sx << 16) - Canv_w2, Canv_w2), Matrix_scale.z, Matrix_scale.x),
-				.y = -fixmuldiv(fixdiv((sy << 16) - Canv_h2, Canv_h2), Matrix_scale.z, Matrix_scale.y),
-				.z = f1_0
-			}
-			),
-		vm_transposed_matrix(Unscaled_matrix));
-	return v;
-}
-#endif
+	vms_vector tempv;
+	vms_matrix tempm;
 
-vms_vector g3_rotate_delta_vec(const vms_vector &src)
+	tempv.x =  fixmuldiv(fixdiv((sx<<16) - Canv_w2,Canv_w2),Matrix_scale.z,Matrix_scale.x);
+	tempv.y = -fixmuldiv(fixdiv((sy<<16) - Canv_h2,Canv_h2),Matrix_scale.z,Matrix_scale.y);
+	tempv.z = f1_0;
+
+	vm_vec_normalize(tempv);
+	tempm = vm_transposed_matrix(Unscaled_matrix);
+	vm_vec_rotate(v,tempv,tempm);
+}
+
+void g3_rotate_delta_vec(vms_vector &dest,const vms_vector &src)
 {
-	return vm_vec_rotate(src, View_matrix);
+	vm_vec_rotate(dest,src,View_matrix);
 }
 
 void g3_add_delta_vec(g3s_point &dest,const g3s_point &src,const vms_vector &deltav)
@@ -154,10 +153,12 @@ void g3_add_delta_vec(g3s_point &dest,const g3s_point &src,const vms_vector &del
 //calculate the depth of a point - returns the z coord of the rotated point
 fix g3_calc_point_depth(const vms_vector &pnt)
 {
-	const auto q0{fixmulaccum({}, pnt.x - View_position.x, View_matrix.fvec.x)};
-	const auto q1{fixmulaccum(q0, pnt.y - View_position.y, View_matrix.fvec.y)};
-	const auto q2{fixmulaccum(q1, pnt.z - View_position.z, View_matrix.fvec.z)};
-	return fixquadadjust(q2);
+	quadint q;
+	q.q = 0;
+	fixmulaccum(&q,(pnt.x - View_position.x),View_matrix.fvec.x);
+	fixmulaccum(&q,(pnt.y - View_position.y),View_matrix.fvec.y);
+	fixmulaccum(&q,(pnt.z - View_position.z),View_matrix.fvec.z);
+	return fixquadadjust(&q);
 }
 
 }

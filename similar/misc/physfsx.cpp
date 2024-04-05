@@ -36,48 +36,40 @@ namespace dcx {
 
 const std::array<file_extension_t, 1> archive_exts{{"dxa"}};
 
-PHYSFSX_fgets_t::result PHYSFSX_fgets_t::get(const std::span<char> buf, PHYSFS_File *const fp)
+char *PHYSFSX_fgets_t::get(const std::span<char> buf, PHYSFS_File *const fp)
 {
-	/* Tell PHYSFS not to use the last byte of the buffer, so that this
-	 * function can always write to the byte after the last byte read from the
-	 * file.
-	 */
-	const PHYSFS_sint64 r{PHYSFS_read(fp, buf.data(), 1, buf.size() - 1)};
+	const PHYSFS_sint64 r = PHYSFS_read(fp, buf.data(), 1, buf.size() - 1);
 	if (r <= 0)
+		return DXX_POISON_MEMORY(buf, 0xcc), nullptr;
+	auto p = buf.begin();
+	const auto cleanup = [&]{
+		return *p = 0, DXX_POISON_MEMORY(buf.subspan((p + 1) - buf.begin()), 0xcc), &*p;
+	};
+	const auto e = std::next(p, r);
+	for (;;)
 	{
-		DXX_POISON_MEMORY(buf, 0xcc);
-		return {};
-	}
-	const auto bb{buf.begin()};
-	auto p{bb};
-	for (const auto e{std::next(bb, r)}; p != e; ++p)
-	{
-		if (const char c{*p}; c == 0 || c == '\n')
+		if (p == e)
 		{
-			/* Do nothing - and skip the `continue` below that handles most
-			 * characters.
-			 */
+			return cleanup();
+		}
+		char c = *p;
+		if (c == 0)
+			break;
+		if (c == '\n')
+		{
+			break;
 		}
 		else if (c == '\r')
 		{
-			/* If a Carriage Return is found, stop here.  If the next byte is a
-			 * newline, then consider it included in the string, so that the
-			 * seek does not cause the newline to replay on the next call.
-			 * Otherwise, set `p` such that the seek will cause that next byte
-			 * to replay on the next call.
-			 */
 			*p = 0;
-			if (++p == e || *p != '\n')
+			if (++p != e && *p != '\n')
 				--p;
+			break;
 		}
-		else
-			continue;
-		PHYSFS_seek(fp, PHYSFS_tell(fp) + p - e + 1);
-		break;
+		++p;
 	}
-	*p = 0;
-	DXX_POISON_MEMORY(buf.subspan((p + 1) - bb), 0xcc);
-	return {bb, p};
+	PHYSFS_seek(fp, PHYSFS_tell(fp) + p - e + 1);
+	return cleanup();
 }
 
 int PHYSFSX_checkMatchingExtension(const char *filename, const ranges::subrange<const file_extension_t *> range)
@@ -207,7 +199,7 @@ bool PHYSFSX_init(int argc, char *argv[])
 #endif
 	con_printf(CON_DEBUG, "PHYSFS: temporarily append base directory \"%s\" to search path", base_dir);
 	PHYSFS_mount(base_dir, nullptr, 1);
-	if (!InitArgs(std::span(argv, argc).template subspan<1>()))
+	if (!InitArgs( argc,argv ))
 		return false;
 	PHYSFS_unmount(base_dir);
 	
@@ -544,7 +536,7 @@ int PHYSFSX_exists_ignorecase(const char *filename)
 }
 
 //Open a file for reading, set up a buffer
-std::pair<RAIINamedPHYSFS_File, PHYSFS_ErrorCode> PHYSFSX_openReadBuffered(const char *filename)
+std::pair<RAIIPHYSFS_File, PHYSFS_ErrorCode> PHYSFSX_openReadBuffered(const char *filename)
 {
 	PHYSFS_uint64 bufSize;
 	char filename2[PATH_MAX];
@@ -557,16 +549,10 @@ std::pair<RAIINamedPHYSFS_File, PHYSFS_ErrorCode> PHYSFSX_openReadBuffered(const
 #endif
 	snprintf(filename2, sizeof(filename2), "%s", filename);
 	PHYSFSEXT_locateCorrectCase(filename2);
-
-	/* Use the original filename in any error messages.  This is close enough
-	 * that the user should be able to identify the bad file, and avoids the
-	 * need to allocate and return storage for the filename.  In almost all
-	 * cases, the filename will never be seen, since it is only shown if an
-	 * error occurs when reading the file.
-	 */
-	RAIINamedPHYSFS_File fp{PHYSFS_openRead(filename2), filename};
+	
+	RAIIPHYSFS_File fp{PHYSFS_openRead(filename2)};
 	if (!fp)
-		return {std::move(fp), PHYSFS_getLastErrorCode()};
+		return {nullptr, PHYSFS_getLastErrorCode()};
 	
 	bufSize = PHYSFS_fileLength(fp);
 	while (!PHYSFS_setBuffer(fp, bufSize) && bufSize)
@@ -665,9 +651,9 @@ void PHYSFSX_removeArchiveContent()
 	}
 }
 
-void PHYSFSX_read_helper_report_error(const char *const filename, const unsigned line, const char *const func, const NamedPHYSFS_File file)
+void PHYSFSX_read_helper_report_error(const char *const filename, const unsigned line, const char *const func, PHYSFS_File *const file)
 {
-	(Error)(filename, line, func, "reading file %s at %lu", file.filename, static_cast<unsigned long>((PHYSFS_tell)(file.fp)));
+	(Error)(filename, line, func, "reading at %lu", static_cast<unsigned long>((PHYSFS_tell)(file)));
 }
 
 RAIIPHYSFS_ComputedPathMount make_PHYSFSX_ComputedPathMount(char *const name, physfs_search_path position)

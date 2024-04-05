@@ -180,7 +180,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 		case OBJ_POWERUP:
 		{
 			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, object_id,
-					segp, object_pos, &seg_matrix, Powerup_info[(powerup_type_t{object_id})].size,
+					segp, object_pos, &seg_matrix, Powerup_info[object_id].size,
 					object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
 
 			if ( objnum == object_none)
@@ -194,7 +194,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 			obj->rtype.vclip_info.frametime = Vclip[obj->rtype.vclip_info.vclip_num].play_time/Vclip[obj->rtype.vclip_info.vclip_num].num_frames;
 			obj->rtype.vclip_info.framenum = 0;
 
-			if (get_powerup_id(obj) == powerup_type_t::POW_VULCAN_WEAPON)
+			if (get_powerup_id(obj) == POW_VULCAN_WEAPON)
 				obj->ctype.powerup_info.count = VULCAN_WEAPON_AMMO_AMOUNT;
 			else
 				obj->ctype.powerup_info.count = 1;
@@ -243,7 +243,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 
 			//set Physics info
 
-			obj->mtype.phys_info.velocity = {};
+			vm_vec_zero(obj->mtype.phys_info.velocity);
 			obj->mtype.phys_info.mass = Player_ship->mass;
 			obj->mtype.phys_info.drag = Player_ship->drag;
 			obj->mtype.phys_info.flags |= PF_TURNROLL | PF_LEVELLING | PF_WIGGLE;
@@ -322,7 +322,7 @@ int ObjectPlaceObject(void)
 
 	//update_due_to_new_segment();
 	auto &vcvertptr = Vertices.vcptr;
-	const auto cur_object_loc{compute_segment_center(vcvertptr, Cursegp)};
+	const auto cur_object_loc = compute_segment_center(vcvertptr, Cursegp);
 
 	old_cur_object_index = Cur_object_index;
 	const auto rval = place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, Cur_object_type, Cur_object_id);
@@ -344,7 +344,7 @@ int ObjectPlaceObjectTmap(void)
 	int	old_cur_object_index;
 	//update_due_to_new_segment();
 	auto &vcvertptr = Vertices.vcptr;
-	const auto cur_object_loc{compute_segment_center(vcvertptr, Cursegp)};
+	const auto cur_object_loc = compute_segment_center(vcvertptr, Cursegp);
 
 	old_cur_object_index = Cur_object_index;
 	const auto rval = place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, Cur_object_type, Cur_object_id);
@@ -515,7 +515,9 @@ class extract_fvec_from_segment
 public:
 	static vms_vector get(fvcvertptr &vcvertptr, const shared_segment &segp)
 	{
-		return extract_forward_vector_from_segment(vcvertptr, segp);
+		vms_vector v;
+		extract_forward_vector_from_segment(vcvertptr, segp, v);
+		return v;
 	}
 };
 
@@ -533,7 +535,9 @@ class extract_uvec_from_segment
 public:
 	static vms_vector get(fvcvertptr &vcvertptr, const shared_segment &segp)
 	{
-		return extract_up_vector_from_segment(vcvertptr, segp);
+		vms_vector v;
+		extract_up_vector_from_segment(vcvertptr, segp, v);
+		return v;
 	}
 };
 
@@ -615,7 +619,7 @@ int	ObjectSetDefault(void)
 
 	const auto &&objp = vmobjptr(Cur_object_index);
 	auto &vcvertptr = Vertices.vcptr;
-	objp->pos = compute_segment_center(vcvertptr, vcsegptr(objp->segnum));
+	compute_segment_center(vcvertptr, objp->pos, vcsegptr(objp->segnum));
 
 	Update_flags |= UF_WORLD_CHANGED;
 
@@ -825,7 +829,7 @@ static void move_object_to_vector(const vms_vector &vec_through_screen, fix delt
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptridx = Objects.vmptridx;
 	const auto &&objp = vmobjptridx(Cur_object_index);
-	const auto result{vm_vec_scale_add(Viewer->pos, vec_through_screen, vm_vec_dist(Viewer->pos, objp->pos) + delta_distance)};
+	const auto result = vm_vec_scale_add(Viewer->pos, vec_through_screen, vm_vec_dist(Viewer->pos, objp->pos) + delta_distance);
 	move_object_to_position(objp, result);
 }
 

@@ -352,16 +352,16 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 
 #if DXX_USE_EDITOR
 	if (Render_only_bottom && sidenum == sidenum_t::WBOTTOM)
-		g3_draw_tmap(canvas, nv, pointlist, uvl_copy, dyn_light, GameBitmaps[Textures[Bottom_bitmap_num]], draw_tmap);
+		g3_draw_tmap(canvas, nv, pointlist, uvl_copy, dyn_light, GameBitmaps[Textures[Bottom_bitmap_num]]);
 	else
 #endif
 
 #if DXX_USE_OGL
 		if (bm2){
-			g3_draw_tmap_2(canvas, nv, pointlist, uvl_copy, dyn_light, *bm, *bm2, get_texture_rotation_low(tmap2), draw_tmap);
+			g3_draw_tmap_2(canvas, nv, pointlist, uvl_copy, dyn_light, *bm, *bm2, get_texture_rotation_low(tmap2));
 		}else
 #endif
-			g3_draw_tmap(canvas, nv, pointlist, uvl_copy, dyn_light, *bm, draw_tmap);
+			g3_draw_tmap(canvas, nv, pointlist, uvl_copy, dyn_light, *bm);
 
 	if (alpha)
 		gr_settransblend(canvas, GR_FADE_OFF, gr_blend::normal); // revert any transparency / blending setting back to normal
@@ -371,7 +371,7 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 	{
 		const uint8_t color = BM_XRGB(63, 63, 63);
 		g3_draw_line_context context{canvas, color};
-		draw_outline(context, nv, pointlist.data());
+		draw_outline(context, nv, &pointlist[0]);
 	}
 #endif
 }
@@ -419,7 +419,7 @@ static void check_face(grs_canvas &canvas, const vmsegidx_t segnum, const sidenu
 #else
 			const auto save_lighting = Lighting_on;
 			Lighting_on = 2;
-			g3_draw_tmap(canvas, nv, pointlist, uvl_copy, dyn_light, *bm, tmap_drawer_ptr);
+			g3_draw_tmap(canvas, nv, pointlist, uvl_copy, dyn_light, *bm);
 			Lighting_on = save_lighting;
 #endif
 		}
@@ -987,7 +987,7 @@ static bool compare_child(fvcvertptr &vcvertptr, const vms_vector &Viewer_eye, c
 {
 	const auto &cside = cseg.sides[edgeside];
 	const auto &sv = Side_to_verts[edgeside][cside.get_type() == side_type::tri_13 ? side_relative_vertnum::_1 : side_relative_vertnum::_0];
-	const auto &temp{vm_vec_sub(Viewer_eye, vcvertptr(seg.verts[sv]))};
+	const auto &temp = vm_vec_sub(Viewer_eye, vcvertptr(seg.verts[sv]));
 	const auto &cnormal = cside.normals;
 	return vm_vec_dot(cnormal[0], temp) < 0 || vm_vec_dot(cnormal[1], temp) < 0;
 }
@@ -1053,7 +1053,7 @@ class render_compare_context_t
 	typedef render_state_t::per_segment_state_t::distant_object distant_object;
 	struct element
 	{
-		vm_distance_squared dist_squared;
+		fix64 dist_squared;
 #if defined(DXX_BUILD_DESCENT_II)
 		const object *objp;
 #endif
@@ -1084,7 +1084,7 @@ bool render_compare_context_t::operator()(const distant_object &a, const distant
 {
 	auto &doa = operator[](a.objnum);
 	auto &dob = operator[](b.objnum);
-	const auto delta_dist_squared = underlying_value(doa.dist_squared) - underlying_value(dob.dist_squared);
+	const auto delta_dist_squared = doa.dist_squared - dob.dist_squared;
 
 #if defined(DXX_BUILD_DESCENT_II)
 	const auto obj_a = doa.objp;

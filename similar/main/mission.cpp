@@ -23,7 +23,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
-#include "dxxsconf.h"
 #include <algorithm>
 #include <vector>
 #include <stdio.h>
@@ -74,28 +73,9 @@ using std::min;
 
 #define CON_PRIORITY_DEBUG_MISSION_LOAD	CON_DEBUG
 
-namespace dcx {
-
 namespace {
 
 using mission_candidate_search_path = std::array<char, PATH_MAX>;
-
-auto prepare_mission_list_count_dirbuf(const std::size_t immediate_directories)
-{
-	std::array<char, sizeof("DIR:99999; ")> dirbuf;
-	/* Limit the count of directories to what can be formatted
-	 * successfully without truncation.  If a user has more than this
-	 * many directories, an empty string will be used instead of showing
-	 * the actual count.
-	 */
-	if (immediate_directories && immediate_directories <= 99999)
-		std::snprintf(std::data(dirbuf), std::size(dirbuf), "DIR:%u; ", DXX_size_t_cast_unsigned_int(immediate_directories));
-	else
-		dirbuf.front() = 0;
-	return dirbuf;
-}
-
-}
 
 }
 
@@ -109,30 +89,16 @@ using mission_list_type = std::vector<mle>;
 //mission list entry
 struct mle : Mission_path
 {
-	static constexpr std::size_t maximum_mission_name_length{75};
-	descent_hog_size builtin_hogsize;    // if it's the built-in mission, used for determining the version
+	int     builtin_hogsize;    // if it's the built-in mission, used for determining the version
+	ntstring<75> mission_name;
 #if defined(DXX_BUILD_DESCENT_II)
 	descent_version_type descent_version;    // descent 1 or descent 2?
 #endif
 	Mission::anarchy_only_level anarchy_only_flag;  // if true, mission is anarchy only
 	mission_list_type directory;
-	ntstring<maximum_mission_name_length> mission_name;
-	mle(Mission_path &&m,
-		const descent_hog_size builtin_hogsize,
-#if defined(DXX_BUILD_DESCENT_II)
-		const descent_version_type descent_version,
-#endif
-		const Mission::anarchy_only_level anarchy_only_flag,
-		const std::span<const char> mission_name
-		) :
-		Mission_path{std::move(m)},
-		builtin_hogsize{builtin_hogsize},
-#if defined(DXX_BUILD_DESCENT_II)
-		descent_version{descent_version},
-#endif
-		anarchy_only_flag{anarchy_only_flag}
+	mle(Mission_path &&m) :
+		Mission_path(std::move(m))
 	{
-		this->mission_name.copy_if(mission_name.data(), mission_name.size());
 	}
 	mle(const char *const name, std::vector<mle> &&d);
 };
@@ -191,12 +157,28 @@ mission_name_and_version::mission_name_and_version(Mission::descent_version_type
 #endif
 }
 
+const char *prepare_mission_list_count_dirbuf(std::array<char, 12> &dirbuf, const std::size_t immediate_directories)
+{
+	/* Limit the count of directories to what can be formatted
+	 * successfully without truncation.  If a user has more than this
+	 * many directories, an empty string will be used instead of showing
+	 * the actual count.
+	 */
+	if (immediate_directories && immediate_directories <= 99999)
+	{
+		snprintf(dirbuf.data(), dirbuf.size(), "DIR:%zu; ", immediate_directories);
+		return dirbuf.data();
+	}
+	return "";
+}
+
 mle::mle(const char *const name, std::vector<mle> &&d) :
 	Mission_path(name, 0), directory(std::move(d))
 {
 	mission_subdir_stats ss;
 	ss.count(directory);
-	snprintf(mission_name.data(), mission_name.size(), "%s/ [%sMSN:L%zu;T%zu]", name, std::data(prepare_mission_list_count_dirbuf(ss.immediate_directories)), ss.immediate_missions, ss.total_missions);
+	std::array<char, 12> dirbuf;
+	snprintf(mission_name.data(), mission_name.size(), "%s/ [%sMSN:L%zu;T%zu]", name, prepare_mission_list_count_dirbuf(dirbuf, ss.immediate_directories), ss.immediate_missions, ss.total_missions);
 }
 
 static const mle *compare_mission_predicate_to_leaf(const mission_entry_predicate mission_predicate, const mle &candidate, const char *candidate_filesystem_name)
@@ -296,7 +278,7 @@ static void allocate_shareware_levels(const unsigned count_regular_level, const 
 	for (const auto &&[idx, name] : enumerate(std::span(Current_mission->level_names.get(), count_regular_level), 1u))
 	{
 		cf_assert(idx <= count_regular_level);
-		snprintf(name.data(), name.size(), "level%02u.sdl", idx);
+		snprintf(&name[0u], name.size(), "level%02u.sdl", idx);
 	}
 }
 
@@ -305,7 +287,7 @@ static void build_rdl_regular_level_names(const unsigned count_regular_level, st
 	for (auto &&[idx, name] : enumerate(std::span(names.get(), count_regular_level), 1u))
 	{
 		cf_assert(idx <= count_regular_level);
-		snprintf(name.data(), name.size(), "level%02u.rdl", idx);
+		snprintf(&name[0u], name.size(), "level%02u.rdl", idx);
 	}
 }
 
@@ -314,7 +296,7 @@ static void build_rdl_secret_level_names(const unsigned count_secret_level, std:
 	for (auto &&[idx, name] : enumerate(std::span(names.get(), count_secret_level), 1u))
 	{
 		cf_assert(idx <= count_secret_level);
-		snprintf(name.data(), name.size(), "levels%1u.rdl", idx);
+		snprintf(&name[0u], name.size(), "levels%1u.rdl", idx);
 	}
 }
 
@@ -343,7 +325,7 @@ static void load_mission_d1()
 			build_rdl_regular_level_names(last_level - 1, Current_mission->level_names);
 			{
 				auto &ln = Current_mission->level_names[last_level - 1];
-				snprintf(ln.data(), ln.size(), "saturn%02d.rdl", last_level);
+				snprintf(&ln[0u], ln.size(), "saturn%02d.rdl", last_level);
 			}
 			build_rdl_secret_level_names(last_secret_level, Current_mission->secret_level_names);
 			Current_mission->secret_level_table[0] = 10;
@@ -389,7 +371,7 @@ static void load_mission_shareware()
     
     switch (Current_mission->builtin_hogsize)
 	{
-		case descent_hog_size::d2_mac_shareware:
+		case MAC_SHARE_MISSION_HOGSIZE:
 			{
 				constexpr unsigned last_level = 4;
 				allocate_levels(last_level, 1);
@@ -404,7 +386,7 @@ static void load_mission_shareware()
 		default:
 			Int3();
 			[[fallthrough]];
-		case descent_hog_size::d2_shareware:
+		case SHAREWARE_MISSION_HOGSIZE:
 			{
 				constexpr unsigned last_level = 3;
 				allocate_levels(last_level, 0);
@@ -525,106 +507,73 @@ namespace dsx {
 
 namespace {
 
-static const mle *read_mission_file(mission_list_type &mission_list, std::string_view str_pathname, const descent_hog_size descent_hog_size, const mission_filter_mode mission_filter)
+static int read_mission_file(mission_list_type &mission_list, mission_candidate_search_path &pathname)
 {
-	if (const auto mfile = PHYSFSX_openReadBuffered(str_pathname.data()).first)
+	if (const auto mfile = PHYSFSX_openReadBuffered(pathname.data()).first)
 	{
+		std::string str_pathname = pathname.data();
 		const auto idx_last_slash{str_pathname.find_last_of('/')};
-		/* If no slash is found, the filename starts at the beginning of the
-		 * view.  If a slash is found, the filename starts at the next
-		 * character after the slash.
-		 */
 		const auto idx_filename{(idx_last_slash == str_pathname.npos) ? 0 : idx_last_slash + 1};
 		const auto idx_file_extension{str_pathname.find_first_of('.', {idx_filename})};
 		if (idx_file_extension == str_pathname.npos)
-			return nullptr;	//missing extension
+			return 0;	//missing extension
 		if (idx_file_extension >= DXX_MAX_MISSION_PATH_LENGTH)
-			return nullptr;	// path too long, would be truncated in save game files
+			return 0;	// path too long, would be truncated in save game files
+		str_pathname.resize(idx_file_extension);
+		mission_list.emplace_back(Mission_path(std::move(str_pathname), idx_filename));
+		mle *mission = &mission_list.back();
 #if defined(DXX_BUILD_DESCENT_I)
 		constexpr auto descent_version = Mission::descent_version_type::descent1;
 #elif defined(DXX_BUILD_DESCENT_II)
 		// look if it's .mn2 or .msn
-		const auto descent_version = (str_pathname[idx_file_extension + 3] == MISSION_EXTENSION_DESCENT_II[3])
+		auto descent_version = (pathname[idx_file_extension + 3] == MISSION_EXTENSION_DESCENT_II[3])
 			? Mission::descent_version_type::descent2
 			: Mission::descent_version_type::descent1;
 #endif
-		str_pathname.remove_suffix(str_pathname.size() - idx_file_extension);
+		mission->anarchy_only_flag = Mission::anarchy_only_level::allow_any_game;
 
 		PHYSFSX_gets_line_t<80> buf;
 		const auto &&nv = get_any_mission_type_name_value(buf, mfile, descent_version);
-		const auto &p = nv.name;
-		if (!p)
-			return nullptr;
 
-		const auto semicolon = strchr(p, ';');
-		/* If a semicolon exists, point to it.  Otherwise, point to the
-		 * null byte terminating the buffer.
-		 */
-		auto t = semicolon ? semicolon : std::next(p, strlen(p));
-		/* Iterate backward until either the beginning of the buffer or the
-		 * first non-whitespace character.
-		 */
-		for (; t != p && isspace(static_cast<unsigned>(*t));)
-		{
-			-- t;
+		if (const auto p = nv.name) {
+#if defined(DXX_BUILD_DESCENT_II)
+			mission->descent_version = nv.descent_version;
+#endif
+			const auto semicolon = strchr(p, ';');
+			/* If a semicolon exists, point to it.  Otherwise, point to the
+			 * null byte terminating the buffer.
+			 */
+			auto t = semicolon ? semicolon : std::next(p, strlen(p));
+			/* Iterate backward until either the beginning of the buffer or the
+			 * first non-whitespace character.
+			 */
+			for (; t != p && isspace(static_cast<unsigned>(*t));)
+			{
+				-- t;
+			}
+			mission->mission_name.copy_if(p, std::min<std::size_t>(mission->mission_name.size() - 1, std::distance(p, t)));
+		}
+		else {
+			mission_list.pop_back();
+			return 0;
 		}
 
-		auto anarchy_only_flag{Mission::anarchy_only_level::allow_any_game};
-		if (PHYSFSX_gets_line_t<64> temp; PHYSFSX_fgets(temp, mfile))
+		{
+			PHYSFSX_gets_line_t<4096> temp;
+		if (PHYSFSX_fgets(temp,mfile))
 		{
 			if (istok(temp,"type"))
 			{
 				//get mission type
 				if (const auto p = get_value(temp))
-				{
-					if (istok(p, "anarchy"))
-					{
-						if (mission_filter == mission_filter_mode::exclude_anarchy)
-							return nullptr;
-						anarchy_only_flag = Mission::anarchy_only_level::only_anarchy_games;
-					}
-				}
+					mission->anarchy_only_flag = istok(p, "anarchy") ? Mission::anarchy_only_level::only_anarchy_games : Mission::anarchy_only_level::allow_any_game;
 			}
 		}
-		return &mission_list.emplace_back(
-			/* Cast to ptrdiff_t is safe, because
-			 * `if (idx_file_extension >= DXX_MAX_MISSION_PATH_LENGTH)` is
-			 * true, then execution does not reach this line.  All values in
-			 * [0, DXX_MAX_MISSION_PATH_LENGTH) can be represented by
-			 * `std::ptrdiff_t`, so no narrowing occurs.
-			 */
-			Mission_path{str_pathname, static_cast<std::ptrdiff_t>(idx_filename)},
-			descent_hog_size,
-#if defined(DXX_BUILD_DESCENT_II)
-			nv.descent_version,
-#endif
-			anarchy_only_flag,
-			std::span(p, std::min<std::size_t>(mle::maximum_mission_name_length, std::distance(p, t)))
-		);
+		}
+		return 1;
 	}
-	return nullptr;
-}
 
-static std::span<const char> get_d1_mission_name_from_descent_hog_size(const descent_hog_size size)
-{
-	switch (size) {
-		case descent_hog_size::pc_shareware_v14:
-		case descent_hog_size::pc_shareware_v10:
-		case descent_hog_size::mac_shareware:
-			return D1_SHAREWARE_MISSION_NAME;
-		case descent_hog_size::pc_oem_v14:
-		case descent_hog_size::pc_oem_v10:
-			return D1_OEM_MISSION_NAME;
-		default:
-			Warning("Unknown D1 hogsize %d", underlying_value(size));
-			Int3();
-			[[fallthrough]];
-		case descent_hog_size::pc_retail_v15:
-		case descent_hog_size::pc_retail_v15_alt1:
-		case descent_hog_size::pc_retail_v10:
-		case descent_hog_size::mac_retail:
-			return D1_MISSION_NAME;
-	}
+	return 0;
 }
 
 static void add_d1_builtin_mission_to_list(mission_list_type &mission_list)
@@ -633,56 +582,83 @@ static void add_d1_builtin_mission_to_list(mission_list_type &mission_list)
 	if (size == descent_hog_size{-1})
 		return;
 
-	mission_list.emplace_back(
-		Mission_path{D1_MISSION_FILENAME, 0},
-		size,
-#if defined(DXX_BUILD_DESCENT_II)
-		Mission::descent_version_type::descent1,	/* The Descent 1 builtin campaign is always treated as a Descent 1 mission. */
+	mission_list.emplace_back(Mission_path(D1_MISSION_FILENAME, 0));
+	mle *mission = &mission_list.back();
+	switch (size) {
+		case descent_hog_size::pc_shareware_v14:
+		case descent_hog_size::pc_shareware_v10:
+		case descent_hog_size::mac_shareware:
+		mission->mission_name.copy_if(D1_SHAREWARE_MISSION_NAME);
+		break;
+		case descent_hog_size::pc_oem_v14:
+		case descent_hog_size::pc_oem_v10:
+		mission->mission_name.copy_if(D1_OEM_MISSION_NAME);
+		break;
+	default:
+		Warning("Unknown D1 hogsize %d", underlying_value(size));
+		Int3();
+		[[fallthrough]];
+		case descent_hog_size::pc_retail_v15:
+		case descent_hog_size::pc_retail_v15_alt1:
+		case descent_hog_size::pc_retail_v10:
+		case descent_hog_size::mac_retail:
+		mission->mission_name.copy_if(D1_MISSION_NAME);
+		break;
+	}
+
+	mission->anarchy_only_flag = Mission::anarchy_only_level::allow_any_game;
+#if defined(DXX_BUILD_DESCENT_I)
+	mission->builtin_hogsize = underlying_value(size);
+#elif defined(DXX_BUILD_DESCENT_II)
+	mission->descent_version = Mission::descent_version_type::descent1;
+	mission->builtin_hogsize = 0;
 #endif
-		Mission::anarchy_only_level::allow_any_game,
-		get_d1_mission_name_from_descent_hog_size(size)
-	);
 }
 
 #if defined(DXX_BUILD_DESCENT_II)
 template <std::size_t N1, std::size_t N2>
-static const mle *set_hardcoded_mission(mission_list_type &mission_list, const char (&path)[N1], const char (&mission_name)[N2], const descent_hog_size descent_hog_size)
+static void set_hardcoded_mission(mission_list_type &mission_list, const char (&path)[N1], const char (&mission_name)[N2])
 {
-	return &mission_list.emplace_back(
-		Mission_path{path, 0},
-		descent_hog_size,
-		Mission::descent_version_type::descent2,
-		Mission::anarchy_only_level::allow_any_game,
-		mission_name
-	);
+	mission_list.emplace_back(Mission_path(path, 0));
+	mle *mission = &mission_list.back();
+	mission->mission_name.copy_if(mission_name);
+	mission->anarchy_only_flag = Mission::anarchy_only_level::allow_any_game;
 }
 
 static void add_builtin_mission_to_list(mission_list_type &mission_list, d_fname &name)
 {
-    descent_hog_size size{PHYSFSX_fsize("descent2.hog")};
-	if (size == descent_hog_size{-1})
-		size = descent_hog_size{PHYSFSX_fsize("d2demo.hog")};
+    int size = PHYSFSX_fsize("descent2.hog");
+    
+	if (size == -1)
+		size = PHYSFSX_fsize("d2demo.hog");
 
-	const mle *mission;
 	switch (size) {
-		case descent_hog_size::d2_shareware:
-		case descent_hog_size::d2_mac_shareware:
-			mission = set_hardcoded_mission(mission_list, SHAREWARE_MISSION_FILENAME, SHAREWARE_MISSION_NAME, size);
-			break;
-		case descent_hog_size::d2_oem_v11:
-			mission = set_hardcoded_mission(mission_list, OEM_MISSION_FILENAME, OEM_MISSION_NAME, size);
-			break;
+	case SHAREWARE_MISSION_HOGSIZE:
+	case MAC_SHARE_MISSION_HOGSIZE:
+		set_hardcoded_mission(mission_list, SHAREWARE_MISSION_FILENAME, SHAREWARE_MISSION_NAME);
+		break;
+	case OEM_MISSION_HOGSIZE:
+		set_hardcoded_mission(mission_list, OEM_MISSION_FILENAME, OEM_MISSION_NAME);
+		break;
 	default:
-			Warning("Unknown hogsize %d, trying %s", underlying_value(size), FULL_MISSION_FILENAME MISSION_EXTENSION_DESCENT_II);
+		Warning("Unknown hogsize %d, trying %s", size, FULL_MISSION_FILENAME MISSION_EXTENSION_DESCENT_II);
 		Int3();
 		[[fallthrough]];
-	case descent_hog_size::d2_full:
-	case descent_hog_size::d2_full_v10:
-	case descent_hog_size::d2_mac_full:
-		if (const std::string_view full_mission_filename{{FULL_MISSION_FILENAME MISSION_EXTENSION_DESCENT_II}}; !(mission = read_mission_file(mission_list, full_mission_filename, size, mission_filter_mode::include_anarchy)))
+	case FULL_MISSION_HOGSIZE:
+	case FULL_10_MISSION_HOGSIZE:
+	case MAC_FULL_MISSION_HOGSIZE:
+		{
+			mission_candidate_search_path full_mission_filename = {{FULL_MISSION_FILENAME MISSION_EXTENSION_DESCENT_II}};
+			if (!read_mission_file(mission_list, full_mission_filename))
 				Error("Could not find required mission file <%s>", FULL_MISSION_FILENAME MISSION_EXTENSION_DESCENT_II);
+		}
 	}
+
+	mle *mission = &mission_list.back();
 	name.copy_if(mission->path.c_str(), FILENAME_LEN);
+    mission->builtin_hogsize = size;
+	mission->descent_version = Mission::descent_version_type::descent2;
+	mission->anarchy_only_flag = Mission::anarchy_only_level::allow_any_game;
 }
 #endif
 
@@ -751,7 +727,16 @@ static void add_missions_to_list(mission_list_type &mission_list, mission_candid
 				|| !d_strnicmp(ext, MISSION_EXTENSION_DESCENT_II)
 #endif
 			))
-			read_mission_file(mission_list, path.data(), descent_hog_size::None, mission_filter);
+			if (read_mission_file(mission_list, path))
+			{
+				if (mission_filter != mission_filter_mode::exclude_anarchy || mission_list.back().anarchy_only_flag == Mission::anarchy_only_level::allow_any_game)
+				{
+					mission_list.back().builtin_hogsize = 0;
+				}
+				else
+					mission_list.pop_back();
+			}
+		
 		if (mission_list.size() >= MAX_MISSIONS)
 		{
 			break;
@@ -785,7 +770,7 @@ static void promote (mission_list_type &mission_list, const char *const name, st
 Mission::~Mission()
 {
     // May become more complex with the editor
-	if (!path.empty() && builtin_hogsize == descent_hog_size::None)
+	if (!path.empty() && builtin_hogsize == 0)
 		{
 			char hogpath[PATH_MAX];
 			snprintf(hogpath, sizeof(hogpath), "%s.hog", path.c_str());
@@ -974,13 +959,13 @@ static const char *load_mission(const mle *const mission)
 #if defined(DXX_BUILD_DESCENT_II)
 	if (PLAYING_BUILTIN_MISSION) {
 		switch (Current_mission->builtin_hogsize) {
-			case descent_hog_size::d2_shareware:
-			case descent_hog_size::d2_mac_shareware:
+		case SHAREWARE_MISSION_HOGSIZE:
+		case MAC_SHARE_MISSION_HOGSIZE:
 			Current_mission->briefing_text_filename = "brief2.txb";
 			Current_mission->ending_text_filename = BIMD2_ENDING_FILE_SHARE;
 			load_mission_shareware();
 			return nullptr;
-			case descent_hog_size::d2_oem_v11:
+		case OEM_MISSION_HOGSIZE:
 			Current_mission->briefing_text_filename = "brief2o.txb";
 			Current_mission->ending_text_filename = BIMD2_ENDING_FILE_OEM;
 			load_mission_oem();
@@ -988,9 +973,9 @@ static const char *load_mission(const mle *const mission)
 		default:
 			Int3();
 			[[fallthrough]];
-		case descent_hog_size::d2_full:
-		case descent_hog_size::d2_full_v10:
-		case descent_hog_size::d2_mac_full:
+		case FULL_MISSION_HOGSIZE:
+		case FULL_10_MISSION_HOGSIZE:
+		case MAC_FULL_MISSION_HOGSIZE:
 			Current_mission->briefing_text_filename = "robot.txb";
 			// continue on... (use d2.mn2 from hogfile)
 			break;
@@ -1284,8 +1269,9 @@ protected:
 	{
 		mission_subdir_stats ss;
 		ss.count(ml);
+		std::array<char, 12> dirbuf;
 		char buf[128];
-		const auto r = 1u + std::snprintf(buf, sizeof(buf), "%s\n[%sMSN:LOCAL %zu; TOTAL %zu]", message, std::data(prepare_mission_list_count_dirbuf(ss.immediate_directories)), ss.immediate_missions, ss.total_missions);
+		const auto r = 1u + std::snprintf(buf, sizeof(buf), "%s\n[%sMSN:LOCAL %zu; TOTAL %zu]", message, prepare_mission_list_count_dirbuf(dirbuf, ss.immediate_directories), ss.immediate_missions, ss.total_missions);
 		unique_menu_tagged_string<menu_title_tag> p = std::make_unique<char[]>(r);
 		std::memcpy(p.get(), buf, r);
 		return p;
@@ -1568,7 +1554,7 @@ void create_new_mission(void)
 {
 	Current_mission = std::make_unique<Mission>(Mission_path(MISSION_DIR "new_miss", sizeof(MISSION_DIR) - 1));		// limited to eight characters because of savegame format
 	Current_mission->mission_name.copy_if("Untitled");
-	Current_mission->builtin_hogsize = descent_hog_size::None;
+	Current_mission->builtin_hogsize = 0;
 	Current_mission->anarchy_only_flag = Mission::anarchy_only_level::allow_any_game;
 	
 	Current_mission->level_names = std::make_unique<d_fname[]>(1);

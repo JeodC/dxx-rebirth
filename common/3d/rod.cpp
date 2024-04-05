@@ -36,7 +36,7 @@ static clipping_code calc_rod_corners(rod_4point &rod_point_group, const g3s_poi
 	//compute vector from one point to other, do cross product with vector
 	//from eye to get perpendiclar
 
-	auto delta_vec{vm_vec_sub(bot_point.p3_vec, top_point.p3_vec)};
+	auto delta_vec = vm_vec_sub(bot_point.p3_vec,top_point.p3_vec);
 
 	//unscale for aspect
 
@@ -65,26 +65,23 @@ static clipping_code calc_rod_corners(rod_4point &rod_point_group, const g3s_poi
 
 	//top points
 
-	auto &rod_points = rod_point_group.points;
-	{
-	auto tempv{vm_vec_copy_scale(rod_norm, top_width)};
+	auto tempv = vm_vec_copy_scale(rod_norm,top_width);
 	tempv.z = 0;
 
 	rod_point_group.point_list[0] = &rod_point_group.points[0];
 	rod_point_group.point_list[1] = &rod_point_group.points[1];
 	rod_point_group.point_list[2] = &rod_point_group.points[2];
 	rod_point_group.point_list[3] = &rod_point_group.points[3];
+	auto &rod_points = rod_point_group.points;
 	vm_vec_add(rod_points[0].p3_vec,top_point.p3_vec,tempv);
 	vm_vec_sub(rod_points[1].p3_vec,top_point.p3_vec,tempv);
-	}
 
-	{
-	auto tempv{vm_vec_copy_scale(rod_norm, bot_width)};
+	vm_vec_copy_scale(tempv,rod_norm,bot_width);
 	tempv.z = 0;
 
 	vm_vec_sub(rod_points[2].p3_vec,bot_point.p3_vec,tempv);
 	vm_vec_add(rod_points[3].p3_vec,bot_point.p3_vec,tempv);
-	}
+
 
 	//now code the four points
 
@@ -102,7 +99,7 @@ static clipping_code calc_rod_corners(rod_4point &rod_point_group, const g3s_poi
 
 //draw a bitmap object that is always facing you
 //returns 1 if off screen, 0 if drew
-void g3_draw_rod_tmap(grs_canvas &canvas, grs_bitmap &bitmap, const g3s_point &bot_point, fix bot_width, const g3s_point &top_point, fix top_width, g3s_lrgb light, const tmap_drawer_type tmap_drawer_ptr)
+void g3_draw_rod_tmap(grs_canvas &canvas, grs_bitmap &bitmap, const g3s_point &bot_point, fix bot_width, const g3s_point &top_point, fix top_width, g3s_lrgb light)
 {
 	rod_4point rod;
 	if (calc_rod_corners(rod, bot_point, bot_width, top_point, top_width) != clipping_code::None)
@@ -122,7 +119,7 @@ void g3_draw_rod_tmap(grs_canvas &canvas, grs_bitmap &bitmap, const g3s_point &b
 		light,
 	}};
 
-	g3_draw_tmap(canvas, rod.point_list, uvl_list, lrgb_list, bitmap, tmap_drawer_ptr);
+	g3_draw_tmap(canvas, rod.point_list, uvl_list, lrgb_list, bitmap);
 }
 
 #if !DXX_USE_OGL

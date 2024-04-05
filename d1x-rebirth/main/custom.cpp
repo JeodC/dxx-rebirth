@@ -106,7 +106,7 @@ constexpr std::integral_constant<uint8_t, 0x80> BM_FLAG_CUSTOMIZED{};
 static enumerated_array<bitmap_original, MAX_BITMAP_FILES, bitmap_index> BitmapOriginal;
 static std::array<snd_info, MAX_SOUND_FILES> SoundOriginal;
 
-static int load_pig1(const NamedPHYSFS_File f, unsigned num_bitmaps, unsigned num_sounds, unsigned &num_custom, std::unique_ptr<custom_info[]> &ci)
+static int load_pig1(PHYSFS_File *f, unsigned num_bitmaps, unsigned num_sounds, unsigned &num_custom, std::unique_ptr<custom_info[]> &ci)
 {
 	int data_ofs;
 	int i;
@@ -178,7 +178,7 @@ static int load_pig1(const NamedPHYSFS_File f, unsigned num_bitmaps, unsigned nu
 	return 0;
 }
 
-static int load_pog(const NamedPHYSFS_File f, int pog_sig, int pog_ver, unsigned &num_custom, std::unique_ptr<custom_info[]> &ci)
+static int load_pog(PHYSFS_File *f, int pog_sig, int pog_ver, unsigned &num_custom, std::unique_ptr<custom_info[]> &ci)
 {
 	int data_ofs;
 	int num_bitmaps;
@@ -381,8 +381,10 @@ static int load_pigpog(const d_fname &pogname)
 	return rc;
 }
 
-static int read_d2_robot_info(const NamedPHYSFS_File fp, robot_info &ri)
+static int read_d2_robot_info(PHYSFS_File *fp, robot_info &ri)
 {
+	int j;
+
 	ri.model_num = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
 
 	for (auto &j : ri.gun_points)
@@ -395,17 +397,17 @@ static int read_d2_robot_info(const NamedPHYSFS_File fp, robot_info &ri)
 	ri.exp2_sound_num = PHYSFSX_readShort(fp);
 	const auto weapon_type = PHYSFSX_readByte(fp);
 	ri.weapon_type = weapon_type < N_weapon_types ? static_cast<weapon_id_type>(weapon_type) : weapon_id_type::LASER_ID_L1;
-	/*ri.weapon_type2 =*/ PHYSFSX_skipBytes<1>(fp);
+	/*ri.weapon_type2 =*/ PHYSFSX_readByte(fp);
 	ri.n_guns = PHYSFSX_readByte(fp);
-	const uint8_t untrusted_contains_id = PHYSFSX_readByte(fp);
-	const uint8_t untrusted_contains_count = PHYSFSX_readByte(fp);
+	ri.contains_id = PHYSFSX_readByte(fp);
+	ri.contains_count = PHYSFSX_readByte(fp);
 	ri.contains_prob = PHYSFSX_readByte(fp);
-	const uint8_t untrusted_contains_type = PHYSFSX_readByte(fp);
-	ri.contains = build_contained_object_parameters_from_untrusted(untrusted_contains_type, untrusted_contains_id, untrusted_contains_count);
-	/*ri.kamikaze =*/ PHYSFSX_skipBytes<1>(fp);
+	const uint8_t contains_type = PHYSFSX_readByte(fp);
+	ri.contains.type = build_contained_object_type_from_untrusted(contains_type);
+	/*ri.kamikaze =*/ PHYSFSX_readByte(fp);
 	ri.score_value = PHYSFSX_readShort(fp);
-	/*ri.badass =*/
-	/*ri.energy_drain =*/ PHYSFSX_skipBytes<2>(fp);
+	/*ri.badass =*/ PHYSFSX_readByte(fp);
+	/*ri.energy_drain =*/ PHYSFSX_readByte(fp);
 	ri.lighting = PHYSFSX_readFix(fp);
 	ri.strength = PHYSFSX_readFix(fp);
 	ri.mass = PHYSFSX_readFix(fp);
@@ -414,7 +416,8 @@ static int read_d2_robot_info(const NamedPHYSFS_File fp, robot_info &ri)
 		j = PHYSFSX_readFix(fp);
 	for (auto &j : ri.firing_wait)
 		j = PHYSFSX_readFix(fp);
-	/*ri.firing_wait2[j] =*/ PHYSFSX_skipBytes<4 * NDL>(fp);
+	for (j = 0; j < NDL; j++)
+		/*ri.firing_wait2[j] =*/ PHYSFSX_readFix(fp);
 	for (auto &j : ri.turn_time)
 		j = PHYSFSX_readFix(fp);
 #if 0 // not used in d1, removed in d2
@@ -436,25 +439,24 @@ static int read_d2_robot_info(const NamedPHYSFS_File fp, robot_info &ri)
 	ri.see_sound = PHYSFSX_readByte(fp);
 	ri.attack_sound = PHYSFSX_readByte(fp);
 	ri.claw_sound = PHYSFSX_readByte(fp);
-	/*ri.taunt_sound =*/ PHYSFSX_skipBytes<1>(fp);
+	/*ri.taunt_sound =*/ PHYSFSX_readByte(fp);
 	const uint8_t boss_flag = PHYSFSX_readByte(fp);
 	ri.boss_flag = (boss_flag == static_cast<uint8_t>(boss_robot_id::d1_1) || boss_flag == static_cast<uint8_t>(boss_robot_id::d1_superboss)) ? boss_robot_id{boss_flag} : boss_robot_id::None;
-	/*ri.companion =*/
-	/*ri.smart_blobs =*/
-	/*ri.energy_blobs =*/
-	/*ri.thief =*/
-	/*ri.pursuit =*/
-	/*ri.lightcast =*/
-	/*ri.death_roll =*/
-	/*ri.flags =*/
-	/*ri.pad[0] =*/
-	/*ri.pad[1] =*/
-	/*ri.pad[2] =*/
-	/*ri.deathroll_sound =*/
-	/*ri.glow =*/
-	/*ri.behavior =*/
-	/*ri.aim =*/
-	PHYSFSX_skipBytes<15>(fp);
+	/*ri.companion =*/ PHYSFSX_readByte(fp);
+	/*ri.smart_blobs =*/ PHYSFSX_readByte(fp);
+	/*ri.energy_blobs =*/ PHYSFSX_readByte(fp);
+	/*ri.thief =*/ PHYSFSX_readByte(fp);
+	/*ri.pursuit =*/ PHYSFSX_readByte(fp);
+	/*ri.lightcast =*/ PHYSFSX_readByte(fp);
+	/*ri.death_roll =*/ PHYSFSX_readByte(fp);
+	/*ri.flags =*/ PHYSFSX_readByte(fp);
+	/*ri.pad[0] =*/ PHYSFSX_readByte(fp);
+	/*ri.pad[1] =*/ PHYSFSX_readByte(fp);
+	/*ri.pad[2] =*/ PHYSFSX_readByte(fp);
+	/*ri.deathroll_sound =*/ PHYSFSX_readByte(fp);
+	/*ri.glow =*/ PHYSFSX_readByte(fp);
+	/*ri.behavior =*/ PHYSFSX_readByte(fp);
+	/*ri.aim =*/ PHYSFSX_readByte(fp);
 
 	for (auto &j : ri.anim_states)
 	{
@@ -542,7 +544,7 @@ static void load_hxm(const d_fname &hxmname)
 			polymodel *pm;
 			if (const auto repl_num = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(f)); repl_num == polygon_model_index::None)
 			{
-				PHYSFSX_skipBytes<4>(f);	// skip n_models
+				PHYSFSX_readInt(f); // skip n_models
 				PHYSFSX_fseek(f, 734 - 8 + PHYSFSX_readInt(f) + 8, SEEK_CUR);
 			}
 			else

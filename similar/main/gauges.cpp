@@ -125,36 +125,6 @@ union weapon_index
 	}
 };
 
-static constexpr const char *PRIMARY_WEAPON_NAMES_SHORT(const primary_weapon_index_t weapon_index)
-{
-	switch (weapon_index)
-	{
-		default:	// unreachable
-		case primary_weapon_index_t::LASER_INDEX:	// reachable
-			return TXT_W_LASER_S;
-		case primary_weapon_index_t::VULCAN_INDEX:
-			return TXT_W_VULCAN_S;
-		case primary_weapon_index_t::SPREADFIRE_INDEX:
-			return TXT_W_SPREADFIRE_S;
-		case primary_weapon_index_t::PLASMA_INDEX:
-			return TXT_W_PLASMA_S;
-		case primary_weapon_index_t::FUSION_INDEX:
-			return TXT_W_FUSION_S;
-#if defined(DXX_BUILD_DESCENT_II)
-		case primary_weapon_index_t::SUPER_LASER_INDEX:
-			return TXT_W_SLASER_S;
-		case primary_weapon_index_t::GAUSS_INDEX:
-			return TXT_W_SVULCAN_S;
-		case primary_weapon_index_t::HELIX_INDEX:
-			return TXT_W_SSPREADFIRE_S;
-		case primary_weapon_index_t::PHOENIX_INDEX:
-			return TXT_W_SPLASMA_S;
-		case primary_weapon_index_t::OMEGA_INDEX:
-			return TXT_W_SFUSION_S;
-#endif
-	}
-}
-
 }
 
 //bitmap numbers for gauges
@@ -1332,25 +1302,24 @@ static void hud_show_afterburner(grs_canvas &canvas, const player_info &player_i
 #define convert_1s(s) do {char *p=s; while ((p=strchr(p,'1')) != NULL) *p=132;} while(0)
 #endif
 
-[[nodiscard]]
-static constexpr const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const secondary_weapon_index_t u)
+static inline const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const unsigned u)
 {
 	switch(u)
 	{
 		default:
 			Int3();
 			[[fallthrough]];
-		case secondary_weapon_index_t::CONCUSSION_INDEX:	return TXT_CONCUSSION;
-		case secondary_weapon_index_t::HOMING_INDEX:		return TXT_HOMING;
-		case secondary_weapon_index_t::PROXIMITY_INDEX:	return TXT_PROXBOMB;
-		case secondary_weapon_index_t::SMART_INDEX:		return TXT_SMART;
-		case secondary_weapon_index_t::MEGA_INDEX:		return TXT_MEGA;
+		case CONCUSSION_INDEX:	return TXT_CONCUSSION;
+		case HOMING_INDEX:		return TXT_HOMING;
+		case PROXIMITY_INDEX:	return TXT_PROXBOMB;
+		case SMART_INDEX:		return TXT_SMART;
+		case MEGA_INDEX:		return TXT_MEGA;
 #if defined(DXX_BUILD_DESCENT_II)
-		case secondary_weapon_index_t::SMISSILE1_INDEX:	return "Flash";
-		case secondary_weapon_index_t::GUIDED_INDEX:		return "Guided";
-		case secondary_weapon_index_t::SMART_MINE_INDEX:	return "SmrtMine";
-		case secondary_weapon_index_t::SMISSILE4_INDEX:	return "Mercury";
-		case secondary_weapon_index_t::SMISSILE5_INDEX:	return "Shaker";
+		case SMISSILE1_INDEX:	return "Flash";
+		case GUIDED_INDEX:		return "Guided";
+		case SMART_MINE_INDEX:	return "SmrtMine";
+		case SMISSILE4_INDEX:	return "Mercury";
+		case SMISSILE5_INDEX:	return "Shaker";
 #endif
 	}
 }
@@ -1377,7 +1346,7 @@ static void show_bomb_count(grs_canvas &canvas, const player_info &player_info, 
 		return;
 
 	gr_set_fontcolor(canvas, count
-		? (bomb == secondary_weapon_index_t::PROXIMITY_INDEX
+		? (bomb == PROXIMITY_INDEX
 			? gr_find_closest_color(55, 0, 0)
 			: BM_XRGB(59, 50, 21)
 		)
@@ -1429,35 +1398,21 @@ constexpr rgb_t hud_rgb_yellow = {30, 30, 0};
 static rgb_t hud_get_primary_weapon_fontcolor(const player_info &player_info, const primary_weapon_index_t consider_weapon)
 {
 	if (player_info.Primary_weapon == consider_weapon)
-		/* The currently active weapon is `consider_weapon` */
 		return hud_rgb_red;
 	else{
-		if (has_weapon(player_has_primary_weapon(player_info, consider_weapon)))
+		if (player_has_primary_weapon(player_info, consider_weapon).has_weapon())
 		{
-			/* The player has not armed this weapon, but could do so. */
 #if defined(DXX_BUILD_DESCENT_II)
-			const auto is_super = is_super_weapon(consider_weapon);
-			const auto base_weapon = is_super ? primary_weapon_index_t{static_cast<uint8_t>(static_cast<uint8_t>(consider_weapon) - SUPER_WEAPON)} : consider_weapon;
-			if (player_info.Primary_last_was_super & HAS_PRIMARY_FLAG(base_weapon))
+			const auto is_super = (consider_weapon >= 5);
+			const int base_weapon = is_super ? consider_weapon - 5 : consider_weapon;
+			if (player_info.Primary_last_was_super & (1 << base_weapon))
 			{
-				/* The player would select the super-weapon version on next press. */
 				if (is_super)
-					/* The weapon is a super-weapon, so it would be selected on
-					 * next press.
-					 */
 					return hud_rgb_green;
 				else
-					/* The weapon is not a super-weapon, so the player will
-					 * need to press twice to select it (once to make the
-					 * non-super active, then again to toggle to super).
-					 */
 					return hud_rgb_yellow;
 			}
-			/* Else the player will select the non-super weapon on next press */
 			else if (is_super)
-				/* The candidate weapon is a super-weapon, so the player will
-				 * need to press twice to select it.
-				 */
 				return hud_rgb_yellow;
 			else
 #endif
@@ -1475,50 +1430,35 @@ static void hud_set_primary_weapon_fontcolor(const player_info &player_info, con
 }
 
 [[nodiscard]]
-static rgb_t hud_get_secondary_weapon_fontcolor(const player_info &player_info, const secondary_weapon_index_t consider_weapon)
+static rgb_t hud_get_secondary_weapon_fontcolor(const player_info &player_info, const int consider_weapon)
 {
 	if (player_info.Secondary_weapon == consider_weapon)
-		/* The currently active weapon is `consider_weapon` */
 		return hud_rgb_red;
 	else{
 		if (player_info.secondary_ammo[consider_weapon])
 		{
-			/* The player has not armed this weapon, but has ammo for it. */
 #if defined(DXX_BUILD_DESCENT_II)
-			const auto is_super = is_super_weapon(consider_weapon);
-			const auto base_weapon = is_super ? secondary_weapon_index_t{static_cast<uint8_t>(static_cast<uint8_t>(consider_weapon) - SUPER_WEAPON)} : consider_weapon;
-			if (player_info.Secondary_last_was_super & HAS_SECONDARY_FLAG(base_weapon))
+			const auto is_super = (consider_weapon >= 5);
+			const int base_weapon = is_super ? consider_weapon - 5 : consider_weapon;
+			if (player_info.Secondary_last_was_super & (1 << base_weapon))
 			{
-				/* The player would select the super-weapon version on next press. */
 				if (is_super)
-					/* The weapon is a super-weapon, so it would be selected on
-					 * next press.
-					 */
 					return hud_rgb_green;
 				else
-					/* The weapon is not a super-weapon, so the player will
-					 * need to press twice to select it (once to make the
-					 * non-super active, then again to toggle to super).
-					 */
 					return hud_rgb_yellow;
 			}
-			/* Else the player will select the non-super weapon on next press */
 			else if (is_super)
-				/* The candidate weapon is a super-weapon, so the player will
-				 * need to press twice to select it.
-				 */
 				return hud_rgb_yellow;
 			else
 #endif
 				return hud_rgb_green;
 		}
 		else
-			/* The weapon has no ammo, so dim it out. */
 			return hud_rgb_dimgreen;
 	}
 }
 
-static void hud_set_secondary_weapon_fontcolor(const player_info &player_info, const secondary_weapon_index_t consider_weapon, grs_canvas &canvas)
+static void hud_set_secondary_weapon_fontcolor(const player_info &player_info, const unsigned consider_weapon, grs_canvas &canvas)
 {
 	auto rgb = hud_get_secondary_weapon_fontcolor(player_info, consider_weapon);
 	gr_set_fontcolor(canvas, gr_find_closest_color(rgb.r, rgb.g, rgb.b), -1);
@@ -1557,7 +1497,7 @@ static void hud_printf_vulcan_ammo(grs_canvas &canvas, const player_info &player
 	hud_set_vulcan_ammo_fontcolor(player_info, has_weapon_uses_vulcan_ammo, canvas);
 	const char c =
 #if defined(DXX_BUILD_DESCENT_II)
-		((primary_weapon_flags & gauss_mask) && ((player_info.Primary_last_was_super & HAS_VULCAN_FLAG) || !(primary_weapon_flags & vulcan_mask)))
+		((primary_weapon_flags & gauss_mask) && ((player_info.Primary_last_was_super & (1 << primary_weapon_index_t::VULCAN_INDEX)) || !(primary_weapon_flags & vulcan_mask)))
 		? 'G'
 		: 
 #endif
@@ -2056,10 +1996,11 @@ static void common_add_points_to_score(const int points, int &score, const game_
 	const auto previous_ship_score = prev_score / EXTRA_SHIP_SCORE;
 	if (current_ship_score != previous_ship_score)
 	{
+		int snd;
 		get_local_player().lives += current_ship_score - previous_ship_score;
 		const auto &&m = TXT_EXTRA_LIFE;
 		powerup_basic_str(20, 20, 20, 0, {m, strlen(m)});
-		if (const auto snd = Powerup_info[powerup_type_t::POW_EXTRA_LIFE].hit_sound; snd > -1)
+		if ((snd=Powerup_info[POW_EXTRA_LIFE].hit_sound) > -1 )
 			digi_play_sample( snd, F1_0 );
 	}
 }
@@ -2643,7 +2584,7 @@ void draw_keys_state::draw_all_cockpit_keys()
 	draw_one_key(GAUGE_RED_KEY_X, GAUGE_RED_KEY_Y, GAUGE_RED_KEY, PLAYER_FLAGS_RED_KEY);
 }
 
-static void draw_weapon_info_sub(const hud_draw_context_hs_mr hudctx, const player_info &player_info, const weapon_id_type info_index, const gauge_box *const box, const int pic_x, const int pic_y, const char *const name, const int text_x, const int text_y)
+static void draw_weapon_info_sub(const hud_draw_context_hs_mr hudctx, const player_info &player_info, const int info_index, const gauge_box *const box, const int pic_x, const int pic_y, const char *const name, const int text_x, const int text_y)
 {
 	//clear the window
 	const uint8_t color = BM_XRGB(0, 0, 0);
@@ -2675,7 +2616,7 @@ static void draw_weapon_info_sub(const hud_draw_context_hs_mr hudctx, const play
 
 		//	For laser, show level and quadness
 #if defined(DXX_BUILD_DESCENT_I)
-		if (info_index == weapon_id_type::LASER_ID)
+		if (info_index == primary_weapon_index_t::LASER_INDEX)
 #elif defined(DXX_BUILD_DESCENT_II)
 		if (info_index == weapon_id_type::LASER_ID || info_index == weapon_id_type::SUPER_LASER_ID)
 #endif
@@ -2744,9 +2685,10 @@ static void draw_primary_weapon_info(const hud_draw_context_hs_mr hudctx, const 
 static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, const player_info &player_info, const secondary_weapon_index_t weapon_num)
 {
 	int x,y;
+	int info_index;
 
 	{
-		const auto info_index = Secondary_weapon_to_weapon_info[weapon_num];
+		info_index = Secondary_weapon_to_weapon_info[weapon_num];
 		const gauge_box *box;
 		int pic_x, pic_y, text_x, text_y;
 		auto &multires_gauge_graphic = hudctx.multires_gauge_graphic;
@@ -2772,44 +2714,7 @@ static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, cons
 			x=SECONDARY_AMMO_X;
 			y=SECONDARY_AMMO_Y;
 		}
-		const char *weapon_name;
-		switch (weapon_num)
-		{
-			default:	// unreachable
-			case secondary_weapon_index_t::CONCUSSION_INDEX:	// reachable
-				weapon_name = TXT_W_C_MISSILE_S;
-				break;
-			case secondary_weapon_index_t::HOMING_INDEX:
-				weapon_name = TXT_W_H_MISSILE_S;
-				break;
-			case secondary_weapon_index_t::PROXIMITY_INDEX:
-				weapon_name = TXT_W_P_BOMB_S;
-				break;
-			case secondary_weapon_index_t::SMART_INDEX:
-				weapon_name = TXT_W_S_MISSILE_S;
-				break;
-			case secondary_weapon_index_t::MEGA_INDEX:
-				weapon_name = TXT_W_M_MISSILE_S;
-				break;
-#if defined(DXX_BUILD_DESCENT_II)
-			case secondary_weapon_index_t::SMISSILE1_INDEX:
-				weapon_name = TXT_W_SMISSILE1_S;
-				break;
-			case secondary_weapon_index_t::GUIDED_INDEX:
-				weapon_name = TXT_W_SMISSILE2_S;
-				break;
-			case secondary_weapon_index_t::SMART_MINE_INDEX:
-				weapon_name = TXT_W_SMISSILE3_S;
-				break;
-			case secondary_weapon_index_t::SMISSILE4_INDEX:
-				weapon_name = TXT_W_SMISSILE4_S;
-				break;
-			case secondary_weapon_index_t::SMISSILE5_INDEX:
-				weapon_name = TXT_W_SMISSILE5_S;
-				break;
-#endif
-		}
-		draw_weapon_info_sub(hudctx, player_info, info_index, box, pic_x, pic_y, weapon_name, hudctx.xscale(text_x), hudctx.yscale(text_y));
+		draw_weapon_info_sub(hudctx, player_info, info_index, box, pic_x, pic_y, SECONDARY_WEAPON_NAMES_SHORT(weapon_num), hudctx.xscale(text_x), hudctx.yscale(text_y));
 		if (PlayerCfg.HudMode != HudType::Standard)
 		{
 #if defined(DXX_BUILD_DESCENT_II)
@@ -3250,9 +3155,9 @@ void show_reticle(grs_canvas &canvas, const player_info &player_info, int reticl
 
 	missile_ready = allowed_to_fire_missile(player_info);
 	auto &Primary_weapon = player_info.Primary_weapon;
-	primary_bm_num = (laser_ready && has_all(player_has_primary_weapon(player_info, Primary_weapon)));
+	primary_bm_num = (laser_ready && player_has_primary_weapon(player_info, Primary_weapon).has_all());
 	auto &Secondary_weapon = player_info.Secondary_weapon;
-	secondary_bm_num = (missile_ready && has_all(player_has_secondary_weapon(player_info, Secondary_weapon)));
+	secondary_bm_num = (missile_ready && player_has_secondary_weapon(player_info, Secondary_weapon).has_all());
 
 	if (primary_bm_num && Primary_weapon == primary_weapon_index_t::LASER_INDEX && (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS))
 		primary_bm_num++;

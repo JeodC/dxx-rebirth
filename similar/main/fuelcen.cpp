@@ -23,7 +23,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
-#include "dxxsconf.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -227,8 +226,8 @@ void trigger_matcen(const vmsegptridx_t segp)
 
 	//	Create a bright object in the segment.
 	auto &vcvertptr = Vertices.vcptr;
-	auto pos{compute_segment_center(vcvertptr, segp)};
-	const auto &&delta{vm_vec_sub(vcvertptr(segp->verts.front()), pos)};
+	auto &&pos = compute_segment_center(vcvertptr, segp);
+	const auto &&delta = vm_vec_sub(vcvertptr(segp->verts.front()), pos);
 	vm_vec_scale_add2(pos, delta, F1_0/2);
 	const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_LIGHT, 0, segp, pos, nullptr, 0, object::control_type::light, object::movement_type::None, render_type::RT_NONE);
 	if (objnum != object_none) {
@@ -421,7 +420,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 		}
 		else
 		{
-			const auto center{compute_segment_center(vcvertptr, segp)};
+			const auto center = compute_segment_center(vcvertptr, segp);
 			const auto dist_to_player = vm_vec_dist_quick( ConsoleObject->pos, center );
 			top_time = dist_to_player/64 + d_rand() * 2 + F1_0*2;
 			if ( top_time > ROBOT_GEN_TIME )
@@ -470,7 +469,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 				}
 			}
 
-			const auto cur_object_loc{compute_segment_center(vcvertptr, csegp)};
+			const auto &&cur_object_loc = compute_segment_center(vcvertptr, csegp);
 			const auto &&robotcen_segp = vmsegptridx(robotcen->segnum);
 			// HACK!!! The 10 under here should be something equal to the 1/2 the size of the segment.
 			auto obj = object_create_explosion_without_damage(Vclip, robotcen_segp, cur_object_loc, i2f(10), vclip_index::morphing_robot);
@@ -492,7 +491,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 			robotcen->Flag = 0;
 
 			robotcen->Timer = 0;
-			const auto cur_object_loc{compute_segment_center(vcvertptr, vcsegptr(robotcen->segnum))};
+			const auto &&cur_object_loc = compute_segment_center(vcvertptr, vcsegptr(robotcen->segnum));
 
 			// If this is the first materialization, set to valid robot.
 			{
@@ -524,7 +523,8 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 					obj->matcen_creator = underlying_value(numrobotcen) | 0x80;
 
 					// Make object faces player...
-					vm_vector_to_matrix_u(obj->orient, vm_vec_sub(ConsoleObject->pos, obj->pos), obj->orient.uvec);
+					const auto direction = vm_vec_sub(ConsoleObject->pos,obj->pos );
+					vm_vector_2_matrix( obj->orient, direction, &obj->orient.uvec, nullptr);
 	
 					morph_start(LevelUniqueMorphObjectState, LevelSharedPolygonModelState, obj);
 					//robotcen->last_created_obj = obj;
@@ -721,7 +721,7 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(d1mi_v26, p, D1_MATCEN_V26_MEMBERLIST);
 DEFINE_SERIAL_UDT_TO_MESSAGE(d1cmi_v26, p, D1_MATCEN_V26_MEMBERLIST);
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(d1mi_v26, 20);
 
-void matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi, int version)
+void matcen_info_read(PHYSFS_File *fp, matcen_info &mi, int version)
 {
 	if (version > 25)
 		PHYSFSX_serialize_read<const d1mi_v26>(fp, mi);
@@ -739,11 +739,11 @@ void fuelcen_check_for_goal(object &plrobj, const shared_segment &segp)
 	{
 		case segment_special::goal_blue:
 			check_team = team_number::blue;
-			powerup_to_drop = powerup_type_t::POW_FLAG_RED;
+			powerup_to_drop = POW_FLAG_RED;
 			break;
 		case segment_special::goal_red:
 			check_team = team_number::red;
-			powerup_to_drop = powerup_type_t::POW_FLAG_BLUE;
+			powerup_to_drop = POW_FLAG_BLUE;
 			break;
 		default:
 			return;
@@ -783,7 +783,7 @@ void fuelcen_check_for_hoard_goal(object &plrobj, const shared_segment &segp)
 /*
  * reads an d1_matcen_info structure from a PHYSFS_File
  */
-void d1_matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi)
+void d1_matcen_info_read(PHYSFS_File *fp, matcen_info &mi)
 {
 	PHYSFSX_serialize_read<const d1mi_v25>(fp, mi);
 	mi.robot_flags[1] = 0;
@@ -792,7 +792,7 @@ void d1_matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi)
 DEFINE_SERIAL_UDT_TO_MESSAGE(matcen_info, m, (m.robot_flags, serial::pad<sizeof(fix) * 2>(), m.segnum, m.fuelcen_num, serial::pad<1>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(matcen_info, 20);
 
-void matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi)
+void matcen_info_read(PHYSFS_File *fp, matcen_info &mi)
 {
 	PHYSFSX_serialize_read(fp, mi);
 }
@@ -814,7 +814,7 @@ void matcen_info_write(PHYSFS_File *fp, const matcen_info &mi, short version)
 DEFINE_SERIAL_UDT_TO_MESSAGE(FuelCenter, fc, (fc.Type, serial::pad<3>(), serial::sign_extend<int>(fc.segnum), fc.Flag, fc.Enabled, fc.Lives, serial::pad<1>(), fc.Capacity, serial::pad<sizeof(fix)>(), fc.Timer, fc.Disable_time, serial::pad<3 * sizeof(fix)>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(FuelCenter, 40);
 
-void fuelcen_read(const NamedPHYSFS_File fp, FuelCenter &fc)
+void fuelcen_read(PHYSFS_File *fp, FuelCenter &fc)
 {
 	PHYSFSX_serialize_read(fp, fc);
 }

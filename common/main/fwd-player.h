@@ -83,7 +83,7 @@ DXX_VALPTRIDX_DECLARE_SUBTYPE(dcx::, player, playernum_t, MAX_PLAYERS);
 namespace dsx {
 struct player_rw;
 struct player_info;
-void player_rw_swap(player_rw *p, physfsx_endian swap);
+void player_rw_swap(player_rw *p, int swap);
 int allowed_to_fire_missile(const player_info &);
 #if defined(DXX_BUILD_DESCENT_II)
 fix get_omega_energy_consumption(fix delta_charge);
@@ -91,3 +91,8 @@ void omega_charge_frame(player_info &);
 #endif
 }
 #endif
+
+/*
+ * reads a player_ship structure from a PHYSFS_File
+ */
+void player_ship_read(player_ship *ps, PHYSFS_File *fp);

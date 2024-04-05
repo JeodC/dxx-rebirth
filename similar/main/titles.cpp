@@ -106,7 +106,7 @@ static int get_message_num(const char *&message)
 	return num;
 }
 
-enum class title_load_location : bool
+enum class title_load_location : uint8_t
 {
 	anywhere,
 	from_hog_only,
@@ -495,7 +495,7 @@ public:
 
 struct briefing : window
 {
-	enum class animating_bitmap_type : bool
+	enum class animating_bitmap_type : uint8_t
 	{
 		loop,
 		reset,
@@ -570,7 +570,7 @@ static void briefing_init(briefing *br, short level_num)
 //	Load Descent briefing text.
 static int load_screen_text(const d_fname &filename, std::unique_ptr<char[]> &buf)
 {
-	int have_binary = 0;
+	int len, have_binary = 0;
 	auto e = end(filename);
 	auto ext = std::find(begin(filename), e, '.');
 	if (ext == e)
@@ -582,7 +582,7 @@ static int load_screen_text(const d_fname &filename, std::unique_ptr<char[]> &bu
 	if (!tfile)
 		return (0);
 
-	const auto len{PHYSFS_fileLength(tfile)};
+	len = PHYSFS_fileLength(tfile);
 	buf = std::make_unique<char[]>(len + 1);
 	PHYSFS_read(tfile, buf.get(), 1, len);
 #if defined(DXX_BUILD_DESCENT_I)
@@ -593,7 +593,7 @@ static int load_screen_text(const d_fname &filename, std::unique_ptr<char[]> &bu
 	*endbuf = 0;
 
 	if (have_binary)
-		decode_text(std::span(buf.get(), len));
+		decode_text(buf.get(), len);
 
 	return (1);
 }
@@ -1514,7 +1514,7 @@ static int new_briefing_screen(grs_canvas &canvas, briefing *br, int first)
 	else if (first)
 	{
 		br->cur_screen = br->level_num;
-		br->screen.reset(Briefing_screens.data());
+		br->screen.reset(&Briefing_screens[0]);
 		init_char_pos(br, br->screen->text_ulx, br->screen->text_uly-(8*(1+HIRESMODE)));
 	}
 	else

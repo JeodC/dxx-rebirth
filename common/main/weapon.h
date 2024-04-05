@@ -54,50 +54,6 @@ enum class laser_level : uint8_t
 	/* endif */
 };
 
-enum class has_primary_weapon_result : uint8_t
-{
-	weapon = 1,
-	energy = 2,
-	ammo = 4,
-};
-
-enum class has_secondary_weapon_result : bool
-{
-	absent,
-	present,
-};
-
-static constexpr has_primary_weapon_result operator&(const has_primary_weapon_result r, const has_primary_weapon_result m)
-{
-	return static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) & static_cast<uint8_t>(m));
-}
-
-static constexpr has_primary_weapon_result operator|(const has_primary_weapon_result r, const has_primary_weapon_result m)
-{
-	return static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) | static_cast<uint8_t>(m));
-}
-
-static constexpr has_primary_weapon_result &operator|=(has_primary_weapon_result &r, const has_primary_weapon_result m)
-{
-	return r = static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) | static_cast<uint8_t>(m));
-}
-
-static constexpr uint8_t has_weapon(const has_primary_weapon_result r)
-{
-	return static_cast<uint8_t>(r & has_primary_weapon_result::weapon);
-}
-
-static constexpr bool has_all(const has_primary_weapon_result r)
-{
-	constexpr auto m = has_primary_weapon_result::weapon | has_primary_weapon_result::energy | has_primary_weapon_result::ammo;
-	return (r & m) == m;
-}
-
-static constexpr uint8_t has_all(const has_secondary_weapon_result r)
-{
-	return static_cast<uint8_t>(r);
-}
-
 }
 
 namespace dsx {
@@ -133,7 +89,7 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 		None = 0xff,
 	};
 	// Flag: set if this object is matter (as opposed to energy)
-	enum class matter_flag : bool
+	enum class matter_flag : uint8_t
 	{
 		energy,
 		matter,
@@ -145,7 +101,7 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 		always,
 		twice,
 	};
-	enum class persistence_flag : bool
+	enum class persistence_flag : uint8_t
 	{
 		terminate_on_impact,
 		persistent,
@@ -249,7 +205,7 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 #endif
 };
 
-enum class primary_weapon_index_t : uint8_t
+enum primary_weapon_index_t : uint8_t
 {
 	LASER_INDEX = 0,
 	VULCAN_INDEX = 1,
@@ -265,7 +221,7 @@ enum class primary_weapon_index_t : uint8_t
 #endif
 };
 
-enum class secondary_weapon_index_t : uint8_t
+enum secondary_weapon_index_t : uint8_t
 {
 	CONCUSSION_INDEX = 0,
 	HOMING_INDEX = 1,
@@ -281,35 +237,60 @@ enum class secondary_weapon_index_t : uint8_t
 #endif
 };
 
-//given a weapon index, return the flag value
-static constexpr unsigned HAS_PRIMARY_FLAG(const primary_weapon_index_t w)
-{
-	return 1 << static_cast<unsigned>(w);
-}
-
-static constexpr unsigned HAS_SECONDARY_FLAG(const secondary_weapon_index_t w)
-{
-	return 1 << static_cast<unsigned>(w);
-}
-
 struct player_info;
 void delayed_autoselect(player_info &, const control_info &Controls);
 
+}
+
+class has_weapon_result
+{
+	uint8_t m_result;
+public:
+	static constexpr auto has_weapon_flag = std::integral_constant<uint8_t, 1>{};
+	static constexpr auto has_energy_flag = std::integral_constant<uint8_t, 2>{};
+	static constexpr auto has_ammo_flag   = std::integral_constant<uint8_t, 4>{};
+	has_weapon_result() = default;
+	constexpr has_weapon_result(uint8_t r) : m_result(r)
+	{
+	}
+	uint8_t has_weapon() const
+	{
+		return m_result & has_weapon_flag;
+	}
+	uint8_t has_energy() const
+	{
+		return m_result & has_energy_flag;
+	}
+	uint8_t has_ammo() const
+	{
+		return m_result & has_ammo_flag;
+	}
+	uint8_t flags() const
+	{
+		return m_result;
+	}
+	bool has_all() const
+	{
+		return m_result == (has_weapon_flag | has_energy_flag | has_ammo_flag);
+	}
+};
+
+namespace dsx {
 //return which bomb will be dropped next time the bomb key is pressed
 #if defined(DXX_BUILD_DESCENT_I)
 static constexpr secondary_weapon_index_t which_bomb(const player_info &)
 {
-	return secondary_weapon_index_t::PROXIMITY_INDEX;
+	return PROXIMITY_INDEX;
 }
 
-static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index_t id)
+static constexpr int weapon_index_uses_vulcan_ammo(const unsigned id)
 {
 	return id == primary_weapon_index_t::VULCAN_INDEX;
 }
 
-static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
+static constexpr int weapon_index_is_player_bomb(const unsigned id)
 {
-	return id == secondary_weapon_index_t::PROXIMITY_INDEX;
+	return id == PROXIMITY_INDEX;
 }
 
 //multiply ammo by this before displaying
@@ -321,14 +302,14 @@ static constexpr unsigned vulcan_ammo_scale(const unsigned v)
 secondary_weapon_index_t which_bomb(player_info &player_info);
 secondary_weapon_index_t which_bomb(const player_info &player_info);
 
-static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index_t id)
+static constexpr int weapon_index_uses_vulcan_ammo(const unsigned id)
 {
 	return id == primary_weapon_index_t::VULCAN_INDEX || id == primary_weapon_index_t::GAUSS_INDEX;
 }
 
-static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
+static constexpr int weapon_index_is_player_bomb(const unsigned id)
 {
-	return id == secondary_weapon_index_t::PROXIMITY_INDEX || id == secondary_weapon_index_t::SMART_MINE_INDEX;
+	return id == PROXIMITY_INDEX || id == SMART_MINE_INDEX;
 }
 
 //multiply ammo by this before displaying

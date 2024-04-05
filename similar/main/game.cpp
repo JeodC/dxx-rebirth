@@ -684,10 +684,10 @@ void move_player_2_segment(const vmsegptridx_t seg, const sidenum_t side)
 	auto &vmobjptridx = Objects.vmptridx;
 	const auto &&console = vmobjptridx(ConsoleObject);
 	auto &vcvertptr = Vertices.vcptr;
-	console->pos = compute_segment_center(vcvertptr, seg);
-	auto vp{compute_center_point_on_side(vcvertptr, seg, side)};
+	compute_segment_center(vcvertptr, console->pos, seg);
+	auto vp = compute_center_point_on_side(vcvertptr, seg, side);
 	vm_vec_sub2(vp, console->pos);
-	vm_vector_to_matrix(console->orient, vp);
+	vm_vector_2_matrix(console->orient, vp, nullptr, nullptr);
 	obj_relink(vmobjptr, vmsegptr, console, seg);
 }
 #endif
@@ -815,7 +815,7 @@ void record_screenshot_text_metadata(png_struct *const png_ptr, png_info *const 
 			auto &t = text_fields[idx++];
 			t.key = key_current_mission_path;
 			current_mission_path = current_mission->path;
-			t.text = current_mission_path.data();
+			t.text = &current_mission_path[0];
 			t.compression = PNG_TEXT_COMPRESSION_NONE;
 		}
 		{
@@ -1097,7 +1097,7 @@ static void do_cloak_stuff()
 				pl_flags &= ~PLAYER_FLAGS_CLOAKED;
 				if (i == Player_num) {
 					multi_digi_play_sample(SOUND_CLOAK_OFF, F1_0);
-					maybe_drop_net_powerup(powerup_type_t::POW_CLOAK, 1, 0);
+					maybe_drop_net_powerup(POW_CLOAK, 1, 0);
 					if ( Newdemo_state != ND_STATE_PLAYBACK )
 						multi_send_decloak(); // For demo recording
 				}
@@ -1123,7 +1123,7 @@ static void do_invulnerable_stuff(player_info &player_info)
 				multi_digi_play_sample(SOUND_INVULNERABILITY_OFF, F1_0);
 				if (Game_mode & GM_MULTI)
 				{
-					maybe_drop_net_powerup(powerup_type_t::POW_INVULNERABILITY, 1, 0);
+					maybe_drop_net_powerup(POW_INVULNERABILITY, 1, 0);
 				}
 		}
 	}
@@ -1709,7 +1709,7 @@ void reset_rear_view(void)
 	select_cockpit(PlayerCfg.CockpitMode[0]);
 }
 
-int8_t cheats_enabled()
+int cheats_enabled()
 {
 	return cheats.enabled;
 }
@@ -2452,7 +2452,7 @@ static int mark_player_path_to_segment(const d_vclip_array &Vclip, fvmobjptridx 
 
 		seg_center = Point_segs[player_hide_index+i].point;
 
-		const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(powerup_type_t::POW_ENERGY), vmsegptridx(Point_segs[player_hide_index+i].segnum), seg_center, &vmd_identity_matrix, Powerup_info[powerup_type_t::POW_ENERGY].size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
+		const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, POW_ENERGY, vmsegptridx(Point_segs[player_hide_index+i].segnum), seg_center, &vmd_identity_matrix, Powerup_info[POW_ENERGY].size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
 		if (obj == object_none) {
 			Int3();		//	Unable to drop energy powerup for path
 			return 1;
@@ -2496,10 +2496,13 @@ namespace dsx {
 /*
  * reads a flickering_light structure from a PHYSFS_File
  */
-void flickering_light_read(flickering_light &fl, const NamedPHYSFS_File fp)
+void flickering_light_read(flickering_light &fl, PHYSFS_File *fp)
 {
-	fl.segnum = read_untrusted_segnum_le16(fp);
-	const auto sidenum{build_sidenum_from_untrusted(PHYSFSX_readShort(fp))};
+	{
+		const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(fp))};
+		fl.segnum = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+	}
+	const auto sidenum = build_sidenum_from_untrusted(PHYSFSX_readShort(fp));
 	fl.mask = PHYSFSX_readInt(fp);
 	fl.timer = PHYSFSX_readFix(fp);
 	fl.delay = PHYSFSX_readFix(fp);

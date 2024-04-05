@@ -498,7 +498,7 @@ void ogl_cache_level_textures(void)
 		auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 		// always have lasers, concs, flares.  Always shows player appearance, and at least concs are always available to disappear.
 		ogl_cache_weapon_textures(Vclip, Weapon_info, Primary_weapon_to_weapon_info[primary_weapon_index_t::LASER_INDEX]);
-		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[secondary_weapon_index_t::CONCUSSION_INDEX]);
+		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[CONCUSSION_INDEX]);
 		ogl_cache_weapon_textures(Vclip, Weapon_info, weapon_id_type::FLARE_ID);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::player_appearance);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::powerup_disappearance);
@@ -517,18 +517,18 @@ void ogl_cache_level_textures(void)
 				if (
 					(
 						(
-							(id == powerup_type_t::POW_VULCAN_WEAPON && (p = primary_weapon_index_t::VULCAN_INDEX, true)) ||
-							(id == powerup_type_t::POW_SPREADFIRE_WEAPON && (p = primary_weapon_index_t::SPREADFIRE_INDEX, true)) ||
-							(id == powerup_type_t::POW_PLASMA_WEAPON && (p = primary_weapon_index_t::PLASMA_INDEX, true)) ||
-							(id == powerup_type_t::POW_FUSION_WEAPON && (p = primary_weapon_index_t::FUSION_INDEX, true))
+							(id == POW_VULCAN_WEAPON && (p = primary_weapon_index_t::VULCAN_INDEX, true)) ||
+							(id == POW_SPREADFIRE_WEAPON && (p = primary_weapon_index_t::SPREADFIRE_INDEX, true)) ||
+							(id == POW_PLASMA_WEAPON && (p = primary_weapon_index_t::PLASMA_INDEX, true)) ||
+							(id == POW_FUSION_WEAPON && (p = primary_weapon_index_t::FUSION_INDEX, true))
 						) && (w = Primary_weapon_to_weapon_info[p], true)
 					) ||
 					(
 						(
-							(id == powerup_type_t::POW_PROXIMITY_WEAPON && (s = secondary_weapon_index_t::PROXIMITY_INDEX, true)) ||
-							((id == powerup_type_t::POW_HOMING_AMMO_1 || id == powerup_type_t::POW_HOMING_AMMO_4) && (s = secondary_weapon_index_t::HOMING_INDEX, true)) ||
-							(id == powerup_type_t::POW_SMARTBOMB_WEAPON && (s = secondary_weapon_index_t::SMART_INDEX, true)) ||
-							(id == powerup_type_t::POW_MEGA_WEAPON && (s = secondary_weapon_index_t::MEGA_INDEX, true))
+							(id == POW_PROXIMITY_WEAPON && (s = secondary_weapon_index_t::PROXIMITY_INDEX, true)) ||
+							((id == POW_HOMING_AMMO_1 || id == POW_HOMING_AMMO_4) && (s = secondary_weapon_index_t::HOMING_INDEX, true)) ||
+							(id == POW_SMARTBOMB_WEAPON && (s = secondary_weapon_index_t::SMART_INDEX, true)) ||
+							(id == POW_MEGA_WEAPON && (s = secondary_weapon_index_t::MEGA_INDEX, true))
 						) && (w = Secondary_weapon_to_weapon_info[s], true)
 					)
 				)
@@ -911,7 +911,7 @@ void _g3_draw_poly(grs_canvas &canvas, const std::span<cg3s_point *const> pointl
 /*
  * Everything texturemapped (walls, robots, ship)
  */ 
-void _g3_draw_tmap(grs_canvas &canvas, const std::span<cg3s_point *const> pointlist, const g3s_uvl *const uvl_list, const g3s_lrgb *const light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+void _g3_draw_tmap(grs_canvas &canvas, const std::span<cg3s_point *const> pointlist, const g3s_uvl *const uvl_list, const g3s_lrgb *const light_rgb, grs_bitmap &bm)
 {
 	GLfloat color_alpha = 1.0;
 
@@ -989,9 +989,9 @@ void _g3_draw_tmap(grs_canvas &canvas, const std::span<cg3s_point *const> pointl
 /*
  * Everything texturemapped with secondary texture (walls with secondary texture)
  */
-void _g3_draw_tmap_2(grs_canvas &canvas, const std::span<const g3s_point *const> pointlist, const std::span<const g3s_uvl, 4> uvl_list, const std::span<const g3s_lrgb, 4> light_rgb, grs_bitmap &bmbot, grs_bitmap &bm, const texture2_rotation_low orient, const tmap_drawer_type tmap_drawer_ptr)
+void _g3_draw_tmap_2(grs_canvas &canvas, const std::span<const g3s_point *const> pointlist, const std::span<const g3s_uvl, 4> uvl_list, const std::span<const g3s_lrgb, 4> light_rgb, grs_bitmap &bmbot, grs_bitmap &bm, const texture2_rotation_low orient)
 {
-	_g3_draw_tmap(canvas, pointlist, uvl_list.data(), light_rgb.data(), bmbot, tmap_drawer_ptr);//draw the bottom texture first.. could be optimized with multitexturing..
+	_g3_draw_tmap(canvas, pointlist, uvl_list.data(), light_rgb.data(), bmbot);//draw the bottom texture first.. could be optimized with multitexturing..
 	ogl_client_states<int, GL_VERTEX_ARRAY, GL_COLOR_ARRAY, GL_TEXTURE_COORD_ARRAY> cs;
 	(void)cs;
 	r_tpolyc++;
@@ -1104,7 +1104,8 @@ void g3_draw_bitmap(grs_canvas &canvas, const vms_vector &pos, const fix iwidth,
 	std::array<fvertex_t, point_count> vertices;
 	std::array<fcolor_t, point_count> color_array;
 	std::array<ftexcoord_t, point_count> texcoord_array;
-	const auto &&rpv{vm_vec_rotate(vm_vec_sub(pos, View_position), View_matrix)};
+	const auto &v1 = vm_vec_sub(pos,View_position);
+	const auto &rpv = vm_vec_rotate(v1,View_matrix);
 	const auto bmglu = bm.gltexture->u;
 	const auto bmglv = bm.gltexture->v;
 	const auto alpha = canvas.cv_fade_level >= GR_FADE_OFF ? 1.0 : (1.0 - static_cast<float>(canvas.cv_fade_level) / (static_cast<float>(GR_FADE_LEVELS) - 1.0));

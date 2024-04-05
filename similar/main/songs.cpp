@@ -136,45 +136,17 @@ void songs_set_volume(int volume)
 
 namespace {
 
-static bool is_valid_song_extension(const std::ranges::subrange<std::span<char>::iterator> extension)
+static int is_valid_song_extension(const char* dot)
 {
-	/* This is a special purpose tolower, which only works due to the special
-	 * circumstances in this function.
-	 * - the user-supplied `extension` may be any set of characters, including
-	 *   non-letters
-	 * - candidate extensions are known to be lowercase letters only, and are
-	 *   not transformed
-	 * - applying this transform to a user-defined input character has 3 cases:
-	 *   - if the input is ASCII uppercase, it becomes ASCII lowercase
-	 *   - if the input is ASCII lowercase, it is unchanged
-	 *   - if the input is not a letter, it is changed to some other non-letter
-	 * Since the comparison only seeks matches, and all candidate extensions
-	 * are all lowercase letters, changing one non-letter to a different
-	 * non-letter preserves the inequality.
-	 */
-	auto &&lower_letter = [](const char c) -> char {
-		return c | ('a' - 'A');
-	};
-	using namespace std::string_view_literals;
-#define SONG_STRING_VIEW_CONCAT_UDL(EXTENSION)	EXTENSION##sv
-#define SONG_STRING_VIEW(EXTENSION)	SONG_STRING_VIEW_CONCAT_UDL(EXTENSION)
-	const auto is_HMP{std::ranges::equal(extension, SONG_STRING_VIEW(SONG_EXT_HMP), {}, lower_letter)};
+	return (!d_stricmp(dot, SONG_EXT_HMP)
 #if DXX_USE_SDLMIXER
-	if (!is_HMP)
-	{
-		if (const auto is_MID{std::ranges::equal(extension, SONG_STRING_VIEW(SONG_EXT_MID), {}, lower_letter)})
-			return is_MID;
-		if (const auto is_OGG{std::ranges::equal(extension, SONG_STRING_VIEW(SONG_EXT_OGG), {}, lower_letter)})
-			return is_OGG;
-		if (const auto is_FLAC{std::ranges::equal(extension, SONG_STRING_VIEW(SONG_EXT_FLAC), {}, lower_letter)})
-			return is_FLAC;
-		if (const auto is_MP3{std::ranges::equal(extension, SONG_STRING_VIEW(SONG_EXT_MP3), {}, lower_letter)})
-			return is_MP3;
-	}
+			||
+			!d_stricmp(dot, SONG_EXT_MID) ||
+			!d_stricmp(dot, SONG_EXT_OGG) ||
+			!d_stricmp(dot, SONG_EXT_FLAC) ||
+			!d_stricmp(dot, SONG_EXT_MP3)
 #endif
-#undef SONG_STRING_VIEW
-#undef SONG_STRING_VIEW_CONCAT_UDL
-	return is_HMP;
+			);
 }
 
 template <std::size_t N>
@@ -191,45 +163,19 @@ static inline void assign_builtin_song(bim_song_info &song, const char (&str)[N]
 	std::ranges::copy(str, std::ranges::begin(song.filename));
 }
 
-static void add_song(std::vector<bim_song_info> &songs, const std::ranges::subrange<std::span<char>::iterator> input)
+static void add_song(std::vector<bim_song_info> &songs, const char *const input)
 {
-	if (input.size() >= std::tuple_size<decltype(bim_song_info::filename)>::value)
-		/* Drop excessively long filenames. */
-		return;
-	auto &&reverse_input{std::ranges::views::reverse(input)};
-	if (const auto &&ri_dot{std::ranges::find(reverse_input, '.')}; ri_dot == reverse_input.end())
-		/* Drop filenames that lack a dot. */
-		return;
-	/* Due to `std::reverse_iterator` rules, `reverse_iterator::operator*()`
-	 * returns `*std::prev(reverse_iterator::base())`, so `find` returns an
-	 * iterator one forward of the '.'.  Therefore, `.base()` points to the
-	 * first character in the extension, not to the dot.
-	 */
-	else if (!is_valid_song_extension({ri_dot.base(), input.end()}))
-		/* Drop filenames that lack a valid song extension. */
-		return;
-	/* The input is not a `bim_song_info`, so a direct use of
-	 * `emplace_back(input)` is not well-formed.
-	 *
-	 * Using `emplace_back(bim_song_info(...))` is well-formed, but constructs
-	 * a temporary to pass to emplace_back, which then copy-constructs the
-	 * vector element.
-	 *
-	 * Pass an instance of an object that is convertible to the element_type,
-	 * and rely on copy elision to construct the converted value directly into
-	 * the vector element.
-	 */
-	struct emplace_subrange
+	songs.emplace_back();
+	auto &filename = songs.back().filename;
+	sscanf(input, "%15s", filename);
+
+	if (const char *dot = strrchr(filename, '.'))
 	{
-		std::ranges::subrange<std::span<char>::iterator> input;
-		operator bim_song_info() const
-		{
-			bim_song_info r;
-			std::ranges::copy(input, std::ranges::begin(r.filename));
-			return r;
-		}
-	};
-	songs.emplace_back(emplace_subrange{input});
+		++ dot;
+		if (is_valid_song_extension(dot))
+			return;
+	}
+	songs.pop_back();
 }
 
 }
@@ -242,7 +188,6 @@ namespace {
 // NOTE: you might think this is done once per runtime but it's not! It's done for EACH song so that each mission can have it's own descent.sng structure. We COULD optimize that by only doing this once per mission.
 static void songs_init()
 {
-	using namespace std::string_view_literals;
 	Songs_initialized = 0;
 
 	BIMSongs.reset();
@@ -285,24 +230,24 @@ static void songs_init()
 	}
 	else
 	{
+		PHYSFSX_gets_line_t<81> inputline;
 		std::vector<bim_song_info> main_songs, secret_songs;
-		for (PHYSFSX_gets_line_t<81> inputline; const auto result{PHYSFSX_fgets(inputline, fp)};)
+		while (PHYSFSX_fgets(inputline, fp))
 		{
-			if (result.empty())
+			if (!inputline[0])
 				continue;
 			{
 				if (canUseExtensions)
 				{
-					const std::string_view secret_label{"!Rebirth.secret "sv};
+					auto &secret_label = "!Rebirth.secret ";
+					constexpr auto secret_label_len = sizeof(secret_label) - 1;
 					// extension stuffs
-					if (result.size() > secret_label.size() &&
-						std::ranges::equal(std::span(result.begin(), secret_label.size()), secret_label))
-					{
-						add_song(secret_songs, result.next(secret_label.size()));
+					if (!strncmp(inputline, secret_label, secret_label_len)) {
+						add_song(secret_songs, &inputline[secret_label_len]);
 						continue;
 					}
 				}
-				add_song(main_songs, result);
+				add_song(main_songs, inputline);
 			}
 		}
 #if defined(DXX_BUILD_DESCENT_I)

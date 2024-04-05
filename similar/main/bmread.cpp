@@ -453,7 +453,7 @@ static int get_int()
 static void set_texture_fname(d_fname &fname, const char *name)
 {
 	fname.copy_if(name, FILENAME_LEN);
-	REMOVE_DOTS(fname.data());
+	REMOVE_DOTS(&fname[0u]);
 }
 
 }
@@ -467,7 +467,7 @@ static get_texture_result get_texture(d_level_unique_tmap_info_state::TmapInfo_a
 {
 	d_fname short_name;
 	short_name.copy_if(name, FILENAME_LEN);
-	REMOVE_DOTS(short_name.data());
+	REMOVE_DOTS(&short_name[0u]);
 	const unsigned t = texture_count;
 	for (const auto &&[i, ti] : enumerate(partial_range(TmapInfo, t)))
 	{
@@ -597,8 +597,8 @@ int gamedata_read_tbl(d_level_shared_robot_info_state &LevelSharedRobotInfoState
 
 	PHYSFS_seek(InfoFile, 0L);
 
-	for (PHYSFSX_gets_line_t<LINEBUF_SIZE> inputline; PHYSFSX_fgets(inputline, InfoFile);)
-	{
+	PHYSFSX_gets_line_t<LINEBUF_SIZE> inputline;
+	while (PHYSFSX_fgets(inputline, InfoFile)) {
 		int l;
 		const char *temp_ptr;
 		int skip;
@@ -1728,12 +1728,8 @@ void bm_read_robot(d_level_shared_robot_info_state &LevelSharedRobotInfoState, i
 	current_robot_info.attack_type = attack_type;
 	current_robot_info.boss_flag = boss_flag;
 
-	/* The input file uses zero/non-zero to pick powerup/robot.  Other input
-	 * sources store robot as OBJ_ROBOT and powerup as OBJ_POWERUP, so
-	 * build_contained_object_parameters_from_untrusted expects those values.
-	 * Convert the type here.
-	 */
-	current_robot_info.contains = build_contained_object_parameters_from_untrusted(contains_type ? underlying_value(contained_object_type::robot) : underlying_value(contained_object_type::powerup), contains_id, contains_count);
+	current_robot_info.contains_id = contains_id;
+	current_robot_info.contains_count = contains_count;
 	current_robot_info.contains_prob = contains_prob;
 #if defined(DXX_BUILD_DESCENT_II)
 	current_robot_info.companion = companion;
@@ -1759,6 +1755,11 @@ void bm_read_robot(d_level_shared_robot_info_state &LevelSharedRobotInfoState, i
 	current_robot_info.behavior = behavior;		//	Default behavior for this robot, if coming out of matcen.
 	current_robot_info.aim = min(f2i(aim*255), 255);		//	how well this robot type can aim.  255=perfect
 #endif
+
+	if (contains_type)
+		current_robot_info.contains.type = contained_object_type::robot;
+	else
+		current_robot_info.contains.type = contained_object_type::powerup;
 
 	++LevelSharedRobotInfoState.N_robot_types;
 #if defined(DXX_BUILD_DESCENT_I)
@@ -2524,15 +2525,12 @@ void bm_read_powerup(int unused_flag)
 	}
 
 	// Initialize powerup array
-	const powerup_type_t pn{n};
-	auto &pin = Powerup_info[pn];
-	pin.light = F1_0 / 3;		//	Default lighting value.
-	pin.vclip_num = vclip_index::None;
-	pin.hit_sound = sound_none;
-	pin.size = DEFAULT_POWERUP_SIZE;
+	Powerup_info[n].light = F1_0/3;		//	Default lighting value.
+	Powerup_info[n].vclip_num = vclip_index::None;
+	Powerup_info[n].hit_sound = sound_none;
+	Powerup_info[n].size = DEFAULT_POWERUP_SIZE;
 #if DXX_USE_EDITOR
-	auto &name = Powerup_names[pn];
-	name[0] = 0;
+	Powerup_names[n][0] = 0;
 #endif
 
 	// Process arguments
@@ -2545,20 +2543,21 @@ void bm_read_powerup(int unused_flag)
 			equal_ptr++;
 			// if we have john=cool, arg is 'john' and equal_ptr is 'cool'
 			if (!d_stricmp( arg, "vclip_num" ))	{
-				pin.vclip_num = build_vclip_index_from_untrusted(atoi(equal_ptr));
+				Powerup_info[n].vclip_num = build_vclip_index_from_untrusted(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "light" ))	{
-				pin.light = fl2f(atof(equal_ptr));
+				Powerup_info[n].light = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "hit_sound" ))	{
-				pin.hit_sound = atoi(equal_ptr);
+				Powerup_info[n].hit_sound = atoi(equal_ptr);
 			} else if (!d_stricmp( arg, "name" )) {
 #if DXX_USE_EDITOR
+				auto &name = Powerup_names[n];
 				const auto len = strlen(equal_ptr);
 				assert(len < name.size());	//	Oops, name too long.
 				memcpy(name.data(), &equal_ptr[1], len - 2);
 				name[len - 2] = 0;
 #endif
 			} else if (!d_stricmp( arg, "size" ))	{
-				pin.size = fl2f(atof(equal_ptr));
+				Powerup_info[n].size = fl2f(atof(equal_ptr));
 			}
 #if defined(DXX_BUILD_DESCENT_II)
 			else {

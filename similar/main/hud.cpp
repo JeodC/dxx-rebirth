@@ -134,11 +134,20 @@ int HUD_init_message_va(int class_flag, const char * format, va_list args)
 	if (!is_worth_showing(class_flag))
 		return 0;
 
-	std::array<char, HUD_MESSAGE_LENGTH> message;
-	const auto written = std::max(vsnprintf(std::data(message), std::size(message), format, args), 0);
-	int r = HUD_init_message_literal_worth_showing(class_flag, std::data(message));
+#ifndef macintosh
+	char message[HUD_MESSAGE_LENGTH+1] = "";
+#else
+	char message[1024] = "";
+#endif
+
+#ifndef macintosh
+	vsnprintf(message, sizeof(char)*HUD_MESSAGE_LENGTH, format, args);
+#else
+	vsprintf(message, format, args);
+#endif
+	int r = HUD_init_message_literal_worth_showing(class_flag, message);
 	if (r)
-		con_puts(CON_HUD, std::span<char>(std::data(message), written));
+		con_puts(CON_HUD, message);
 	return r;
 }
 
@@ -214,11 +223,11 @@ int (HUD_init_message)(int class_flag, const char * format, ... )
 	return ret;
 }
 
-int HUD_init_message_literal(int class_flag, const std::span<const char> str)
+int HUD_init_message_literal(int class_flag, const char *str)
 {
 	if (!is_worth_showing(class_flag))
 		return 0;
-	int r = HUD_init_message_literal_worth_showing(class_flag, str.data());
+	int r = HUD_init_message_literal_worth_showing(class_flag, str);
 	if (r)
 		con_puts(CON_HUD, str);
 	return r;

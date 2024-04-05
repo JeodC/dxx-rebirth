@@ -193,10 +193,9 @@ static void extract_vector_from_segment_side(const shared_segment &sp, const sid
 	auto &sv = Side_to_verts[side];
 	auto &verts = sp.verts;
 	auto &vcvertptr = Vertices.vcptr;
-	vm_vec_add(vp,
-		vm_vec_sub(vcvertptr(verts[sv[vra]]), vcvertptr(verts[sv[vla]])),
-		vm_vec_sub(vcvertptr(verts[sv[vrb]]), vcvertptr(verts[sv[vlb]]))
-	);
+	const auto v1 = vm_vec_sub(vcvertptr(verts[sv[vra]]), vcvertptr(verts[sv[vla]]));
+	const auto v2 = vm_vec_sub(vcvertptr(verts[sv[vrb]]), vcvertptr(verts[sv[vlb]]));
+	vm_vec_add(vp, v1, v2);
 	vm_vec_scale(vp, F1_0/2);
 }
 
@@ -228,7 +227,7 @@ static int segsize_common(int dimension, fix amount)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
-	vms_vector	uvec, rvec, scalevec;
+	vms_vector	uvec, rvec, fvec, scalevec;
 
 	Degenerate_segment_found = 0;
 
@@ -237,7 +236,7 @@ static int segsize_common(int dimension, fix amount)
 	med_extract_up_vector_from_segment_side(Cursegp, Curside, uvec);
 	med_extract_right_vector_from_segment_side(Cursegp, Curside, rvec);
 	auto &vcvertptr = Vertices.vcptr;
-	const auto fvec{extract_forward_vector_from_segment(vcvertptr, Cursegp)};
+	extract_forward_vector_from_segment(vcvertptr, Cursegp, fvec);
 
 	scalevec.x = vm_vec_mag(rvec);
 	scalevec.y = vm_vec_mag(uvec);
@@ -398,14 +397,15 @@ static int	PerturbCursideCommon(fix amount)
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	int			saveSegSizeMode = SegSizeMode;
+	vms_vector	fvec, uvec;
 	SegSizeMode = SEGSIZEMODE_CURSIDE;
 
 	Modified_vertex_index = 0;
 
 	auto &vcvertptr = Vertices.vcptr;
-	const auto fvec{extract_forward_vector_from_segment(vcvertptr, Cursegp)};
+	extract_forward_vector_from_segment(vcvertptr, Cursegp, fvec);
 	const auto rvec{extract_right_vector_from_segment(vcvertptr, Cursegp)};
-	const auto uvec{extract_up_vector_from_segment(vcvertptr, Cursegp)};
+	extract_up_vector_from_segment(vcvertptr, Cursegp, uvec);
 
 	const auto fmag = vm_vec_mag(fvec);
 	const auto rmag = vm_vec_mag(rvec);

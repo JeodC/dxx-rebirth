@@ -60,8 +60,7 @@ void hostage_rescue()
 	if (Newdemo_state != ND_STATE_PLAYBACK)
 		digi_play_sample(SOUND_HOSTAGE_RESCUED, F1_0);
 
-	const auto &&m = TXT_HOSTAGE_RESCUED;
-	HUD_init_message_literal(HM_DEFAULT, std::span<const char>(m, strlen(m)));
+	HUD_init_message_literal(HM_DEFAULT, TXT_HOSTAGE_RESCUED);
 }
 
 }

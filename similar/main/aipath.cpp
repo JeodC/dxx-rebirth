@@ -97,8 +97,8 @@ static uint_fast32_t insert_center_points(segment_array &segments, point_seg *ps
 		if (connect_side == side_none)			//	Try to blow past the assert, this should at least prevent a hang.
 			connect_side = sidenum_t::WLEFT;
 		auto &vcvertptr = Vertices.vcptr;
-		const auto center_point{compute_center_point_on_side(vcvertptr, seg1, connect_side)};
-		auto new_point{vm_vec_sub(psegs[i-1].point, center_point)};
+		const auto &&center_point = compute_center_point_on_side(vcvertptr, seg1, connect_side);
+		auto new_point = vm_vec_sub(psegs[i-1].point, center_point);
 		new_point.x /= 16;
 		new_point.y /= 16;
 		new_point.z /= 16;
@@ -122,9 +122,8 @@ static uint_fast32_t insert_center_points(segment_array &segments, point_seg *ps
 	//	MK, OPTIMIZE!  Can get away with about half the math since every vector gets computed twice.
 	for (uint_fast32_t i = 1; i < count - 1; i += 2)
 	{
-		const auto temp1{vm_vec_sub(psegs[i].point, psegs[i - 1].point)};
-		const auto temp2{vm_vec_sub(psegs[i + 1].point, psegs[i].point)};
-		const auto dot{vm_vec_dot(temp1, temp2)};
+		vms_vector	temp1, temp2;
+		const auto dot = vm_vec_dot(vm_vec_sub(temp1, psegs[i].point, psegs[i-1].point), vm_vec_sub(temp2, psegs[i+1].point, psegs[i].point));
 		if (dot * 9/8 > fixmul(vm_vec_mag(temp1), vm_vec_mag(temp2)))
 			psegs[i].segnum = segment_none;
 	}
@@ -163,6 +162,7 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 		//	I don't think we can use quick version here and this is _very_ rarely called. --MK, 07/03/95
 		const auto a = vm_vec_normalized_quick(vm_vec_sub(psegs[i].point, psegs[i-1].point));
 		const auto b = vm_vec_normalized_quick(vm_vec_sub(psegs[i+1].point, psegs[i].point));
+		const auto c = vm_vec_sub(psegs[i+1].point, psegs[i-1].point);
 		if (abs(vm_vec_dot(a, b)) > 3*F1_0/4 ) {
 			if (abs(a.z) < F1_0/2) {
 				if (rand_flag != create_path_random_flag::nonrandom)
@@ -191,7 +191,7 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 			}
 		} else {
 			const auto d{vm_vec_cross(a, b)};
-			e = vm_vec_cross(vm_vec_sub(psegs[i + 1].point, psegs[i - 1].point), d);
+			e = vm_vec_cross(c, d);
 			vm_vec_normalize_quick(e);
 		}
 
@@ -203,7 +203,7 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 		if (segment_size > F1_0*40)
 			segment_size = F1_0*40;
 
-		auto goal_pos{vm_vec_scale_add(psegs[i].point, e, segment_size / 4)};
+		auto goal_pos = vm_vec_scale_add(psegs[i].point, e, segment_size/4);
 
 		count = 3;
 		while (count) {
@@ -373,7 +373,7 @@ std::pair<create_path_result, unsigned> create_path_points(const vmobjptridx_t o
 #if defined(DXX_BUILD_DESCENT_II)
 				Assert(this_seg != segment_none);
 				if (((cur_seg == avoid_seg) || (this_seg == avoid_seg)) && (ConsoleObject->segnum == avoid_seg)) {
-					const auto center_point{compute_center_point_on_side(vcvertptr, segp, snum)};
+					const auto &&center_point = compute_center_point_on_side(vcvertptr, segp, snum);
 					fvi_info		hit_data;
 	
 					const auto hit_type = find_vector_intersection(fvi_query{
@@ -447,7 +447,7 @@ cpp_done1: ;
 		this_seg = seg_queue[qtail].end;
 		parent_seg = seg_queue[qtail].start;
 		psegs->segnum = this_seg;
-		psegs->point = compute_segment_center(vcvertptr, vcsegptr(this_seg));
+		compute_segment_center(vcvertptr, psegs->point, vcsegptr(this_seg));
 		psegs++;
 		l_num_points++;
 #if defined(DXX_BUILD_DESCENT_I)
@@ -464,7 +464,7 @@ cpp_done1: ;
 	}
 
 	psegs->segnum = start_seg;
-	psegs->point = compute_segment_center(vcvertptr, vcsegptr(start_seg));
+	compute_segment_center(vcvertptr, psegs->point, vcsegptr(start_seg));
 	psegs++;
 	l_num_points++;
 
@@ -1503,18 +1503,16 @@ void attempt_to_resume_path(const d_robot_info_array &Robot_info, const vmobjptr
 namespace {
 
 __attribute_used
-static void test_create_path_many(fvmobjptridx &vmobjptridx, const d_level_shared_segment_state &LevelSharedSegmentState, const unsigned long seed)
+static void test_create_path_many(fvmobjptridx &vmobjptridx, fimsegptridx &imsegptridx)
 {
-	auto &SSegments = LevelSharedSegmentState.get_segments();
-	std::minstd_rand mrd{seed};
-	std::uniform_int_distribution<std::underlying_type_t<segnum_t>> uid{0u, SSegments.get_count()};
-	for (const auto i : constant_xrange<std::size_t, 0, 1000u>{})
-	{
-		(void)i;
-		const vcsegidx_t start_segment{segnum_t{uid(mrd)}};
-		const vcsegidx_t end_segment{segnum_t{uid(mrd)}};
-		std::array<point_seg, 200> point_segs;
-		create_path_points(vmobjptridx(object_first), create_path_unused_robot_info, start_segment, end_segment, point_segs.begin(), MAX_PATH_LENGTH, create_path_random_flag::nonrandom, create_path_safety_flag::unsafe, segment_none);
+	std::array<point_seg, 200> point_segs;
+	int			i;
+
+	const unsigned Test_size = 1000;
+	for (i=0; i<Test_size; i++) {
+		Cursegp = imsegptridx(static_cast<segnum_t>((d_rand() * (Highest_segment_index + 1)) / D_RAND_MAX));
+		Markedsegp = imsegptridx(static_cast<segnum_t>((d_rand() * (Highest_segment_index + 1)) / D_RAND_MAX));
+		create_path_points(vmobjptridx(object_first), create_path_unused_robot_info, Cursegp, Markedsegp, point_segs.begin(), MAX_PATH_LENGTH, create_path_random_flag::nonrandom, create_path_safety_flag::unsafe, segment_none);
 	}
 }
 

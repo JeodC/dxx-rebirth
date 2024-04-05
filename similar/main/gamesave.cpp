@@ -74,6 +74,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "d_zip.h"
 #include "partial_range.h"
 
+char Gamesave_current_filename[PATH_MAX];
+
 int Gamesave_current_version;
 
 #if defined(DXX_BUILD_DESCENT_I)
@@ -236,9 +238,8 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 
 	if (obj.type == OBJ_POWERUP)
 	{
-		if (underlying_value(get_powerup_id(obj)) >= N_powerup_types)
-		{
-			set_powerup_id(Powerup_info, Vclip, obj, powerup_type_t::POW_SHIELD_BOOST);
+		if ( get_powerup_id(obj) >= N_powerup_types )	{
+			set_powerup_id(Powerup_info, Vclip, obj, POW_SHIELD_BOOST);
 			assert(obj.render_type != render_type::RT_POLYOBJ);
 		}
 		obj.control_source = object::control_type::powerup;
@@ -326,7 +327,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 //}
 
 //reads one object of the given version from the given file
-static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int version)
+static void read_object(const vmobjptr_t obj,PHYSFS_File *f,int version)
 {
 	DXX_POISON_MEMORY(std::span<object>(&*obj, 1), 0xfd);
 	obj->signature = object_signature_t{0};
@@ -389,13 +390,14 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 	}
 	obj->flags          = PHYSFSX_readByte(f);
 
-	obj->segnum = read_untrusted_segnum_le16(f);
+	{
+		const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(f))};
+		obj->segnum = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+	}
 	obj->attached_obj   = object_none;
 
 	PHYSFSX_readVector(f, obj->pos);
-	PHYSFSX_readVector(f, obj->orient.rvec);
-	PHYSFSX_readVector(f, obj->orient.uvec);
-	PHYSFSX_readVector(f, obj->orient.fvec);
+	PHYSFSX_readMatrix(&obj->orient,f);
 
 	obj->size           = PHYSFSX_readFix(f);
 	obj->shields        = PHYSFSX_readFix(f);
@@ -405,10 +407,10 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 		PHYSFSX_readVector(f, last_pos);
 	}
 
-	const uint8_t untrusted_contains_type = PHYSFSX_readByte(f);
-	const uint8_t untrusted_contains_id = PHYSFSX_readByte(f);
-	const uint8_t untrusted_contains_count = PHYSFSX_readByte(f);
-	obj->contains = build_contained_object_parameters_from_untrusted(untrusted_contains_type, untrusted_contains_id, untrusted_contains_count);
+	const uint8_t contains_type = PHYSFSX_readByte(f);
+	obj->contains.type  = build_contained_object_type_from_untrusted(contains_type);
+	obj->contains_id    = PHYSFSX_readByte(f);
+	obj->contains_count = PHYSFSX_readByte(f);
 
 	switch (obj->movement_source) {
 
@@ -419,7 +421,7 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 
 			obj->mtype.phys_info.mass		= PHYSFSX_readFix(f);
 			obj->mtype.phys_info.drag		= PHYSFSX_readFix(f);
-			PHYSFSX_skipBytes<4>(f);	/* brakes */
+			PHYSFSX_readFix(f);	/* brakes */
 
 			PHYSFSX_readVector(f, obj->mtype.phys_info.rotvel);
 			PHYSFSX_readVector(f, obj->mtype.phys_info.rotthrust);
@@ -447,7 +449,7 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 			obj->ctype.ai_info.behavior				= static_cast<ai_behavior>(PHYSFSX_readByte(f));
 
 			std::array<int8_t, 11> ai_info_flags{};
-			PHYSFS_read(f, ai_info_flags.data(), 1, 11);
+			PHYSFS_read(f, &ai_info_flags[0], 1, 11);
 			{
 				const uint8_t gun_num = ai_info_flags[0];
 				obj->ctype.ai_info.CURRENT_GUN = (gun_num < MAX_GUNS) ? robot_gun_number{gun_num} : robot_gun_number{};
@@ -465,15 +467,17 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 			obj->ctype.ai_info.SKIP_AI_COUNT = ai_info_flags[7];
 			obj->ctype.ai_info.REMOTE_OWNER = ai_info_flags[8];
 			obj->ctype.ai_info.REMOTE_SLOT_NUM = ai_info_flags[9];
-			obj->ctype.ai_info.hide_segment = read_untrusted_segnum_le16(f);
+			{
+				const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readShort(f))};
+				obj->ctype.ai_info.hide_segment = imsegidx_t::check_nothrow_index(s) ? s : segment_none;
+			}
 			obj->ctype.ai_info.hide_index			= PHYSFSX_readShort(f);
 			obj->ctype.ai_info.path_length			= PHYSFSX_readShort(f);
 			obj->ctype.ai_info.cur_path_index		= PHYSFSX_readShort(f);
 
 			if (version <= 25) {
-				//				obj->ctype.ai_info.follow_path_start_seg	= 
-				//				obj->ctype.ai_info.follow_path_end_seg		= 
-				PHYSFSX_skipBytes<4>(f);
+				PHYSFSX_readShort(f);	//				obj->ctype.ai_info.follow_path_start_seg	= 
+				PHYSFSX_readShort(f);	//				obj->ctype.ai_info.follow_path_end_seg		= 
 			}
 
 			break;
@@ -524,14 +528,14 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 				 * type OBJ_HOSTAGE.  Hostages are never weapons, so
 				 * prevent checking their IDs.
 				 */
-			if (get_powerup_id(obj) == powerup_type_t::POW_VULCAN_WEAPON)
+			if (get_powerup_id(obj) == POW_VULCAN_WEAPON)
 					obj->ctype.powerup_info.count = VULCAN_WEAPON_AMMO_AMOUNT;
 
 #if defined(DXX_BUILD_DESCENT_II)
-			else if (get_powerup_id(obj) == powerup_type_t::POW_GAUSS_WEAPON)
+			else if (get_powerup_id(obj) == POW_GAUSS_WEAPON)
 					obj->ctype.powerup_info.count = VULCAN_WEAPON_AMMO_AMOUNT;
 
-			else if (get_powerup_id(obj) == powerup_type_t::POW_OMEGA_WEAPON)
+			else if (get_powerup_id(obj) == POW_OMEGA_WEAPON)
 					obj->ctype.powerup_info.count = MAX_OMEGA_CHARGE;
 #endif
 			}
@@ -576,7 +580,7 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 			);
 
 			range_for (auto &i, obj->rtype.pobj_info.anim_angles)
-				PHYSFSX_readAngleVec(f, i);
+				PHYSFSX_readAngleVec(&i, f);
 
 			obj->rtype.pobj_info.subobj_flags	= PHYSFSX_readInt(f);
 
@@ -681,8 +685,8 @@ static void write_object(const object &obj, short version, PHYSFS_File *f)
 	PHYSFSX_writeVector(f, obj.pos);
 
 	PHYSFSX_writeU8(f, underlying_value(obj.contains.type));
-	PHYSFSX_writeU8(f, underlying_value(obj.contains.id.robot));
-	PHYSFSX_writeU8(f, obj.contains.count);
+	PHYSFSX_writeU8(f, obj.contains_id);
+	PHYSFSX_writeU8(f, obj.contains_count);
 
 	switch (obj.movement_source) {
 
@@ -735,7 +739,7 @@ static void write_object(const object &obj, short version, PHYSFS_File *f)
 			ai_info_flags[7] = obj.ctype.ai_info.SKIP_AI_COUNT;
 			ai_info_flags[8] = obj.ctype.ai_info.REMOTE_OWNER;
 			ai_info_flags[9] = obj.ctype.ai_info.REMOTE_SLOT_NUM;
-			PHYSFS_write(f, ai_info_flags.data(), 1, 11);
+			PHYSFS_write(f, &ai_info_flags[0], 1, 11);
 			PHYSFS_writeSLE16(f, obj.ctype.ai_info.hide_segment);
 			PHYSFS_writeSLE16(f, obj.ctype.ai_info.hide_index);
 			PHYSFS_writeSLE16(f, obj.ctype.ai_info.path_length);
@@ -903,7 +907,7 @@ static int load_game_data(
 #if defined(DXX_BUILD_DESCENT_II)
 	d_level_shared_destructible_light_state &LevelSharedDestructibleLightState,
 #endif
-	fvmobjptridx &vmobjptridx, fvmsegptridx &vmsegptridx, const NamedPHYSFS_File LoadFile)
+	fvmobjptridx &vmobjptridx, fvmsegptridx &vmsegptridx, PHYSFS_File *LoadFile)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
@@ -971,7 +975,7 @@ static int load_game_data(
 	{
 		// read newline-terminated string, not sure what version this changed.
 		if (!PHYSFSX_fgets(Current_level_name, LoadFile))
-			Current_level_name.next()[0]=0;
+			*Current_level_name = 0;
 	}
 	else
 		Current_level_name.next()[0]=0;
@@ -1351,11 +1355,13 @@ int load_level(
 	(void)sig;
 
 	if (Gamesave_current_version < 5)
-		PHYSFSX_skipBytes<4>(LoadFile);		//was hostagetext_offset
+		PHYSFSX_readInt(LoadFile);       //was hostagetext_offset
 	init_exploding_walls();
 #if defined(DXX_BUILD_DESCENT_II)
 	if (Gamesave_current_version >= 8) {    //read dummy data
-		PHYSFSX_skipBytes<4 + 2 + 1>(LoadFile);
+		PHYSFSX_readInt(LoadFile);
+		PHYSFSX_readShort(LoadFile);
+		PHYSFSX_readByte(LoadFile);
 	}
 
 	if (Gamesave_current_version > 1)
@@ -1398,7 +1404,10 @@ int load_level(
 		Secret_return_orient.uvec.y = 0;
 		Secret_return_orient.uvec.z = F1_0;
 	} else {
-		LevelSharedSegmentState.Secret_return_segment = read_untrusted_segnum_le32(LoadFile);
+		{
+			const auto s = segnum_t{static_cast<uint16_t>(PHYSFSX_readInt(LoadFile))};
+			LevelSharedSegmentState.Secret_return_segment = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+		}
 		Secret_return_orient.rvec.x = PHYSFSX_readInt(LoadFile);
 		Secret_return_orient.rvec.y = PHYSFSX_readInt(LoadFile);
 		Secret_return_orient.rvec.z = PHYSFSX_readInt(LoadFile);
@@ -1877,7 +1886,7 @@ static int save_level_sub(
 			if (plr->segnum > Highest_segment_index)
 				plr->segnum = segment_first;
 			auto &vcvertptr = Vertices.vcptr;
-			plr->pos = compute_segment_center(vcvertptr, vcsegptr(plr->segnum));
+			compute_segment_center(vcvertptr, plr->pos, vcsegptr(plr->segnum));
 		}
 	}
  

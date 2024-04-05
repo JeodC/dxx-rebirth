@@ -23,7 +23,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
-#include "dxxsconf.h"
 #include <stdio.h>
 #include <string.h>
 #include <SDL.h>
@@ -84,6 +83,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 #include "physfs_list.h"
 
+#include "dxxsconf.h"
 #include "dsx-ns.h"
 #include "compiler-range_for.h"
 #include "d_enumerate.h"
@@ -103,7 +103,7 @@ enum {
 	optgrp_autoselect_firing,
 };
 
-enum class main_menu_item_index : uint8_t
+enum class main_menu_item_index
 {
 	start_new_singleplayer_game = 0,
 	load_existing_singleplayer_game,
@@ -132,7 +132,7 @@ struct main_menu_items
 };
 
 #if DXX_USE_UDP
-enum class netgame_menu_item_index : uint8_t
+enum class netgame_menu_item_index
 {
 	start_new_multiplayer_game,
 	list_multiplayer_games,
@@ -210,36 +210,41 @@ static void delete_player_saved_games(const char *const name)
 template <typename T>
 using select_file_subfunction = window_event_result (*)(T *, const char *);
 
-[[nodiscard]]
-std::optional<std::chrono::seconds> parse_human_readable_time(const char *const buf)
+void format_human_readable_time(char *const data, std::size_t size, const int duration_seconds)
 {
-	char *endptr_minutes{};
-	const std::chrono::minutes m{strtoul(buf, &endptr_minutes, 10)};
-	if (*endptr_minutes == 0)
+	const auto &&split_interval = std::div(duration_seconds, static_cast<int>(std::chrono::minutes::period::num));
+	snprintf(data, size, "%im%is", split_interval.quot, split_interval.rem);
+}
+
+std::pair<std::chrono::seconds, bool> parse_human_readable_time(const char *const buf)
+{
+	char *p{};
+	const std::chrono::minutes m(strtoul(buf, &p, 10));
+	if (*p == 0)
 		/* Assume that a pure-integer string is a count of minutes. */
-		return m;
-	if (const auto c0{*endptr_minutes}; c0 == 'm')
+		return {m, true};
+	const auto c0 = *p;
+	if (c0 == 'm')
 	{
-		char *endptr_seconds{};
-		const std::chrono::seconds s{strtoul(endptr_minutes + 1, &endptr_seconds, 10)};
-		if (*endptr_seconds == 's')
+		const std::chrono::seconds s(strtoul(p + 1, &p, 10));
+		if (*p == 's')
 			/* The trailing 's' is optional, but no character other than
 			 * the optional 's' can follow the number.
 			 */
-			++endptr_seconds;
-		if (*endptr_seconds == 0)
-			return m + s;
+			++p;
+		if (*p == 0)
+			return {m + s, true};
 	}
-	else if (c0 == 's' && endptr_minutes[1] == 0)
+	else if (c0 == 's' && p[1] == 0)
 		/* Input is only seconds.  Use `.count()` to extract the raw
 		 * value without scaling.
 		 */
-		return std::chrono::seconds{m.count()};
-	return std::nullopt;
+		return {std::chrono::seconds(m.count()), true};
+	return {{}, false};
 }
 
 #if DXX_USE_SDLMIXER
-enum class select_dir_flag : bool
+enum class select_dir_flag : uint8_t
 {
 	files_only,
 	directories_or_files,
@@ -260,24 +265,23 @@ static window_event_result get_absolute_path(ntstring<PATH_MAX - 1> &full_path, 
 
 }
 
-human_readable_mmss_time<uint16_t> build_human_readable_time(const std::chrono::duration<uint16_t, std::chrono::seconds::period> duration)
+template <typename Rep, std::size_t S>
+void format_human_readable_time(std::array<char, S> &buf, const std::chrono::duration<Rep, std::chrono::seconds::period> duration)
 {
-	const auto &&split_interval = std::div(duration.count(), static_cast<int>(std::chrono::minutes::period::num));
-	human_readable_mmss_time<uint16_t> buf{};
-	const std::size_t bufsize{std::size(buf)};
-	if (unlikely(static_cast<std::size_t>(snprintf(std::data(buf), bufsize, "%im%is", split_interval.quot, split_interval.rem)) >= bufsize))
-		buf[0] = 0;
-	return buf;
+	static_assert(S >= std::tuple_size<human_readable_mmss_time<Rep>>::value, "array is too small");
+	static_assert(std::numeric_limits<Rep>::max() <= std::numeric_limits<int>::max(), "Rep allows too large a value");
+	format_human_readable_time(buf.data(), buf.size(), duration.count());
 }
 
 template <typename Rep, std::size_t S>
 void parse_human_readable_time(std::chrono::duration<Rep, std::chrono::seconds::period> &duration, const std::array<char, S> &buf)
 {
 	const auto &&r = parse_human_readable_time(buf.data());
-	if (r)
-		duration = *r;
+	if (r.second)
+		duration = r.first;
 }
 
+template void format_human_readable_time(human_readable_mmss_time<autosave_interval_type::rep> &buf, autosave_interval_type);
 template void parse_human_readable_time(autosave_interval_type &, const human_readable_mmss_time<autosave_interval_type::rep> &buf);
 
 }
@@ -2763,13 +2767,13 @@ struct gameplay_config_menu_items
 	DSX_GAMEPLAY_MENU_OPTIONS(DECL);
 	std::array<newmenu_item, DSX_GAMEPLAY_MENU_OPTIONS(COUNT)> m;
 	human_readable_mmss_time<decltype(d_gameplay_options::AutosaveInterval)::rep> AutosaveInterval;
-	gameplay_config_menu_items() :
-		AutosaveInterval{build_human_readable_time(PlayerCfg.SPGameplayOptions.AutosaveInterval)}
+	gameplay_config_menu_items()
 	{
 #if defined(DXX_BUILD_DESCENT_II)
 		auto thief_absent = PlayerCfg.ThiefModifierFlags & ThiefModifier::Absent;
 		auto thief_cannot_steal_energy_weapons = PlayerCfg.ThiefModifierFlags & ThiefModifier::NoEnergyWeapons;
 #endif
+		format_human_readable_time(AutosaveInterval, PlayerCfg.SPGameplayOptions.AutosaveInterval);
 		DSX_GAMEPLAY_MENU_OPTIONS(ADD);
 	}
 };

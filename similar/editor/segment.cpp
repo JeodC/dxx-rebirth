@@ -343,18 +343,20 @@ void make_orthogonal(vms_matrix *rmat,vms_matrix *smat)
 void med_extract_matrix_from_segment(const shared_segment &sp, vms_matrix &rotmat)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
+	vms_vector	forwardvec,upvec;
 
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vcvertptr = Vertices.vcptr;
-	const auto forwardvec{extract_forward_vector_from_segment(vcvertptr, sp)};
-	const auto upvec{extract_up_vector_from_segment(vcvertptr, sp)};
+	extract_forward_vector_from_segment(vcvertptr, sp, forwardvec);
+	extract_up_vector_from_segment(vcvertptr, sp, upvec);
 
-	if (forwardvec == vms_vector{} || upvec == vms_vector{})
-	{
+	if (((forwardvec.x == 0) && (forwardvec.y == 0) && (forwardvec.z == 0)) || ((upvec.x == 0) && (upvec.y == 0) && (upvec.z == 0))) {
 		rotmat = vmd_identity_matrix;
 		return;
 	}
-	vm_vector_to_matrix_u(rotmat, forwardvec, upvec);
+
+
+	vm_vector_2_matrix(rotmat, forwardvec, &upvec, nullptr);
 }
 
 }
@@ -712,7 +714,7 @@ static int med_attach_segment_rotated(const vmsegptridx_t destseg, const csmuseg
 	// Do lots of hideous matrix stuff, about 3/4 of which could probably be simplified out.
 	med_extract_matrix_from_segment(destseg, rotmat);		// get orientation matrix for destseg (orthogonal rotation matrix)
 	update_matrix_based_on_side(rotmat,destside);
-	const auto rotmat1{vm_vector_to_matrix_u(forvec, upvec)};
+	const auto rotmat1 = vm_vector_2_matrix(forvec,&upvec,nullptr);
 	const auto rotmat4 = vm_matrix_x_matrix(rotmat,rotmat1);			// this is the desired orientation of the new segment
 	med_extract_matrix_from_segment(newseg, rotmat3);		// this is the current orientation of the new segment
 	vm_transpose_matrix(rotmat3);								// get the inverse of the current orientation matrix
@@ -723,12 +725,12 @@ static int med_attach_segment_rotated(const vmsegptridx_t destseg, const csmuseg
 
 	// Compute and rotate the center point of the attaching face.
 	auto &vcvertptr = Vertices.vcptr;
-	const auto vc0{compute_center_point_on_side(vcvertptr, newseg, newside)};
+	const auto &&vc0 = compute_center_point_on_side(vcvertptr, newseg, newside);
 	const auto vr = vm_vec_rotate(vc0,rotmat2);
 
 	// Now translate the new segment so that the center point of the attaching faces are the same.
-	const auto vc1{compute_center_point_on_side(vcvertptr, destseg, destside)};
-	const auto xlate_vec{vm_vec_sub(vc1, vr)};
+	const auto &&vc1 = compute_center_point_on_side(vcvertptr, destseg, destside);
+	const auto xlate_vec = vm_vec_sub(vc1,vr);
 
 	// Now rotate the free vertices in the segment
 	// Create and add the 4 new vertices.
@@ -945,7 +947,7 @@ int med_delete_segment(const vmsegptridx_t sp)
 			//if an object is in the seg, delete it
 			//if the object is the player, move to new curseg
 			if (objnum == ConsoleObject)	{
-				ConsoleObject->pos = compute_segment_center(vcvertptr, Cursegp);
+				compute_segment_center(vcvertptr, ConsoleObject->pos,Cursegp);
 				obj_relink(vmobjptr, vmsegptr, objnum, Cursegp);
 			} else
 				obj_delete(LevelUniqueObjectState, Segments, objnum);
@@ -1395,12 +1397,12 @@ void med_create_new_segment_from_cursegp(void)
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	vms_vector	scalevec;
-	vms_vector	uvec, rvec;
+	vms_vector	uvec, rvec, fvec;
 
 	med_extract_up_vector_from_segment_side(Cursegp, Curside, uvec);
 	med_extract_right_vector_from_segment_side(Cursegp, Curside, rvec);
 	auto &vcvertptr = Vertices.vcptr;
-	const auto fvec{extract_forward_vector_from_segment(vcvertptr, Cursegp)};
+	extract_forward_vector_from_segment(vcvertptr, Cursegp, fvec);
 
 	scalevec.x = vm_vec_mag(rvec);
 	scalevec.y = vm_vec_mag(uvec);
@@ -1432,8 +1434,8 @@ void create_coordinate_axes_from_segment(const shared_segment &sp, std::array<ve
 
 	auto &vcvertptr = Vertices.vcptr;
 	auto &vmvertptr = Vertices.vmptr;
-	vms_vector &v0{*vmvertptr(vertnums[0])};
-	v0 = compute_segment_center(vcvertptr, sp);
+	const auto &&v0 = vmvertptr(vertnums[0]);
+	compute_segment_center(vcvertptr, v0, sp);
 
 	t = rotmat.rvec;
 	vm_vec_scale(t,i2f(32));
@@ -1590,7 +1592,7 @@ std::optional<std::pair<vmsegptridx_t, sidenum_t>> med_find_closest_threshold_se
 		return std::nullopt;
 
 	auto &vcvertptr = Vertices.vcptr;
-	const auto vsc{compute_center_point_on_side(vcvertptr, sp, side)};
+	const auto &&vsc = compute_center_point_on_side(vcvertptr, sp, side);
 
 	closest_seg_dist = JOINT_THRESHOLD;
 
@@ -1603,7 +1605,7 @@ std::optional<std::pair<vmsegptridx_t, sidenum_t>> med_find_closest_threshold_se
 			{
 				if (!IS_CHILD(value))
 				{
-					const auto vtc{compute_center_point_on_side(vcvertptr, segp, idx)};
+					const auto &&vtc = compute_center_point_on_side(vcvertptr, segp, idx);
 					const auto current_dist = vm_vec_dist(vsc, vtc);
 					if (closest_seg_dist > current_dist)
 					{

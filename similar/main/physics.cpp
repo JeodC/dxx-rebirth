@@ -62,13 +62,15 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 //make sure matrix is orthogonal
 void check_and_fix_matrix(vms_matrix &m)
 {
-	vm_vector_to_matrix_u(m, m.fvec, m.uvec);
+	m = vm_vector_2_matrix(m.fvec,&m.uvec,nullptr);
 }
 
 namespace {
 
 static void do_physics_align_object(object_base &obj)
 {
+	vms_vector desired_upvec;
+	fixang delta_ang,roll_ang;
 	fix largest_d = INT32_MIN;
 	const shared_side *best_side = nullptr;
 	// bank player according to segment orientation
@@ -89,34 +91,32 @@ static void do_physics_align_object(object_base &obj)
 	// new player leveling code: use normal of side closest to our up vec
 	if (!best_side)
 		return;
-	const vms_vector desired_upvec{
-		get_side_is_quad(*best_side)
-			? vm_vec_normalized(vm_vec_avg(best_side->normals[0], best_side->normals[1]))
-			: best_side->normals[0]
-	};
+	if (!get_side_is_quad(*best_side))
+	{
+		desired_upvec = vm_vec_avg(best_side->normals[0], best_side->normals[1]);
+		vm_vec_normalize(desired_upvec);
+	}
+	else
+		desired_upvec = best_side->normals[0];
 
 	if (labs(vm_vec_dot(desired_upvec, obj.orient.fvec)) < f1_0 / 2)
 	{
-		const auto temp_matrix{vm_vector_to_matrix_u(obj.orient.fvec, desired_upvec)};
+		vms_angvec tangles;
+		
+		const auto temp_matrix = vm_vector_2_matrix(obj.orient.fvec, &desired_upvec, nullptr);
 
-		auto delta_ang{vm_vec_delta_ang(obj.orient.uvec, temp_matrix.uvec, obj.orient.fvec)};
+		delta_ang = vm_vec_delta_ang(obj.orient.uvec, temp_matrix.uvec, obj.orient.fvec);
+
 		delta_ang += obj.mtype.phys_info.turnroll;
 
 		if (abs(delta_ang) > DAMP_ANG) {
-			const auto uncapped_roll_ang{fixmul(FrameTime, ROLL_RATE)};
-			const fixang roll_ang{
-				(uncapped_roll_ang > abs(delta_ang))
-					? delta_ang
-					: (delta_ang < 0
-						? static_cast<fixang>(-uncapped_roll_ang)
-						: static_cast<fixang>(uncapped_roll_ang))
-			};
-			const auto &&rotmat = vm_angles_2_matrix(
-				vms_angvec{
-					.p = fixang{0},
-					.b = roll_ang,
-					.h = fixang{0}
-				});
+			roll_ang = fixmul(FrameTime,ROLL_RATE);
+
+			if (abs(delta_ang) < roll_ang) roll_ang = delta_ang;
+			else if (delta_ang<0) roll_ang = -roll_ang;
+
+			tangles.p = tangles.h = 0;  tangles.b = roll_ang;
+			const auto &&rotmat = vm_angles_2_matrix(tangles);
 			obj.orient = vm_matrix_x_matrix(obj.orient, rotmat);
 		}
 	}
@@ -165,9 +165,15 @@ namespace dsx {
 namespace {
 static void do_physics_sim_rot(object_base &obj)
 {
+	vms_angvec	tangles;
+	//fix		rotdrag_scale;
+	physics_info *pi;
+
 	Assert(FrameTime > 0);	//Get MATT if hit this!
 
-	if (const physics_info &pi{obj.mtype.phys_info}; !(pi.rotvel.x || pi.rotvel.y || pi.rotvel.z || pi.rotthrust.x || pi.rotthrust.y || pi.rotthrust.z))
+	pi = &obj.mtype.phys_info;
+
+	if (!(pi->rotvel.x || pi->rotvel.y || pi->rotvel.z || pi->rotthrust.x || pi->rotthrust.y || pi->rotthrust.z))
 		return;
 
 	if (obj.mtype.phys_info.drag)
@@ -183,7 +189,7 @@ static void do_physics_sim_rot(object_base &obj)
 
 		if (obj.mtype.phys_info.flags & PF_USES_THRUST)
 		{
-			const auto accel{vm_vec_copy_scale(obj.mtype.phys_info.rotthrust, fixdiv(f1_0, obj.mtype.phys_info.mass))};
+			const auto accel = vm_vec_copy_scale(obj.mtype.phys_info.rotthrust, fixdiv(f1_0, obj.mtype.phys_info.mass));
 			while (count--) {
 				vm_vec_add2(obj.mtype.phys_info.rotvel, accel);
 				vm_vec_scale(obj.mtype.phys_info.rotvel, f1_0 - drag);
@@ -216,49 +222,30 @@ static void do_physics_sim_rot(object_base &obj)
 	//now rotate object
 
 	//unrotate object for bank caused by turn
-	if (const auto turnroll{obj.mtype.phys_info.turnroll})
+	if (obj.mtype.phys_info.turnroll)
 	{
-		const auto &&rotmat = vm_angles_2_matrix(
-			vms_angvec{
-				.p = fixang{0},
-				.b = static_cast<fixang>(-turnroll),
-				.h = fixang{0}
-			});
+		tangles.p = tangles.h = 0;
+		tangles.b = -obj.mtype.phys_info.turnroll;
+		const auto &&rotmat = vm_angles_2_matrix(tangles);
 		obj.orient = vm_matrix_x_matrix(obj.orient, rotmat);
 	}
 
-	const auto frametime{FrameTime};
+	const auto frametime = FrameTime;
+	tangles.p = fixmul(obj.mtype.phys_info.rotvel.x, frametime);
+	tangles.h = fixmul(obj.mtype.phys_info.rotvel.y, frametime);
+	tangles.b = fixmul(obj.mtype.phys_info.rotvel.z, frametime);
 
-	{
-		const auto multiply_with_clamp = [](const fix rotvel, const fix frametime) -> fixang {
-			static constexpr fix min{std::numeric_limits<fixang>::min()};
-			static constexpr fix max{std::numeric_limits<fixang>::max()};
-			return std::clamp<fix>({fixmul(rotvel, frametime)}, min, max);
-		};
-		obj.orient = vm_matrix_x_matrix(obj.orient, vm_angles_2_matrix(
-				vms_angvec{
-					.p = multiply_with_clamp(obj.mtype.phys_info.rotvel.x, frametime),
-					.b = multiply_with_clamp(obj.mtype.phys_info.rotvel.z, frametime),
-					.h = multiply_with_clamp(obj.mtype.phys_info.rotvel.y, frametime)
-				}));
-	}
+	obj.orient = vm_matrix_x_matrix(obj.orient, vm_angles_2_matrix(tangles));
 
 	if (obj.mtype.phys_info.flags & PF_TURNROLL)
 		set_object_turnroll(obj);
 
 	//re-rotate object for bank caused by turn
-	/* The call to `set_object_turnroll` may have changed
-	 * `.phys_info.turnroll`, so it must be reread here.  The value loaded
-	 * above is stale.
-	 */
-	if (const auto turnroll{obj.mtype.phys_info.turnroll})
+	if (obj.mtype.phys_info.turnroll)
 	{
-		obj.orient = vm_matrix_x_matrix(obj.orient, vm_angles_2_matrix(
-				vms_angvec{
-					.p = fixang{0},
-					.b = turnroll,
-					.h = fixang{0}
-				}));
+		tangles.p = tangles.h = 0;
+		tangles.b = obj.mtype.phys_info.turnroll;
+		obj.orient = vm_matrix_x_matrix(obj.orient, vm_angles_2_matrix(tangles));
 	}
 
 	check_and_fix_matrix(obj.orient);
@@ -285,31 +272,38 @@ static void fix_illegal_wall_intersection(const vmobjptridx_t obj)
 
 class ignore_objects_array_t
 {
-	using object_index_array = std::array<vcobjidx_t, MAX_IGNORE_OBJS>;
-	object_index_array::iterator iter_first_uninitialized;
-	std::array<std::byte, sizeof(object_index_array)> storage;
-	object_index_array &array()
-	{
-		return *reinterpret_cast<object_index_array *>(&storage);
-	}
-	const object_index_array &array() const
-	{
-		return *reinterpret_cast<const object_index_array *>(&storage);
-	}
+	using array_t = std::array<vcobjidx_t, MAX_IGNORE_OBJS>;
+	array_t::iterator e;
+	union {
+		array_t a;
+	};
 public:
-	ignore_objects_array_t() :
-		iter_first_uninitialized(array().begin())
+	/* The iterator should be initialized in a
+	 * member-initialization-list.  However, clang complains that the
+	 * union is uninitialized during the member-initialization-list, but
+	 * accepts the still-uninitialized union member once the constructor
+	 * body starts.  Assign the iterator in the body to silence this
+	 * useless clang warning.
+	 *
+	 * Known bad:
+	 *	clang-5
+	 *	clang-7
+	 */
+	ignore_objects_array_t()
 	{
+		e = a.begin();
 	}
-	vcobjidx_t *push_back(const vcobjidx_t o)
+	bool push_back(const vcobjidx_t o)
 	{
-		if (likely(iter_first_uninitialized != array().end()))
-			return std::construct_at(std::to_address(iter_first_uninitialized++), o);
-		return nullptr;
+		if (unlikely(e == a.end()))
+			return false;
+		std::uninitialized_fill_n(e, 1, o);
+		++e;
+		return true;
 	}
-	operator std::ranges::subrange<const vcobjidx_t *>() const
+	operator std::pair<const vcobjidx_t *, const vcobjidx_t *>() const
 	{
-		return {array().begin(), iter_first_uninitialized};
+		return {a.begin(), e};
 	}
 };
 
@@ -325,13 +319,23 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 	auto &vcobjptr = Objects.vcptr;
 	auto &vmobjptr = Objects.vmptr;
 	ignore_objects_array_t ignore_obj_list;
+	int try_again;
+	vms_vector ipos;		//position after this frame
+	segnum_t WallHitSeg;
+	sidenum_t WallHitSide;
 	fvi_info hit_info;
+	vms_vector save_pos;
+	fix drag;
+	fix sim_time;
+	vms_vector start_pos;
+	int obj_stopped=0;
 	fix moved_time;			//how long objected moved before hit something
-	const auto orig_segnum{obj->segnum};
+	physics_info *pi;
+	auto orig_segnum = obj->segnum;
+	int bounced=0;
 	bool Player_ScrapeFrame=false;
 	auto result = window_event_result::handled;
 #if defined(DXX_BUILD_DESCENT_II)
-	bool bounced{};
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
 #endif
 
@@ -343,20 +347,23 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 			return window_event_result::ignored;
 #endif
 
+	pi = &obj->mtype.phys_info;
+
 	do_physics_sim_rot(obj);
 
-	if (const physics_info &pi{obj->mtype.phys_info}; !(pi.velocity.x || pi.velocity.y || pi.velocity.z || pi.thrust.x || pi.thrust.y || pi.thrust.z))
+	if (!(pi->velocity.x || pi->velocity.y || pi->velocity.z || pi->thrust.x || pi->thrust.y || pi->thrust.z))
 		return window_event_result::ignored;
 
-	fix sim_time{FrameTime};
-	const vms_vector start_pos{obj->pos};
+	sim_time = FrameTime;
+
+	start_pos = obj->pos;
 
 		//if uses thrust, cannot have zero drag
 	Assert(!(obj->mtype.phys_info.flags&PF_USES_THRUST) || obj->mtype.phys_info.drag!=0);
 
 	//do thrust & drag
-	if (const fix drag{obj->mtype.phys_info.drag})
-	{
+	if ((drag = obj->mtype.phys_info.drag) != 0) {
+
 		int count;
 		fix r,k,have_accel;
 
@@ -366,7 +373,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 
 		if (obj->mtype.phys_info.flags & PF_USES_THRUST) {
 
-			const auto accel{vm_vec_copy_scale(obj->mtype.phys_info.thrust,fixdiv(f1_0,obj->mtype.phys_info.mass))};
+			const auto accel = vm_vec_copy_scale(obj->mtype.phys_info.thrust,fixdiv(f1_0,obj->mtype.phys_info.mass));
 			have_accel = (accel.x || accel.y || accel.z);
 
 			while (count--) {
@@ -401,14 +408,12 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 	auto &vcvertptr = Vertices.vcptr;
 	auto &Walls = LevelUniqueWallSubsystemState.Walls;
 	auto &vcwallptr = Walls.vcptr;
-	auto fate{fvi_hit_type::None};
-	bool try_again{};
-	bool obj_stopped{};
+	auto fate = fvi_hit_type::None;
 	do {
 		try_again = 0;
 
 		//Move the object
-		const auto frame_vec{vm_vec_copy_scale(obj->mtype.phys_info.velocity, sim_time)};
+		const auto frame_vec = vm_vec_copy_scale(obj->mtype.phys_info.velocity, sim_time);
 
 		if ( (frame_vec.x==0) && (frame_vec.y==0) && (frame_vec.z==0) )	
 			break;
@@ -452,7 +457,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 
 		if (phys_segs && !hit_info.seglist.empty())
 		{
-			auto n_phys_segs{phys_segs->nsegs};
+			auto n_phys_segs = phys_segs->nsegs;
 			if (n_phys_segs && phys_segs->seglist[n_phys_segs - 1] == hit_info.seglist[0])
 				n_phys_segs--;
 			range_for (const auto &hs, hit_info.seglist)
@@ -464,10 +469,10 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 			phys_segs->nsegs = n_phys_segs;
 		}
 
-		const vms_vector ipos{hit_info.hit_pnt};		//position after this frame
-		const auto iseg{hit_info.hit_seg};
-		const sidenum_t WallHitSide{hit_info.hit_side};
-		const segnum_t WallHitSeg{hit_info.hit_side_seg};
+		ipos = hit_info.hit_pnt;
+		auto iseg = hit_info.hit_seg;
+		WallHitSide = hit_info.hit_side;
+		WallHitSeg = hit_info.hit_side_seg;
 
 		if (iseg==segment_none) {		//some sort of horrible error
 			if (obj->type == OBJ_WEAPON)
@@ -477,8 +482,8 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 
 		assert(!(fate == fvi_hit_type::Wall && (WallHitSeg == segment_none || WallHitSeg > Highest_segment_index)));
 
-		const vms_vector save_pos{obj->pos};			//save the object's position
-		const auto save_seg{obj->segnum};
+		save_pos = obj->pos;			//save the object's position
+		auto save_seg = obj->segnum;
 
 		// update object's position and segment number
 		obj->pos = ipos;
@@ -490,7 +495,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		//if start point not in segment, move object to center of segment
 		if (get_seg_masks(vcvertptr, obj->pos, Segments.vcptr(obj->segnum), 0).centermask != sidemask_t{})
 		{
-			auto n{find_object_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj)};
+			auto n = find_object_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj);
 			if (n == segment_none)
 			{
 				//Int3();
@@ -500,7 +505,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 					obj_relink(vmobjptr, Segments.vmptr, obj, n);
 				}
 				else {
-					obj->pos = compute_segment_center(vcvertptr, obj_segp);
+					compute_segment_center(vcvertptr, obj->pos, obj_segp);
 					obj->pos.x += obj;
 				}
 				if (obj->type == OBJ_WEAPON)
@@ -513,7 +518,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		{
 			//vms_vector moved_vec;
 			vms_vector moved_vec_n;
-			const auto actual_dist{vm_vec_normalized_dir(moved_vec_n, obj->pos, save_pos)};
+			const auto actual_dist = vm_vec_normalized_dir(moved_vec_n,obj->pos,save_pos);
 
 			if (fate == fvi_hit_type::Wall && vm_vec_dot(moved_vec_n,frame_vec) < 0)
 			{		//moved backwards
@@ -529,8 +534,8 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				moved_time = 0;
 			}
 			else {
-				const auto attempted_dist{vm_vec_mag(frame_vec)};
-				const auto old_sim_time{sim_time};
+				const auto attempted_dist = vm_vec_mag(frame_vec);
+				const auto old_sim_time = sim_time;
 				sim_time = fixmuldiv(sim_time,attempted_dist-actual_dist,attempted_dist);
 
 				moved_time = old_sim_time - sim_time;
@@ -548,12 +553,13 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		switch( fate )		{
 
 			case fvi_hit_type::Wall:		{
-				fix hit_speed=0;
+				fix hit_speed=0,wall_part=0;
 
 				// Find hit speed	
 
-				const auto moved_v{vm_vec_sub(obj->pos, save_pos)};
-				auto wall_part{vm_vec_dot(moved_v,hit_info.hit_wallnorm)};
+				const auto moved_v = vm_vec_sub(obj->pos,save_pos);
+
+				wall_part = vm_vec_dot(moved_v,hit_info.hit_wallnorm);
 
 				if ((wall_part != 0 && moved_time>0 && (hit_speed=-fixdiv(wall_part,moved_time))>0) || obj->type == OBJ_WEAPON || obj->type == OBJ_DEBRIS)
 					result = collide_object_with_wall(
@@ -588,15 +594,15 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 #elif defined(DXX_BUILD_DESCENT_II)
 					const unique_segment &useg = vcsegptr(WallHitSeg);
 					auto &uside = useg.sides[WallHitSide];
-					const auto forcefield_bounce{(TmapInfo[get_texture_index(uside.tmap_num)].flags & tmapinfo_flag::force_field)};		//bounce off a forcefield
-					bool check_vel{};
+					const auto forcefield_bounce = (TmapInfo[get_texture_index(uside.tmap_num)].flags & tmapinfo_flag::force_field);		//bounce off a forcefield
+					int check_vel=0;
 #endif
 
 					if (!forcefield_bounce && (obj->mtype.phys_info.flags & PF_STICK)) {		//stop moving
 
 						LevelUniqueStuckObjectState.add_stuck_object(vcwallptr, obj, Segments.vmptr(WallHitSeg), WallHitSide);
 
-						obj->mtype.phys_info.velocity = {};
+						vm_vec_zero(obj->mtype.phys_info.velocity);
 						obj_stopped = 1;
 						try_again = 0;
 					}
@@ -625,6 +631,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 								else
 									obj->mtype.phys_info.flags |= PF_BOUNCED_ONCE;
 							}
+
 							bounced = 1;		//this object bounced
 #endif
 						}
@@ -640,7 +647,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 						}
 
 						if (bounced && obj->type == OBJ_WEAPON)
-							vm_vector_to_matrix_u(obj->orient, obj->mtype.phys_info.velocity, obj->orient.uvec);
+							vm_vector_2_matrix(obj->orient,obj->mtype.phys_info.velocity,&obj->orient.uvec,nullptr);
 #endif
 
 						try_again = 1;
@@ -651,21 +658,27 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 			}
 
 			case fvi_hit_type::Object:		{
+				vms_vector old_vel;
+
 				// Mark the hit object so that on a retry the fvi code
 				// ignores this object.
 
 				Assert(hit_info.hit_object != object_none);
-				const auto old_vel{obj->mtype.phys_info.velocity};
 				//	Calculcate the hit point between the two objects.
 				{
+					fix			size0, size1;
 					const auto &&hit = obj.absolute_sibling(hit_info.hit_object);
 					const auto &ppos0 = hit->pos;
 					const auto &ppos1 = obj->pos;
-					const fix size0{hit->size};
-					const fix size1{obj->size};
+					size0 = hit->size;
+					size1 = obj->size;
 					Assert(size0+size1 != 0);	// Error, both sizes are 0, so how did they collide, anyway?!?
-					auto pos_hit{vm_vec_scale_add(ppos0, vm_vec_sub(ppos1, ppos0), fixdiv(size0, size0 + size1))};
+					//vm_vec_scale(vm_vec_sub(&pos_hit, ppos1, ppos0), fixdiv(size0, size0 + size1));
+					//vm_vec_add2(&pos_hit, ppos0);
+					auto pos_hit = vm_vec_sub(ppos1, ppos0);
+					vm_vec_scale_add(pos_hit,ppos0,pos_hit,fixdiv(size0, size0 + size1));
 
+					old_vel = obj->mtype.phys_info.velocity;
 					collide_two_objects(Robot_info, obj, hit, pos_hit);
 				}
 
@@ -673,8 +686,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				if ( !(obj->flags&OF_SHOULD_BE_DEAD)  )	{
 					//obj->pos = save_pos;
 
-					if ((obj->mtype.phys_info.flags & PF_PERSISTENT) || old_vel == obj->mtype.phys_info.velocity)
-					{
+					if (obj->mtype.phys_info.flags&PF_PERSISTENT || (old_vel.x == obj->mtype.phys_info.velocity.x && old_vel.y == obj->mtype.phys_info.velocity.y && old_vel.z == obj->mtype.phys_info.velocity.z)) {
 						//if (Objects[hit_info.hit_object].type == OBJ_POWERUP)
 						if (ignore_obj_list.push_back(hit_info.hit_object))
 						try_again = 1;
@@ -707,16 +719,13 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 	}
 
 	// After collision with objects and walls, set velocity from actual movement
-	if (!obj_stopped
-#if defined(DXX_BUILD_DESCENT_II)
-		&& !bounced 
-#endif
+	if (!obj_stopped && !bounced 
 		&& ((obj->type == OBJ_PLAYER) || (obj->type == OBJ_ROBOT) || (obj->type == OBJ_DEBRIS)) 
 		&& (fate == fvi_hit_type::Wall || fate == fvi_hit_type::Object || fate == fvi_hit_type::BadP0)
 		)
 	{	
-		const auto moved_vec{vm_vec_sub(obj->pos, start_pos)};
-		obj->mtype.phys_info.velocity = vm_vec_copy_scale(moved_vec, fixdiv(F1_0, FrameTime));
+		const auto moved_vec = vm_vec_sub(obj->pos,start_pos);
+		vm_vec_copy_scale(obj->mtype.phys_info.velocity,moved_vec,fixdiv(f1_0,FrameTime));
 	}
 
 	fix_illegal_wall_intersection(obj);
@@ -730,25 +739,29 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 	//hack to keep player from going through closed doors
 	if (obj->type==OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) ) {
 
-		const cscusegment orig_segp{vcsegptr(orig_segnum)};
+		const cscusegment orig_segp = vcsegptr(orig_segnum);
 		const auto &&sidenum = find_connect_side(vcsegptridx(obj->segnum), orig_segp);
 		if (sidenum != side_none)
 		{
 
 			if (! (WALL_IS_DOORWAY(GameBitmaps, Textures, vcwallptr, orig_segp, sidenum) & WALL_IS_DOORWAY_FLAG::fly))
 			{
+				fix dist;
+
 				//bump object back
 
 				auto &s = orig_segp.s.sides[sidenum];
+
 				const auto &&vertex_list = create_abs_vertex_lists(orig_segp, s, sidenum).second;
 
 				//let's pretend this wall is not triangulated
-				const auto b{begin(vertex_list)};
-				const auto vertnum{*std::min_element(b, std::next(b, 4))};
+				const auto b = begin(vertex_list);
+				const auto vertnum = *std::min_element(b, std::next(b, 4));
 
-				const fix dist{vm_dist_to_plane(start_pos, s.normals[0], vcvertptr(vertnum))};
-				obj->pos = vm_vec_scale_add(start_pos, s.normals[0], obj->size - dist);
+				dist = vm_dist_to_plane(start_pos, s.normals[0], vcvertptr(vertnum));
+				vm_vec_scale_add(obj->pos, start_pos, s.normals[0], obj->size-dist);
 				update_object_seg(vmobjptr, LevelSharedSegmentState, LevelUniqueSegmentState, obj);
+
 			}
 		}
 	}
@@ -760,6 +773,8 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		if (find_object_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj) == segment_none)
 		{
 			segnum_t n;
+
+			//Int3();
 			const auto &&obj_segp = Segments.vmptridx(obj->segnum);
 			if (obj->type == OBJ_PLAYER && (n = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj_previous_position, obj_segp)) != segment_none)
 			{
@@ -767,7 +782,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				obj_relink(vmobjptr, Segments.vmptr, obj, Segments.vmptridx(n));
 			}
 			else {
-				obj->pos = compute_segment_center(vcvertptr, obj_segp);
+				compute_segment_center(vcvertptr, obj->pos, obj_segp);
 				obj->pos.x += obj;
 			}
 			if (obj->type == OBJ_WEAPON)
@@ -823,11 +838,13 @@ static void physics_set_rotvel_and_saturate(fix &dest, fix delta)
 //	phys_apply_rot used to call ai_turn_towards_vector until I fixed it, which broke phys_apply_rot.
 void physics_turn_towards_vector(const vms_vector &goal_vector, object_base &obj, fix rate)
 {
+	fix			delta_p, delta_h;
+
 	// Make this object turn towards the goal_vector.  Changes orientation, doesn't change direction of movement.
 	// If no one moves, will be facing goal_vector in 1 second.
 
 	//	Detect null vector.
-	if (goal_vector == vms_vector{})
+	if ((goal_vector.x == 0) && (goal_vector.y == 0) && (goal_vector.z == 0))
 		return;
 
 	//	Make morph objects turn more slowly.
@@ -837,8 +854,8 @@ void physics_turn_towards_vector(const vms_vector &goal_vector, object_base &obj
 	const auto dest_angles{vm_extract_angles_vector(goal_vector)};
 	const auto cur_angles{vm_extract_angles_vector(obj.orient.fvec)};
 
-	fix delta_p{dest_angles.p - cur_angles.p};
-	fix delta_h{dest_angles.h - cur_angles.h};
+	delta_p = (dest_angles.p - cur_angles.p);
+	delta_h = (dest_angles.h - cur_angles.h);
 
 	if (delta_p > F1_0/2) delta_p = dest_angles.p - cur_angles.p - F1_0;
 	if (delta_p < -F1_0/2) delta_p = dest_angles.p - cur_angles.p + F1_0;
@@ -874,7 +891,7 @@ void phys_apply_rot(object &obj, const vms_vector &force_vec)
 #if defined(DXX_BUILD_DESCENT_II)
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 #endif
-	const auto vecmag{vm_vec_mag(force_vec)};
+	auto vecmag = vm_vec_mag(force_vec);
 	if (vecmag < F1_0/32)
 		rate = 4*F1_0;
 	else if (vecmag < obj.mtype.phys_info.mass >> 11)
@@ -890,8 +907,10 @@ void phys_apply_rot(object &obj, const vms_vector &force_vec)
 			//	Changed by mk, 10/24/95, claw guys should not slow down when attacking!
 			if (!Robot_info[get_robot_id(obj)].thief && !Robot_info[get_robot_id(obj)].attack_type) {
 				if (obj.ctype.ai_info.SKIP_AI_COUNT * FrameTime < 3*F1_0/4) {
-					fix tval{fixdiv(F1_0, 8*FrameTime)};
-					auto addval{f2i(tval)};
+					fix	tval = fixdiv(F1_0, 8*FrameTime);
+					int	addval;
+
+					addval = f2i(tval);
 
 					if ( (d_rand() * 2) < (tval & 0xffff))
 						addval++;
@@ -919,7 +938,7 @@ void set_thrust_from_velocity(object_base &obj)
 {
 	Assert(obj.movement_source == object::movement_type::physics);
 	auto &phys_info = obj.mtype.phys_info;
-	phys_info.thrust = vm_vec_copy_scale(phys_info.velocity,
+	vm_vec_copy_scale(phys_info.thrust, phys_info.velocity,
 		fixmuldiv(phys_info.mass, phys_info.drag, F1_0 - phys_info.drag)
 	);
 }

@@ -45,8 +45,7 @@ namespace dsx {
 #if defined(DXX_BUILD_DESCENT_II)
 struct disk_expl_wall
 {
-	uint32_t segnum;
-	int sidenum;
+	int segnum, sidenum;
 	fix time;
 };
 static_assert(sizeof(disk_expl_wall) == 12, "sizeof(disk_expl_wall) wrong");
@@ -78,7 +77,7 @@ void maybe_replace_powerup_with_energy(object_base &del_obj);
 
 namespace dcx {
 void init_exploding_walls();
-enum class explosion_vclip_stage : bool
+enum class explosion_vclip_stage : int
 {
 	s0,
 	s1,
@@ -88,8 +87,8 @@ enum class explosion_vclip_stage : bool
 namespace dsx {
 vclip_index get_explosion_vclip(const d_robot_info_array &Robot_info, const object_base &obj, explosion_vclip_stage stage);
 
-imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, powerup_type_t id, const vms_vector &init_vel, const vms_vector &pos, vmsegptridx_t segnum, bool player);
-bool drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, powerup_type_t id, unsigned num, const vms_vector &init_vel, const vms_vector &pos, vmsegptridx_t segnum, bool player);
+imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, int id, const vms_vector &init_vel, const vms_vector &pos, vmsegptridx_t segnum, bool player);
+bool drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, int id, unsigned num, const vms_vector &init_vel, const vms_vector &pos, vmsegptridx_t segnum, bool player);
 
 #if defined(DXX_BUILD_DESCENT_II)
 // creates afterburner blobs behind the specified object
@@ -98,7 +97,7 @@ void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime
 /*
  * reads n expl_wall structs from a PHYSFS_File and swaps if specified
  */
-void expl_wall_read_n_swap(fvmwallptr &, PHYSFS_File *fp, physfsx_endian swap, unsigned);
+void expl_wall_read_n_swap(fvmwallptr &, PHYSFS_File *fp, int swap, unsigned);
 void expl_wall_write(fvcwallptr &, PHYSFS_File *);
 extern fix	Flash_effect;
 #endif

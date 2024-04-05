@@ -34,7 +34,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <utility>
 #include "dxxsconf.h"
 #include "dsx-ns.h"
-#include "d_array.h"
+#include <array>
 
 namespace dcx {
 struct segmasks
@@ -44,9 +44,7 @@ struct segmasks
    sidemask_t centermask;   //which sides center point is on back of (6 bits)
 };
 
-struct segment_depth_array_t : public enumerated_array<uint8_t, MAX_SEGMENTS, segnum_t>
-{
-};
+struct segment_depth_array_t : public std::array<ubyte, MAX_SEGMENTS> {};
 
 struct side_vertnum_list_t : std::array<vertnum_t, 4> {};
 
@@ -63,11 +61,19 @@ using vertex_vertnum_array_list = std::array<vertex_vertnum_pair, 6>;
 [[nodiscard]]
 sidenum_t find_connect_side(vcsegidx_t base_seg, const shared_segment &con_seg);
 
-[[nodiscard]]
-vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const shared_segment &sp, sidenum_t side);
-
-[[nodiscard]]
-vms_vector compute_segment_center(fvcvertptr &vcvertptr, const shared_segment &sp);
+void compute_center_point_on_side(fvcvertptr &vcvertptr, vms_vector &vp, const shared_segment &sp, sidenum_t side);
+static inline vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const shared_segment &sp, const sidenum_t side)
+{
+	vms_vector v;
+	return compute_center_point_on_side(vcvertptr, v, sp, side), v;
+}
+void compute_segment_center(fvcvertptr &vcvertptr, vms_vector &vp, const shared_segment &sp);
+static inline vms_vector compute_segment_center(fvcvertptr &vcvertptr, const shared_segment &sp)
+{
+	vms_vector v;
+	compute_segment_center(vcvertptr, v, sp);
+	return v;
+}
 
 // Fill in array with four absolute point numbers for a given side
 void get_side_verts(side_vertnum_list_t &vertlist, const shared_segment &seg, sidenum_t sidenum);
@@ -182,11 +188,10 @@ void validate_segment_all(d_level_shared_segment_state &);
 //              create new vector normals
 void validate_segment(fvcvertptr &vcvertptr, vmsegptridx_t sp);
 
-//      Extract the forward vector from segment *sp, return it by value.
+//      Extract the forward vector from segment *sp, return in *vp.
 //      The forward vector is defined to be the vector from the center of the front face of the segment
 // to the center of the back face of the segment.
-[[nodiscard]]
-vms_vector extract_forward_vector_from_segment(fvcvertptr &, const shared_segment &sp);
+void extract_forward_vector_from_segment(fvcvertptr &, const shared_segment &sp, vms_vector &vp);
 
 //      Extract the right vector from segment *sp, return it by value.
 //      The forward vector is defined to be the vector from the center of the left face of the segment
@@ -194,19 +199,22 @@ vms_vector extract_forward_vector_from_segment(fvcvertptr &, const shared_segmen
 [[nodiscard]]
 vms_vector extract_right_vector_from_segment(fvcvertptr &, const shared_segment &sp);
 
-//      Extract the up vector from segment *sp, return it by value.
+//      Extract the up vector from segment *sp, return in *vp.
 //      The forward vector is defined to be the vector from the center of the bottom face of the segment
 // to the center of the top face of the segment.
-[[nodiscard]]
-vms_vector extract_up_vector_from_segment(fvcvertptr &, const shared_segment &sp);
+void extract_up_vector_from_segment(fvcvertptr &, const shared_segment &sp, vms_vector &vp);
 
 void create_walls_on_side(fvcvertptr &, shared_segment &sp, sidenum_t sidenum);
 
 void validate_segment_side(fvcvertptr &, vmsegptridx_t sp, sidenum_t sidenum);
 #endif
 
-[[nodiscard]]
-vms_vector pick_random_point_in_seg(fvcvertptr &vcvertptr, const shared_segment &sp, std::minstd_rand r);
+void pick_random_point_in_seg(fvcvertptr &vcvertptr, vms_vector &new_pos, const shared_segment &sp, std::minstd_rand);
+static inline vms_vector pick_random_point_in_seg(fvcvertptr &vcvertptr, const shared_segment &sp, std::minstd_rand r)
+{
+	vms_vector v;
+	return pick_random_point_in_seg(vcvertptr, v, sp, r), v;
+}
 
 int check_segment_connections(void);
 unsigned set_segment_depths(vcsegidx_t start_seg, const std::array<uint8_t, MAX_SEGMENTS> *limit, segment_depth_array_t &depths);

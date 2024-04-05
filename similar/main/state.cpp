@@ -351,8 +351,8 @@ static void state_object_to_object_rw(const object &obj, object_rw *const obj_rw
 	obj_rw->shields       = obj.shields;
 	obj_rw->last_pos    = obj.pos;
 	obj_rw->contains_type = underlying_value(obj.contains.type);
-	obj_rw->contains_id   = underlying_value(obj.contains.id.robot);
-	obj_rw->contains_count= obj.contains.count;
+	obj_rw->contains_id   = obj.contains_id;
+	obj_rw->contains_count= obj.contains_count;
 	obj_rw->matcen_creator= obj.matcen_creator;
 	obj_rw->lifeleft      = obj.lifeleft;
 
@@ -541,7 +541,10 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 		obj.render_type = render_type::RT_NONE;
 	}
 	obj.flags         = obj_rw->flags;
-	obj.segnum    = vmsegidx_t::check_nothrow_index(obj_rw->segnum).value_or(segment_none);
+	{
+		const auto s = segnum_t{obj_rw->segnum};
+		obj.segnum    = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+	}
 	obj.attached_obj  = obj_rw->attached_obj;
 	obj.pos.x         = obj_rw->pos.x;
 	obj.pos.y         = obj_rw->pos.y;
@@ -557,7 +560,9 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 	obj.orient.uvec.z = obj_rw->orient.uvec.z;
 	obj.size          = obj_rw->size;
 	obj.shields       = obj_rw->shields;
-	obj.contains = build_contained_object_parameters_from_untrusted(obj_rw->contains_type, obj_rw->contains_id, obj_rw->contains_count);
+	obj.contains.type = build_contained_object_type_from_untrusted(obj_rw->contains_type);
+	obj.contains_id   = obj_rw->contains_id;
+	obj.contains_count= obj_rw->contains_count;
 	obj.matcen_creator= obj_rw->matcen_creator;
 	obj.lifeleft      = obj_rw->lifeleft;
 	
@@ -607,8 +612,8 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 			 * fixed in 14cdf1b3521ff82701c58c04e47a6c1deefe8e43, but some old
 			 * save games were corrupted by it, so trap that error here.
 			 */
-			if (const auto last_hitobj{vcobjidx_t::check_nothrow_index(obj_rw->ctype.laser_info.last_hitobj)})
-				obj.ctype.laser_info.reset_hitobj(*last_hitobj);
+			if (const auto last_hitobj = obj_rw->ctype.laser_info.last_hitobj; vcobjidx_t::check_nothrow_index(last_hitobj))
+				obj.ctype.laser_info.reset_hitobj(last_hitobj);
 			else
 				obj.ctype.laser_info.clear_hitobj();
 			obj.ctype.laser_info.track_goal       = obj_rw->ctype.laser_info.track_goal;
@@ -647,7 +652,10 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 			obj.ctype.ai_info.SKIP_AI_COUNT = obj_rw->ctype.ai_info.flags[7];
 			obj.ctype.ai_info.REMOTE_OWNER = obj_rw->ctype.ai_info.flags[8];
 			obj.ctype.ai_info.REMOTE_SLOT_NUM = obj_rw->ctype.ai_info.flags[9];
-			obj.ctype.ai_info.hide_segment = vmsegidx_t::check_nothrow_index(obj_rw->ctype.ai_info.hide_segment).value_or(segment_none);
+			{
+				const auto s = segnum_t{obj_rw->ctype.ai_info.hide_segment};
+				obj.ctype.ai_info.hide_segment = vmsegidx_t::check_nothrow_index(s) ? s : segment_none;
+			}
 			obj.ctype.ai_info.hide_index             = obj_rw->ctype.ai_info.hide_index;
 			obj.ctype.ai_info.path_length            = obj_rw->ctype.ai_info.path_length;
 			obj.ctype.ai_info.cur_path_index         = obj_rw->ctype.ai_info.cur_path_index;
@@ -771,6 +779,7 @@ namespace {
 // turn player to player_rw to be saved to Savegame.
 static void state_player_to_player_rw(const relocated_player_data &rpd, const player *pl, player_rw *pl_rw, const player_info &pl_info)
 {
+	int i=0;
 	pl_rw->callsign = pl->callsign;
 	memset(pl_rw->net_address, 0, 6);
 	pl_rw->connected                 = underlying_value(pl->connected);
@@ -794,17 +803,17 @@ static void state_player_to_player_rw(const relocated_player_data &rpd, const pl
 	pl_rw->primary_weapon_flags      = pl_info.primary_weapon_flags;
 #if defined(DXX_BUILD_DESCENT_I)
 	// make sure no side effects for Mac demo
-	pl_rw->secondary_weapon_flags    = 0x0f | (pl_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index_t::MEGA_INDEX);
+	pl_rw->secondary_weapon_flags    = 0x0f | (pl_info.secondary_ammo[MEGA_INDEX] > 0) << MEGA_INDEX;
 #elif defined(DXX_BUILD_DESCENT_II)
 	// make sure no side effects for PC demo
-	pl_rw->secondary_weapon_flags    = 0xef | (pl_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index_t::MEGA_INDEX)
-											| (pl_info.secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] > 0) << underlying_value(secondary_weapon_index_t::SMISSILE4_INDEX)	// mercury missile
-											| (pl_info.secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] > 0) << underlying_value(secondary_weapon_index_t::SMISSILE5_INDEX);	// earthshaker missile
+	pl_rw->secondary_weapon_flags    = 0xef | (pl_info.secondary_ammo[MEGA_INDEX] > 0) << MEGA_INDEX
+											| (pl_info.secondary_ammo[SMISSILE4_INDEX] > 0) << SMISSILE4_INDEX	// mercury missile
+											| (pl_info.secondary_ammo[SMISSILE5_INDEX] > 0) << SMISSILE5_INDEX;	// earthshaker missile
 #endif
 	pl_rw->obsolete_primary_ammo = {};
 	pl_rw->vulcan_ammo   = pl_info.vulcan_ammo;
-	for (const auto &&[iw, r] : enumerate(pl_info.secondary_ammo))
-		pl_rw->secondary_ammo[underlying_value(iw)] = r;
+	for (i = 0; i < MAX_SECONDARY_WEAPONS; i++)
+		pl_rw->secondary_ammo[i] = pl_info.secondary_ammo[i];
 #if defined(DXX_BUILD_DESCENT_II)
 	pl_rw->pad = 0;
 #endif
@@ -842,6 +851,7 @@ static void state_player_to_player_rw(const relocated_player_data &rpd, const pl
 
 static void state_player_rw_to_player(const player_rw *pl_rw, player *pl, player_info &pl_info, relocated_player_data &rpd)
 {
+	int i=0;
 	pl->callsign = pl_rw->callsign;
 	pl->connected                 = player_connection_status{pl_rw->connected};
 	pl->objnum                    = pl_rw->objnum;
@@ -855,8 +865,8 @@ static void state_player_rw_to_player(const player_rw *pl_rw, player *pl, player
 	pl_info.killer_objnum         = pl_rw->killer_objnum;
 	pl_info.primary_weapon_flags  = pl_rw->primary_weapon_flags;
 	pl_info.vulcan_ammo   = pl_rw->vulcan_ammo;
-	for (const auto &&[ir, w] : enumerate(pl_info.secondary_ammo))
-		w = pl_rw->secondary_ammo[underlying_value(ir)];
+	for (i = 0; i < MAX_SECONDARY_WEAPONS; i++)
+		pl_info.secondary_ammo[i] = pl_rw->secondary_ammo[i];
 	pl_info.mission.last_score                = pl_rw->last_score;
 	pl_info.mission.score                     = pl_rw->score;
 	pl->time_level                = pl_rw->time_level;
@@ -890,7 +900,7 @@ static void state_write_player(PHYSFS_File *fp, const player &pl, const relocate
 	PHYSFS_write(fp, &pl_rw, sizeof(pl_rw), 1);
 }
 
-static void state_read_player(PHYSFS_File *fp, player &pl, const physfsx_endian swap, player_info &pl_info, relocated_player_data &rpd)
+static void state_read_player(PHYSFS_File *fp, player &pl, int swap, player_info &pl_info, relocated_player_data &rpd)
 {
 	player_rw pl_rw;
 	PHYSFS_read(fp, &pl_rw, sizeof(pl_rw), 1);
@@ -1372,7 +1382,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 
 		PHYSFS_write(fp, cnv->cv_bitmap.bm_data, THUMBNAIL_W * THUMBNAIL_H, 1);
 #if defined(DXX_BUILD_DESCENT_II)
-		PHYSFS_write(fp, gr_palette.data(), sizeof(gr_palette[0]), gr_palette.size());
+		PHYSFS_write(fp, &gr_palette[0], sizeof(gr_palette[0]), gr_palette.size());
 #endif
 	}
 
@@ -1416,11 +1426,11 @@ int state_save_all_sub(const char *filename, const char *desc)
 
 // Save the current weapon info
 	{
-		const int8_t v = static_cast<int8_t>(player_info.Primary_weapon.get_active());
+		int8_t v = static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon));
 		PHYSFS_write(fp, &v, sizeof(int8_t), 1);
 	}
 	{
-		const int8_t v = static_cast<int8_t>(player_info.Secondary_weapon.get_active());
+		int8_t v = static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon));
 		PHYSFS_write(fp, &v, sizeof(int8_t), 1);
 	}
 
@@ -1431,9 +1441,9 @@ int state_save_all_sub(const char *filename, const char *desc)
 	}
 
 // Save cheats enabled
-	PHYSFS_writeULE32(fp, cheats.enabled ? UINT32_MAX : 0);
+	PHYSFS_write(fp, &cheats.enabled, sizeof(int), 1);
 #if defined(DXX_BUILD_DESCENT_I)
-	PHYSFS_writeULE32(fp, cheats.turbo ? UINT32_MAX : 0);
+	PHYSFS_write(fp, &cheats.turbo, sizeof(int), 1);
 #endif
 
 //Finish all morph objects
@@ -1594,15 +1604,16 @@ int state_save_all_sub(const char *filename, const char *desc)
 
 	PHYSFS_write(fp, &state_game_id, sizeof(unsigned), 1);
 	{
-	PHYSFS_writeULE32(fp, cheats.rapidfire ? UINT32_MAX : 0);
+		const int i = 0;
+	PHYSFS_write(fp, &cheats.rapidfire, sizeof(int), 1);
 #if defined(DXX_BUILD_DESCENT_I)
-	PHYSFS_writeULE32(fp, 0); // was Ugly_robot_cheat
-	PHYSFS_writeULE32(fp, 0); // was Ugly_robot_texture
-	PHYSFS_writeULE32(fp, cheats.ghostphysics ? UINT32_MAX : 0);
+	PHYSFS_write(fp, &i, sizeof(int), 1); // was Ugly_robot_cheat
+	PHYSFS_write(fp, &i, sizeof(int), 1); // was Ugly_robot_texture
+	PHYSFS_write(fp, &cheats.ghostphysics, sizeof(int), 1);
 #endif
-	PHYSFS_writeULE32(fp, 0); // was Lunacy
+	PHYSFS_write(fp, &i, sizeof(int), 1); // was Lunacy
 #if defined(DXX_BUILD_DESCENT_II)
-	PHYSFS_writeULE32(fp, 0); // was Lunacy, too... and one was Ugly robot stuff a long time ago...
+	PHYSFS_write(fp, &i, sizeof(int), 1); // was Lunacy, too... and one was Ugly robot stuff a long time ago...
 
 	// Save automap marker info
 
@@ -1629,16 +1640,16 @@ int state_save_all_sub(const char *filename, const char *desc)
 		 * MAX_*_WEAPONS for each.  Copy into a temporary, then write
 		 * the temporary to the file.
 		 */
-		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++j)
+		for (uint_fast32_t j = primary_weapon_index_t::VULCAN_INDEX; j != primary_weapon_index_t::SUPER_LASER_INDEX; ++j)
 		{
-			if (Primary_last_was_super & HAS_PRIMARY_FLAG(primary_weapon_index_t{j}))
+			if (Primary_last_was_super & (1 << j))
 				last_was_super[j] = 1;
 		}
 		PHYSFS_write(fp, &last_was_super, MAX_PRIMARY_WEAPONS, 1);
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
-		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index_t::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index_t::SMISSILE1_INDEX); ++j)
+		for (uint_fast32_t j = secondary_weapon_index_t::CONCUSSION_INDEX; j != secondary_weapon_index_t::SMISSILE1_INDEX; ++j)
 		{
-			if (Secondary_last_was_super & HAS_SECONDARY_FLAG(secondary_weapon_index_t{j}))
+			if (Secondary_last_was_super & (1 << j))
 				last_was_super[j] = 1;
 		}
 		PHYSFS_write(fp, &last_was_super, MAX_SECONDARY_WEAPONS, 1);
@@ -1726,7 +1737,7 @@ void set_pos_from_return_segment(void)
 	const auto &&plobjnum = vmobjptridx(get_local_player().objnum);
 	const auto &&segp = vmsegptridx(LevelSharedSegmentState.Secret_return_segment);
 	auto &vcvertptr = Vertices.vcptr;
-	plobjnum->pos = compute_segment_center(vcvertptr, segp);
+	compute_segment_center(vcvertptr, plobjnum->pos, segp);
 	obj_relink(vmobjptr, vmsegptr, plobjnum, segp);
 	plobjnum->orient = LevelSharedSegmentState.Secret_return_orient;
 	reset_player_object(*plobjnum);
@@ -1836,7 +1847,10 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	auto &RobotCenters = LevelSharedRobotcenterState.RobotCenters;
 	auto &Station = LevelUniqueFuelcenterState.Station;
 	int version, coop_player_got[MAX_PLAYERS], coop_org_objnum = get_local_player().objnum;
+	int swap = 0;	// if file is not endian native, have to swap all shorts and ints
+	int current_level;
 	char id[5];
+	fix tmptime32 = 0;
 	std::array<per_side_array<texture1_value>, MAX_SEGMENTS> TempTmapNum;
 	std::array<per_side_array<texture2_value>, MAX_SEGMENTS> TempTmapNum2;
 
@@ -1864,11 +1878,11 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 //Read version
 	//Check for swapped file here, as dgss_id is written as a string (i.e. endian independent)
 	PHYSFS_read(fp, &version, sizeof(int), 1);
-	const physfsx_endian swap{
-		(version & 0xffff0000)
-			? (version = SWAPINT(version), physfsx_endian::foreign)
-			: physfsx_endian::native
-	};	// if file is not endian native, have to swap all shorts and ints
+	if (version & 0xffff0000)
+	{
+		swap = 1;
+		version = SWAPINT(version);
+	}
 
 	if (version < STATE_COMPATIBLE_VERSION)	{
 		return 0;
@@ -1898,7 +1912,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	PHYSFS_seek(fp, PHYSFS_tell(fp) + 768);
 #endif
 // Read the Between levels flag...
-	PHYSFSX_skipBytes<4>(fp);
+	PHYSFSX_readSXE32(fp, swap);
 
 // Read the mission info...
 	savegame_mission_path mission_pathname{};
@@ -1958,11 +1972,12 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	}
 
 //Read level info
-	const auto current_level{PHYSFSX_readSXE32(fp, swap)};
-	PHYSFSX_skipBytes<4>(fp);	// skip Next_level_num
+	current_level = PHYSFSX_readSXE32(fp, swap);
+	PHYSFS_seek(fp, PHYSFS_tell(fp) + sizeof(PHYSFS_sint32)); // skip Next_level_num
 
 //Restore GameTime
-	GameTime64 = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
+	tmptime32 = PHYSFSX_readSXE32(fp, swap);
+	GameTime64 = static_cast<fix64>(tmptime32);
 
 // Start new game....
 	callsign_t org_callsign;
@@ -2081,9 +2096,9 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 
 // Restore the cheats enabled flag
 	game_disable_cheats(); // disable cheats first
-	cheats.enabled = !!PHYSFSX_readULE32(fp);
+	cheats.enabled = PHYSFSX_readSXE32(fp, swap);
 #if defined(DXX_BUILD_DESCENT_I)
-	cheats.turbo = !!PHYSFSX_readULE32(fp);
+	cheats.turbo = PHYSFSX_readSXE32(fp, swap);
 #endif
 
 	Do_appearance_effect = 0;			// Don't do this for middle o' game stuff.
@@ -2095,7 +2110,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 
 	//Read objects, and pop 'em into their respective segments.
 	{
-		const auto i{PHYSFSX_readSXE32(fp, swap)};
+		const int i = PHYSFSX_readSXE32(fp, swap);
 	Objects.set_count(i);
 	}
 	range_for (const auto &&objp, vmobjptr)
@@ -2220,19 +2235,20 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	{
 		for (const auto j : MAX_SIDES_PER_SEGMENT)
 		{
-			segp->shared_segment::sides[j].wall_num = wallnum_t{PHYSFSX_readUXE16(fp, swap)};
-			TempTmapNum[segp][j] = texture1_value{PHYSFSX_readUXE16(fp, swap)};
-			TempTmapNum2[segp][j] = texture2_value{PHYSFSX_readUXE16(fp, swap)};
+			const uint16_t wall_num = PHYSFSX_readSXE16(fp, swap);
+			segp->shared_segment::sides[j].wall_num = wallnum_t{wall_num};
+			TempTmapNum[segp][j] = static_cast<texture1_value>(PHYSFSX_readSXE16(fp, swap));
+			TempTmapNum2[segp][j] = static_cast<texture2_value>(PHYSFSX_readSXE16(fp, swap));
 		}
 	}
 
 	//Restore the fuelcen info
 	LevelUniqueControlCenterState.Control_center_destroyed = PHYSFSX_readSXE32(fp, swap);
 #if defined(DXX_BUILD_DESCENT_I)
-	LevelUniqueControlCenterState.Countdown_seconds_left = {PHYSFSX_readSXE32(fp, swap)};
+	LevelUniqueControlCenterState.Countdown_seconds_left = PHYSFSX_readSXE32(fp, swap);
 	LevelUniqueControlCenterState.Countdown_timer = 0;
 #elif defined(DXX_BUILD_DESCENT_II)
-	LevelUniqueControlCenterState.Countdown_timer = {PHYSFSX_readSXE32(fp, swap)};
+	LevelUniqueControlCenterState.Countdown_timer = PHYSFSX_readSXE32(fp, swap);
 #endif
 	const unsigned Num_robot_centers = PHYSFSX_readSXE32(fp, swap);
 	LevelSharedRobotcenterState.Num_robot_centers = Num_robot_centers;
@@ -2257,8 +2273,11 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 
 	// Restore the control cen info
 	LevelUniqueControlCenterState.Control_center_been_hit = PHYSFSX_readSXE32(fp, swap);
-	LevelUniqueControlCenterState.Control_center_player_been_seen = static_cast<player_visibility_state>(PHYSFSX_readSXE32(fp, swap));
-	LevelUniqueControlCenterState.Frametime_until_next_fire = {PHYSFSX_readSXE32(fp, swap)};
+	{
+		const int cc = PHYSFSX_readSXE32(fp, swap);
+		LevelUniqueControlCenterState.Control_center_player_been_seen = static_cast<player_visibility_state>(cc);
+	}
+	LevelUniqueControlCenterState.Frametime_until_next_fire = PHYSFSX_readSXE32(fp, swap);
 	LevelUniqueControlCenterState.Control_center_present = PHYSFSX_readSXE32(fp, swap);
 	LevelUniqueControlCenterState.Dead_controlcen_object_num = PHYSFSX_readSXE32(fp, swap);
 	if (LevelUniqueControlCenterState.Control_center_destroyed)
@@ -2301,20 +2320,19 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 
 	if ( version >= 7 )	{
 		state_game_id = PHYSFSX_readSXE32(fp, swap);
-		cheats.rapidfire = !!PHYSFSX_readULE32(fp);
-		// PHYSFSX_readSXE32(fp, swap); // was Lunacy
-		// PHYSFSX_readSXE32(fp, swap); // was Lunacy, too... and one was Ugly robot stuff a long time ago...
-		PHYSFSX_skipBytes<8>(fp);
+		cheats.rapidfire = PHYSFSX_readSXE32(fp, swap);
+		PHYSFS_seek(fp, PHYSFS_tell(fp) + sizeof(PHYSFS_sint32)); // PHYSFSX_readSXE32(fp, swap); // was Lunacy
+		PHYSFS_seek(fp, PHYSFS_tell(fp) + sizeof(PHYSFS_sint32)); // PHYSFSX_readSXE32(fp, swap); // was Lunacy, too... and one was Ugly robot stuff a long time ago...
 #if defined(DXX_BUILD_DESCENT_I)
-		cheats.ghostphysics = !!PHYSFSX_readULE32(fp);
-		PHYSFSX_skipBytes<4>(fp);
+		cheats.ghostphysics = PHYSFSX_readSXE32(fp, swap);
+		PHYSFS_seek(fp, PHYSFS_tell(fp) + sizeof(PHYSFS_sint32)); // PHYSFSX_readSXE32(fp, swap);
 #endif
 	}
 
 #if defined(DXX_BUILD_DESCENT_II)
 	if (version >= 17) {
 		range_for (auto &i, MarkerState.imobjidx)
-			i = vcobjidx_t::check_nothrow_index(PHYSFSX_readUXE32(fp, swap)).value_or(object_none);
+			i = PHYSFSX_readSXE32(fp, swap);
 		PHYSFS_seek(fp, PHYSFS_tell(fp) + (NUM_MARKERS)*(CALLSIGN_LEN+1)); // PHYSFS_read(fp, MarkerOwner, sizeof(MarkerOwner), 1); // skip obsolete MarkerOwner
 		range_for (auto &i, MarkerState.message)
 		{
@@ -2324,9 +2342,12 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		}
 	}
 	else {
+		int num;
+
 		// skip dummy info
-		const auto num{PHYSFSX_readSXE32(fp, swap)};           // was NumOfMarkers
-		PHYSFSX_skipBytes<4>(fp);	// was CurMarker
+
+		num = PHYSFSX_readSXE32(fp, swap);           // was NumOfMarkers
+		PHYSFS_seek(fp, PHYSFS_tell(fp) + sizeof(PHYSFS_sint32)); // PHYSFSX_readSXE32(fp, swap); // was CurMarker
 
 		PHYSFS_seek(fp, PHYSFS_tell(fp) + num * (sizeof(vms_vector) + 40));
 
@@ -2336,9 +2357,9 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 
 	if (version>=11) {
 		if (secret != secret_restore::survived)
-			Afterburner_charge = {PHYSFSX_readSXE32(fp, swap)};
+			Afterburner_charge = PHYSFSX_readSXE32(fp, swap);
 		else {
-			PHYSFSX_skipBytes<4>(fp);
+			PHYSFSX_readSXE32(fp, swap);
 		}
 	}
 	if (version>=12) {
@@ -2354,27 +2375,28 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		 */
 		PHYSFS_read(fp, &last_was_super, MAX_PRIMARY_WEAPONS, 1);
 		Primary_last_was_super = 0;
-		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++j)
+		for (uint_fast32_t j = primary_weapon_index_t::VULCAN_INDEX; j != primary_weapon_index_t::SUPER_LASER_INDEX; ++j)
 		{
 			if (last_was_super[j])
-				Primary_last_was_super |= HAS_PRIMARY_FLAG(primary_weapon_index_t{j});
+				Primary_last_was_super |= 1 << j;
 		}
 		PHYSFS_read(fp, &last_was_super, MAX_SECONDARY_WEAPONS, 1);
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
 		Secondary_last_was_super = 0;
-		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index_t::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index_t::SMISSILE1_INDEX); ++j)
+		for (uint_fast32_t j = secondary_weapon_index_t::CONCUSSION_INDEX; j != secondary_weapon_index_t::SMISSILE1_INDEX; ++j)
 		{
 			if (last_was_super[j])
-				Secondary_last_was_super |= HAS_SECONDARY_FLAG(secondary_weapon_index_t{j});
+				Secondary_last_was_super |= 1 << j;
 		}
 	}
 
 	if (version >= 12) {
-		Flash_effect = {PHYSFSX_readSXE32(fp, swap)};
-		Time_flash_last_played = fix64{fix{PHYSFSX_readSXE32(fp, swap)}};
-		PaletteRedAdd = {PHYSFSX_readSXE32(fp, swap)};
-		PaletteGreenAdd = {PHYSFSX_readSXE32(fp, swap)};
-		PaletteBlueAdd = {PHYSFSX_readSXE32(fp, swap)};
+		Flash_effect = PHYSFSX_readSXE32(fp, swap);
+		tmptime32 = PHYSFSX_readSXE32(fp, swap);
+		Time_flash_last_played = static_cast<fix64>(tmptime32);
+		PaletteRedAdd = PHYSFSX_readSXE32(fp, swap);
+		PaletteGreenAdd = PHYSFSX_readSXE32(fp, swap);
+		PaletteBlueAdd = PHYSFSX_readSXE32(fp, swap);
 	} else {
 		Flash_effect = 0;
 		Time_flash_last_played = 0;
@@ -2424,7 +2446,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	}
 	if (version >= 22)
 	{
-		const auto i{PHYSFSX_readSXE32(fp, swap)};
+		auto i = PHYSFSX_readSXE32(fp, swap);
 		if (secret != secret_restore::survived)
 		{
 			player_info.Omega_charge = i;
@@ -2516,13 +2538,13 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 			PHYSFS_read(fp, a.data(), a.size(), 1);
 			Netgame.mission_name.copy_if(a);
 		}
-		Netgame.levelnum = {PHYSFSX_readSXE32(fp, swap)};
+		Netgame.levelnum = PHYSFSX_readSXE32(fp, swap);
 		PHYSFS_read(fp, &Netgame.difficulty, sizeof(ubyte), 1);
 		PHYSFS_read(fp, &Netgame.game_status, sizeof(ubyte), 1);
 		PHYSFS_read(fp, &Netgame.numplayers, sizeof(ubyte), 1);
 		PHYSFS_read(fp, &Netgame.max_numplayers, sizeof(ubyte), 1);
 		PHYSFS_read(fp, &Netgame.numconnected, sizeof(ubyte), 1);
-		Netgame.level_time = {PHYSFSX_readSXE32(fp, swap)};
+		Netgame.level_time = PHYSFSX_readSXE32(fp, swap);
 		for (playernum_t i = 0; i < MAX_PLAYERS; i++)
 		{
 			const auto &&objp = vmobjptr(vcplayerptr(i)->objnum);
@@ -2570,6 +2592,7 @@ namespace dcx {
 int state_get_game_id(const d_game_unique_state::savegame_file_path &filename)
 {
 	int version;
+	int swap = 0;	// if file is not endian native, have to swap all shorts and ints
 	char id[5];
 	callsign_t saved_callsign;
 
@@ -2593,11 +2616,11 @@ int state_get_game_id(const d_game_unique_state::savegame_file_path &filename)
 //Read version
 	//Check for swapped file here, as dgss_id is written as a string (i.e. endian independent)
 	PHYSFS_read(fp, &version, sizeof(int), 1);
-	const physfsx_endian swap{
-		(version & 0xffff0000)
-			? (version = SWAPINT(version), physfsx_endian::foreign)
-			: physfsx_endian::native
-	};	// if file is not endian native, have to swap all shorts and ints
+	if (version & 0xffff0000)
+	{
+		swap = 1;
+		version = SWAPINT(version);
+	}
 
 	if (version < STATE_COMPATIBLE_VERSION)	{
 		return 0;

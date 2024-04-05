@@ -154,31 +154,30 @@ int ReadConfigFile()
 	}
 
 	// to be fully safe, assume the whole cfg consists of one big line
-	for (PHYSFSX_gets_line_t<0> line(PHYSFS_fileLength(infile) + 1); const auto rc{PHYSFSX_fgets(line, infile)};)
+	for (PHYSFSX_gets_line_t<0> line(PHYSFS_fileLength(infile) + 1); const char *const eol = PHYSFSX_fgets(line, infile);)
 	{
-		const auto eol{rc.end()};
-		const auto lb{rc.begin()};
-		const auto eq{std::ranges::find(lb, eol, '=')};
+		const auto lb = line.begin();
+		auto eq = std::find(lb, eol, '=');
 		if (eq == eol)
 			continue;
-		const auto value{std::next(eq)};
-		if (const std::ranges::subrange name{lb, eq}; compare_nonterminated_name(name, DigiVolumeStr))
+		auto value = std::next(eq);
+		if (cmp(lb, eq, DigiVolumeStr))
 		{
 			if (const auto r = convert_integer<uint8_t>(value))
 				if (const auto v = *r; v < 8)
 					CGameCfg.DigiVolume = v;
 		}
-		else if (compare_nonterminated_name(name, MusicVolumeStr))
+		else if (cmp(lb, eq, MusicVolumeStr))
 		{
 			if (const auto r = convert_integer<uint8_t>(value))
 				if (const auto v = *r; v < 8)
 					CGameCfg.MusicVolume = v;
 		}
-		else if (compare_nonterminated_name(name, ReverseStereoStr))
+		else if (cmp(lb, eq, ReverseStereoStr))
 			convert_integer(CGameCfg.ReverseStereo, value);
-		else if (compare_nonterminated_name(name, OrigTrackOrderStr))
+		else if (cmp(lb, eq, OrigTrackOrderStr))
 			convert_integer(CGameCfg.OrigTrackOrder, value);
-		else if (compare_nonterminated_name(name, MusicTypeStr))
+		else if (cmp(lb, eq, MusicTypeStr))
 		{
 			if (const auto r = convert_integer<uint8_t>(value))
 				switch (const music_type v{*r})
@@ -193,48 +192,48 @@ int ReadConfigFile()
 						break;
 				}
 		}
-		else if (compare_nonterminated_name(name, CMLevelMusicPlayOrderStr))
+		else if (cmp(lb, eq, CMLevelMusicPlayOrderStr))
 		{
 			if (auto r = convert_integer<uint8_t>(value))
 				if (auto CMLevelMusicPlayOrder = *r; CMLevelMusicPlayOrder <= static_cast<uint8_t>(LevelMusicPlayOrder::Random))
 					CGameCfg.CMLevelMusicPlayOrder = LevelMusicPlayOrder{CMLevelMusicPlayOrder};
 		}
-		else if (compare_nonterminated_name(name, CMLevelMusicTrack0Str))
+		else if (cmp(lb, eq, CMLevelMusicTrack0Str))
 			convert_integer(CGameCfg.CMLevelMusicTrack[0], value);
-		else if (compare_nonterminated_name(name, CMLevelMusicTrack1Str))
+		else if (cmp(lb, eq, CMLevelMusicTrack1Str))
 			convert_integer(CGameCfg.CMLevelMusicTrack[1], value);
-		else if (compare_nonterminated_name(name, CMLevelMusicPathStr))
+		else if (cmp(lb, eq, CMLevelMusicPathStr))
 			convert_string(CGameCfg.CMLevelMusicPath, value, eol);
-		else if (compare_nonterminated_name(name, CMMiscMusic0Str))
+		else if (cmp(lb, eq, CMMiscMusic0Str))
 			convert_string(CGameCfg.CMMiscMusic[SONG_TITLE], value, eol);
-		else if (compare_nonterminated_name(name, CMMiscMusic1Str))
+		else if (cmp(lb, eq, CMMiscMusic1Str))
 			convert_string(CGameCfg.CMMiscMusic[SONG_BRIEFING], value, eol);
-		else if (compare_nonterminated_name(name, CMMiscMusic2Str))
+		else if (cmp(lb, eq, CMMiscMusic2Str))
 			convert_string(CGameCfg.CMMiscMusic[SONG_ENDLEVEL], value, eol);
-		else if (compare_nonterminated_name(name, CMMiscMusic3Str))
+		else if (cmp(lb, eq, CMMiscMusic3Str))
 			convert_string(CGameCfg.CMMiscMusic[SONG_ENDGAME], value, eol);
-		else if (compare_nonterminated_name(name, CMMiscMusic4Str))
+		else if (cmp(lb, eq, CMMiscMusic4Str))
 			convert_string(CGameCfg.CMMiscMusic[SONG_CREDITS], value, eol);
-		else if (compare_nonterminated_name(name, GammaLevelStr))
+		else if (cmp(lb, eq, GammaLevelStr))
 		{
 			convert_integer(CGameCfg.GammaLevel, value);
 			gr_palette_set_gamma(CGameCfg.GammaLevel);
 		}
-		else if (compare_nonterminated_name(name, LastPlayerStr))
+		else if (cmp(lb, eq, LastPlayerStr))
 			GameCfg.LastPlayer.copy_lower(std::span(value, std::distance(value, eol)));
-		else if (compare_nonterminated_name(name, LastMissionStr))
+		else if (cmp(lb, eq, LastMissionStr))
 			convert_string(CGameCfg.LastMission, value, eol);
-		else if (compare_nonterminated_name(name, ResolutionXStr))
+		else if (cmp(lb, eq, ResolutionXStr))
 			convert_integer(CGameCfg.ResolutionX, value);
-		else if (compare_nonterminated_name(name, ResolutionYStr))
+		else if (cmp(lb, eq, ResolutionYStr))
 			convert_integer(CGameCfg.ResolutionY, value);
-		else if (compare_nonterminated_name(name, AspectXStr))
+		else if (cmp(lb, eq, AspectXStr))
 			convert_integer(CGameCfg.AspectX, value);
-		else if (compare_nonterminated_name(name, AspectYStr))
+		else if (cmp(lb, eq, AspectYStr))
 			convert_integer(CGameCfg.AspectY, value);
-		else if (compare_nonterminated_name(name, WindowModeStr))
+		else if (cmp(lb, eq, WindowModeStr))
 			convert_integer(CGameCfg.WindowMode, value);
-		else if (compare_nonterminated_name(name, TexFiltStr))
+		else if (cmp(lb, eq, TexFiltStr))
 		{
 			if (auto r = convert_integer<uint8_t>(value))
 			{
@@ -258,29 +257,29 @@ int ReadConfigFile()
 				}
 			}
 		}
-		else if (compare_nonterminated_name(name, TexAnisStr))
+		else if (cmp(lb, eq, TexAnisStr))
 			convert_integer(CGameCfg.TexAnisotropy, value);
 #if defined(DXX_BUILD_DESCENT_II)
-		else if (compare_nonterminated_name(name, MovieTexFiltStr))
+		else if (cmp(lb, eq, MovieTexFiltStr))
 			convert_integer(GameCfg.MovieTexFilt, value);
-		else if (compare_nonterminated_name(name, MovieSubtitlesStr))
+		else if (cmp(lb, eq, MovieSubtitlesStr))
 			convert_integer(GameCfg.MovieSubtitles, value);
 #endif
 #if DXX_USE_ADLMIDI
-		else if (compare_nonterminated_name(name, ADLMIDINumChipsStr))
+		else if (cmp(lb, eq, ADLMIDINumChipsStr))
 			convert_integer(CGameCfg.ADLMIDI_num_chips, value);
-		else if (compare_nonterminated_name(name, ADLMIDIBankStr))
+		else if (cmp(lb, eq, ADLMIDIBankStr))
 			convert_integer(CGameCfg.ADLMIDI_bank, value);
-		else if (compare_nonterminated_name(name, ADLMIDIEnabledStr))
+		else if (cmp(lb, eq, ADLMIDIEnabledStr))
 			convert_integer(CGameCfg.ADLMIDI_enabled, value);
 #endif
-		else if (compare_nonterminated_name(name, VSyncStr))
+		else if (cmp(lb, eq, VSyncStr))
 			convert_integer(CGameCfg.VSync, value);
-		else if (compare_nonterminated_name(name, MultisampleStr))
+		else if (cmp(lb, eq, MultisampleStr))
 			convert_integer(CGameCfg.Multisample, value);
-		else if (compare_nonterminated_name(name, FPSIndicatorStr))
+		else if (cmp(lb, eq, FPSIndicatorStr))
 			convert_integer(CGameCfg.FPSIndicator, value);
-		else if (compare_nonterminated_name(name, GrabinputStr))
+		else if (cmp(lb, eq, GrabinputStr))
 			convert_integer(CGameCfg.Grabinput, value);
 	}
 

@@ -23,7 +23,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
-#include "dxxsconf.h"
 #include <stdio.h>		// for printf()
 #include <stdlib.h>		// for rand() and qsort()
 #include <string.h>		// for memset()
@@ -82,6 +81,10 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 namespace dsx {
 
 namespace {
+
+#if defined(DXX_BUILD_DESCENT_II)
+static constexpr std::integral_constant<uint8_t, UINT8_MAX> stolen_item_type_none{};
+#endif
 
 static void say_escort_goal(escort_goal_t goal_num);
 
@@ -375,7 +378,7 @@ void detect_escort_goal_accomplished(const vmobjptridx_t index)
 	const auto Escort_goal_objidx = BuddyState.Escort_goal_objidx;
 	if (Escort_goal_objidx == object_none)
 	{
-		con_puts(CON_URGENT, "BUG: buddy goal is reachable, but goal object is object_none");
+		con_printf(CON_URGENT, "BUG: buddy goal is reachable, but goal object is object_none");
 		return;
 	}
 
@@ -391,9 +394,9 @@ void detect_escort_goal_accomplished(const vmobjptridx_t index)
 	if (index->type == OBJ_POWERUP)  {
 		const auto index_id = get_powerup_id(index);
 		escort_goal_t goal_key;
-		if ((index_id == powerup_type_t::POW_KEY_BLUE && (goal_key = ESCORT_GOAL_BLUE_KEY, true)) ||
-			(index_id == powerup_type_t::POW_KEY_GOLD && (goal_key = ESCORT_GOAL_GOLD_KEY, true)) ||
-			(index_id == powerup_type_t::POW_KEY_RED && (goal_key = ESCORT_GOAL_RED_KEY, true))
+		if ((index_id == POW_KEY_BLUE && (goal_key = ESCORT_GOAL_BLUE_KEY, true)) ||
+			(index_id == POW_KEY_GOLD && (goal_key = ESCORT_GOAL_GOLD_KEY, true)) ||
+			(index_id == POW_KEY_RED && (goal_key = ESCORT_GOAL_RED_KEY, true))
 		)
 		{
 			if (BuddyState.Escort_goal_object == goal_key)
@@ -675,9 +678,9 @@ static icobjidx_t exists_in_mine_2(const unique_segment &segp, const std::option
 				 * current object is a robot that will drop that powerup, then
 				 * consider the robot to be a match.
 				 */
-				if (curobjp->contains.count)
+				if (curobjp->contains_count)
 					if (curobjp->contains.type == contained_object_type::powerup)
-						if (curobjp->contains.id.powerup == powerup_type_t{*objid})
+						if (curobjp->contains_id == *objid)
 							return curobjp;
 	}
 	return object_none;
@@ -886,11 +889,6 @@ static imsegidx_t escort_get_goal_segment(const object &buddy_obj, const object_
 	return segment_none;
 }
 
-static inline imsegidx_t escort_get_goal_segment(const object &buddy_obj, const powerup_type_t objid, const player_flags powerup_flags)
-{
-	return escort_get_goal_segment(buddy_obj, OBJ_POWERUP, underlying_value(objid), powerup_flags);
-}
-
 static void set_escort_goal_non_object(d_unique_buddy_state &BuddyState)
 {
 	BuddyState.Escort_goal_objidx = object_none;
@@ -917,13 +915,13 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 	} else {
 		switch (Escort_goal_object) {
 			case ESCORT_GOAL_BLUE_KEY:
-				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_KEY_BLUE, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, POW_KEY_BLUE, powerup_flags);
 				break;
 			case ESCORT_GOAL_GOLD_KEY:
-				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_KEY_GOLD, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, POW_KEY_GOLD, powerup_flags);
 				break;
 			case ESCORT_GOAL_RED_KEY:
-				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_KEY_RED, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, POW_KEY_RED, powerup_flags);
 				break;
 			case ESCORT_GOAL_CONTROLCEN:
 				goal_seg = escort_get_goal_segment(objp, OBJ_CNTRLCEN, std::nullopt, powerup_flags);
@@ -939,7 +937,7 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 					escort_go_to_goal(objp, robptr, aip, goal_seg);
 				return;
 			case ESCORT_GOAL_ENERGY:
-				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_ENERGY, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, POW_ENERGY, powerup_flags);
 				break;
 			case ESCORT_GOAL_ENERGYCEN:
 				{
@@ -954,7 +952,7 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 				return;
 				}
 			case ESCORT_GOAL_SHIELD:
-				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_SHIELD_BOOST, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, POW_SHIELD_BOOST, powerup_flags);
 				break;
 			case ESCORT_GOAL_POWERUP:
 				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, std::nullopt, powerup_flags);
@@ -1037,18 +1035,18 @@ static escort_goal_t escort_set_goal_object(const object &Buddy_objp, const play
 			/* Player already has this key, so no need to get it again.
 			 */
 			return false;
-		const auto &&e = exists_in_mine(Buddy_objp, start_search_seg, OBJ_POWERUP, underlying_value(powerup_key), -1, pl_flags);
+		const auto &&e = exists_in_mine(Buddy_objp, start_search_seg, OBJ_POWERUP, powerup_key, -1, pl_flags);
 		/* For compatibility with classic Descent 2, test only whether
 		 * the key exists, but ignore whether it can be reached by the
 		 * guide bot.
 		 */
 		return e.first != object_none;
 	};
-	if (need_key_and_key_exists(PLAYER_FLAGS_BLUE_KEY, powerup_type_t::POW_KEY_BLUE))
+	if (need_key_and_key_exists(PLAYER_FLAGS_BLUE_KEY, POW_KEY_BLUE))
 		return ESCORT_GOAL_BLUE_KEY;
-	else if (need_key_and_key_exists(PLAYER_FLAGS_GOLD_KEY, powerup_type_t::POW_KEY_GOLD))
+	else if (need_key_and_key_exists(PLAYER_FLAGS_GOLD_KEY, POW_KEY_GOLD))
 		return ESCORT_GOAL_GOLD_KEY;
-	else if (need_key_and_key_exists(PLAYER_FLAGS_RED_KEY, powerup_type_t::POW_KEY_RED))
+	else if (need_key_and_key_exists(PLAYER_FLAGS_RED_KEY, POW_KEY_RED))
 		return ESCORT_GOAL_RED_KEY;
 	else if (LevelUniqueControlCenterState.Control_center_destroyed == 0)
 	{
@@ -1438,7 +1436,7 @@ void recreate_thief(const d_robot_info_array &Robot_info, const robot_id thief_i
 	const auto segnum = choose_thief_recreation_segment(vcsegptr, LevelUniqueWallSubsystemState.Walls.vcptr, ConsoleObject->segnum);
 	const auto &&segp = vmsegptridx(segnum);
 	auto &vcvertptr = Vertices.vcptr;
-	const auto center_point{compute_segment_center(vcvertptr, segp)};
+	const auto &&center_point = compute_segment_center(vcvertptr, segp);
 
 	const auto &&new_obj = create_morph_robot(Robot_info, segp, center_point, thief_id);
 	if (new_obj == object_none)
@@ -1596,37 +1594,37 @@ static int maybe_steal_flag_item(object &playerobj, const PLAYER_FLAG flagval)
 	if (plr_flags & flagval)
 	{
 		if (d_rand() < THIEF_PROBABILITY) {
-			powerup_type_t powerup_index;
+			int	powerup_index;
 			const char *msg;
 			plr_flags &= (~flagval);
 			switch (flagval) {
 				case PLAYER_FLAGS_INVULNERABLE:
-					powerup_index = powerup_type_t::POW_INVULNERABILITY;
+					powerup_index = POW_INVULNERABILITY;
 					msg = "Invulnerability stolen!";
 					break;
 				case PLAYER_FLAGS_CLOAKED:
-					powerup_index = powerup_type_t::POW_CLOAK;
+					powerup_index = POW_CLOAK;
 					msg = "Cloak stolen!";
 					break;
 				case PLAYER_FLAGS_MAP_ALL:
-					powerup_index = powerup_type_t::POW_FULL_MAP;
+					powerup_index = POW_FULL_MAP;
 					msg = "Full map stolen!";
 					break;
 				case PLAYER_FLAGS_QUAD_LASERS:
 					update_laser_weapon_info();
-					powerup_index = powerup_type_t::POW_QUAD_FIRE;
+					powerup_index = POW_QUAD_FIRE;
 					msg = "Quad lasers stolen!";
 					break;
 				case PLAYER_FLAGS_AFTERBURNER:
-					powerup_index = powerup_type_t::POW_AFTERBURNER;
+					powerup_index = POW_AFTERBURNER;
 					msg = "Afterburner stolen!";
 					break;
 				case PLAYER_FLAGS_CONVERTER:
-					powerup_index = powerup_type_t::POW_CONVERTER;
+					powerup_index = POW_CONVERTER;
 					msg = "Converter stolen!";
 					break;
 				case PLAYER_FLAG::HEADLIGHT_PRESENT_AND_ON:
-					powerup_index = powerup_type_t::POW_HEADLIGHT;
+					powerup_index = POW_HEADLIGHT;
 					msg = "Headlight stolen!";
 					break;
 				default:
@@ -1705,7 +1703,7 @@ static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_in
 			{
 				auto &laser_level = player_info.laser_level;
 				primary_weapon_powerup = (laser_level > MAX_LASER_LEVEL)
-					? powerup_type_t::POW_SUPER_LASER
+					? POW_SUPER_LASER
 					: Primary_weapon_to_powerup[weapon_num];
 					/* Laser levels are zero-based, so print the old
 					 * level, then decrement it.  Decrementing first
@@ -1855,25 +1853,25 @@ void init_thief_for_level(void)
 	auto &ThiefUniqueState = LevelUniqueObjectState.ThiefState;
 	ThiefUniqueState.Stolen_item_index = 0;
 	auto &Stolen_items = ThiefUniqueState.Stolen_items;
-	Stolen_items.fill(ThiefUniqueState.stolen_item_type_none);
+	Stolen_items.fill(stolen_item_type_none);
 
 	constexpr unsigned iterations = 3;
 	static_assert (std::tuple_size<decltype(ThiefUniqueState.Stolen_items)>::value >= iterations * 2, "Stolen_items too small");	//	Oops!  Loop below will overwrite memory!
    if (!(Game_mode & GM_MULTI))    
 		for (unsigned i = 0; i < iterations; i++)
 		{
-			Stolen_items[2*i] = powerup_type_t::POW_SHIELD_BOOST;
-			Stolen_items[2*i+1] = powerup_type_t::POW_ENERGY;
+			Stolen_items[2*i] = POW_SHIELD_BOOST;
+			Stolen_items[2*i+1] = POW_ENERGY;
 		}
 }
 
 // --------------------------------------------------------------------------------------------------------------
-void drop_stolen_items_local(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, const vmsegptridx_t segp, const vms_vector &thief_velocity, const vms_vector &thief_position, d_thief_unique_state::stolen_item_storage &Stolen_items)
+void drop_stolen_items_local(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, vmsegptridx_t segp, const vms_vector &thief_velocity, const vms_vector &thief_position, d_thief_unique_state::stolen_item_storage &Stolen_items)
 {
 	for (auto &i : Stolen_items)
 	{
-		if (i != d_thief_unique_state::stolen_item_type_none)
-			drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, std::exchange(i, d_thief_unique_state::stolen_item_type_none), thief_velocity, thief_position, segp, true);
+		if (i != stolen_item_type_none)
+			drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, std::exchange(i, stolen_item_type_none), thief_velocity, thief_position, segp, true);
 	}
 }
 

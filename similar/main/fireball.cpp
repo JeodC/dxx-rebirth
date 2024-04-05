@@ -657,7 +657,7 @@ static void object_create_debris(fvmsegptridx &vmsegptridx, const object_base &p
 
 	// -- used to be: Notice, not random! vm_vec_make(&obj->mtype.phys_info.rotvel,10*0x2000/3,10*0x4000/3,10*0x7000/3);
 	obj->mtype.phys_info.rotvel = {d_rand() + 0x1000, d_rand()*2 + 0x4000, d_rand()*3 + 0x2000};
-	obj->mtype.phys_info.rotthrust = {};
+	vm_vec_zero(obj->mtype.phys_info.rotthrust);
 
 	obj->lifeleft = 3*DEBRIS_LIFE/4 + fixmul(d_rand(), DEBRIS_LIFE);	//	Some randomness, so they don't all go away at the same time.
 
@@ -695,7 +695,7 @@ static unsigned disallowed_cc_dist(fvcsegptr &vcsegptr, fvcvertptr &vcvertptr, c
 			return 1;
 	}
 	//bail if not far enough from original position
-	const auto tempv{compute_segment_center(vcvertptr, sseg)};
+	const auto &&tempv = compute_segment_center(vcvertptr, sseg);
 	if (find_connected_distance(player_pos, player_seg, tempv, segp, -1, wall_is_doorway_mask::fly) < static_cast<fix>(i2f(20) * cur_drop_depth))
 		return 1;
 	return 0;
@@ -881,8 +881,8 @@ void maybe_drop_net_powerup(powerup_type_t powerup_type, bool adjust_cap, bool r
 
 		auto &vcvertptr = Vertices.vcptr;
 		const auto &&segnum = choose_drop_segment(LevelUniqueSegmentState.get_segments().vmptridx, vcvertptr, LevelUniqueWallSubsystemState.Walls.vcptr, pnum);
-		const auto &&new_pos{pick_random_point_in_seg(vcvertptr, segnum, std::minstd_rand(d_rand()))};
-		const auto &&objnum{drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, powerup_type, {}, new_pos, segnum, true)};
+		const auto &&new_pos = pick_random_point_in_seg(vcvertptr, segnum, std::minstd_rand(d_rand()));
+		const auto &&objnum = drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, powerup_type, {}, new_pos, segnum, true);
 		if (objnum == object_none)
 			return;
 		multi_send_create_powerup(powerup_type, segnum, objnum, new_pos);
@@ -947,124 +947,86 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 	if (del_obj.contains.type != contained_object_type::powerup)
 		return;
 
-	switch (del_obj.contains.id.powerup)
-	{
-		case powerup_type_t::POW_CLOAK:
-			if (weapon_nearby(vcobjptridx, vcsegptr, del_obj, powerup_type_t::POW_CLOAK) != nullptr)
-				del_obj.contains.count = 0;
+	switch (del_obj.contains_id) {
+		case POW_CLOAK:
+			if (weapon_nearby(vcobjptridx, vcsegptr, del_obj, POW_CLOAK) != nullptr)
+			{
+				del_obj.contains_count = 0;
+			}
 			return;
-		case powerup_type_t::POW_VULCAN_WEAPON:
+		case POW_VULCAN_WEAPON:
 			weapon_index = primary_weapon_index_t::VULCAN_INDEX;
 			break;
-		case powerup_type_t::POW_SPREADFIRE_WEAPON:
+		case POW_SPREADFIRE_WEAPON:
 			weapon_index = primary_weapon_index_t::SPREADFIRE_INDEX;
 			break;
-		case powerup_type_t::POW_PLASMA_WEAPON:
+		case POW_PLASMA_WEAPON:
 			weapon_index = primary_weapon_index_t::PLASMA_INDEX;
 			break;
-		case powerup_type_t::POW_FUSION_WEAPON:
+		case POW_FUSION_WEAPON:
 			weapon_index = primary_weapon_index_t::FUSION_INDEX;
 			break;
 #if defined(DXX_BUILD_DESCENT_II)
-		case powerup_type_t::POW_GAUSS_WEAPON:
+		case POW_GAUSS_WEAPON:
 			weapon_index = primary_weapon_index_t::GAUSS_INDEX;
 			break;
-		case powerup_type_t::POW_HELIX_WEAPON:
+		case POW_HELIX_WEAPON:
 			weapon_index = primary_weapon_index_t::HELIX_INDEX;
 			break;
-		case powerup_type_t::POW_PHOENIX_WEAPON:
+		case POW_PHOENIX_WEAPON:
 			weapon_index = primary_weapon_index_t::PHOENIX_INDEX;
 			break;
-		case powerup_type_t::POW_OMEGA_WEAPON:
+		case POW_OMEGA_WEAPON:
 			weapon_index = primary_weapon_index_t::OMEGA_INDEX;
 			break;
 #endif
-		case powerup_type_t::POW_EXTRA_LIFE:
-		case powerup_type_t::POW_ENERGY:
-		case powerup_type_t::POW_SHIELD_BOOST:
-		case powerup_type_t::POW_LASER:
-		case powerup_type_t::POW_KEY_BLUE:
-		case powerup_type_t::POW_KEY_RED:
-		case powerup_type_t::POW_KEY_GOLD:
-		case powerup_type_t::POW_MISSILE_1:
-		case powerup_type_t::POW_MISSILE_4:
-		case powerup_type_t::POW_QUAD_FIRE:
-		case powerup_type_t::POW_PROXIMITY_WEAPON:
-		case powerup_type_t::POW_HOMING_AMMO_1:
-		case powerup_type_t::POW_HOMING_AMMO_4:
-		case powerup_type_t::POW_SMARTBOMB_WEAPON:
-		case powerup_type_t::POW_MEGA_WEAPON:
-		case powerup_type_t::POW_VULCAN_AMMO:
-		case powerup_type_t::POW_TURBO:
-		case powerup_type_t::POW_INVULNERABILITY:
-		case powerup_type_t::POW_MEGAWOW:
-#if defined(DXX_BUILD_DESCENT_II)
-		case powerup_type_t::POW_SUPER_LASER:
-		case powerup_type_t::POW_FULL_MAP:
-		case powerup_type_t::POW_CONVERTER:
-		case powerup_type_t::POW_AMMO_RACK:
-		case powerup_type_t::POW_AFTERBURNER:
-		case powerup_type_t::POW_HEADLIGHT:
-		case powerup_type_t::POW_SMISSILE1_1:
-		case powerup_type_t::POW_SMISSILE1_4:
-		case powerup_type_t::POW_GUIDED_MISSILE_1:
-		case powerup_type_t::POW_GUIDED_MISSILE_4:
-		case powerup_type_t::POW_SMART_MINE:
-		case powerup_type_t::POW_MERCURY_MISSILE_1:
-		case powerup_type_t::POW_MERCURY_MISSILE_4:
-		case powerup_type_t::POW_EARTHSHAKER_MISSILE:
-		case powerup_type_t::POW_FLAG_BLUE:
-		case powerup_type_t::POW_FLAG_RED:
-		case powerup_type_t::POW_HOARD_ORB:
-#endif
-			break;
 	}
 
 	//	Don't drop vulcan ammo if player maxed out.
 	auto &player_info = get_local_plrobj().ctype.player_info;
-	if ((weapon_index_uses_vulcan_ammo(weapon_index) || del_obj.contains.id.powerup == powerup_type_t::POW_VULCAN_AMMO) &&
+	if ((weapon_index_uses_vulcan_ammo(weapon_index) || del_obj.contains_id == POW_VULCAN_AMMO) &&
 		player_info.vulcan_ammo >= VULCAN_AMMO_MAX)
-		del_obj.contains.count = 0;
+		del_obj.contains_count = 0;
 	else if (weapon_index != unset_weapon_index)
 	{
-		if (has_weapon(player_has_primary_weapon(player_info, weapon_index)) || weapon_nearby(vcobjptridx, vcsegptr, del_obj, del_obj.contains.id.powerup) != nullptr)
+		if (player_has_primary_weapon(player_info, weapon_index).has_weapon() || weapon_nearby(vcobjptridx, vcsegptr, del_obj, static_cast<powerup_type_t>(del_obj.contains_id)) != nullptr)
 		{
 			if (d_rand() > 16384) {
 #if defined(DXX_BUILD_DESCENT_I)
-				del_obj.contains.count = 1;
+				del_obj.contains_count = 1;
 #endif
 				del_obj.contains.type = contained_object_type::powerup;
 				if (weapon_index_uses_vulcan_ammo(weapon_index)) {
-					del_obj.contains.id.powerup = powerup_type_t::POW_VULCAN_AMMO;
+					del_obj.contains_id = POW_VULCAN_AMMO;
 				}
 				else {
-					del_obj.contains.id.powerup = powerup_type_t::POW_ENERGY;
+					del_obj.contains_id = POW_ENERGY;
 				}
 			} else {
 #if defined(DXX_BUILD_DESCENT_I)
-				del_obj.contains.count = 0;
+				del_obj.contains_count = 0;
 #elif defined(DXX_BUILD_DESCENT_II)
 				del_obj.contains.type = contained_object_type::powerup;
-				del_obj.contains.id.powerup = powerup_type_t::POW_SHIELD_BOOST;
+				del_obj.contains_id = POW_SHIELD_BOOST;
 #endif
 			}
 		}
-	} else if (del_obj.contains.id.powerup == powerup_type_t::POW_QUAD_FIRE)
+	} else if (del_obj.contains_id == POW_QUAD_FIRE)
 	{
-		if ((player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS) || weapon_nearby(vcobjptridx, vcsegptr, del_obj, del_obj.contains.id.powerup) != nullptr)
+		if ((player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS) || weapon_nearby(vcobjptridx, vcsegptr, del_obj, static_cast<powerup_type_t>(del_obj.contains_id)) != nullptr)
 		{
 			if (d_rand() > 16384) {
 #if defined(DXX_BUILD_DESCENT_I)
-				del_obj.contains.count = 1;
+				del_obj.contains_count = 1;
 #endif
 				del_obj.contains.type = contained_object_type::powerup;
-				del_obj.contains.id.powerup = powerup_type_t::POW_ENERGY;
+				del_obj.contains_id = POW_ENERGY;
 			} else {
 #if defined(DXX_BUILD_DESCENT_I)
-				del_obj.contains.count = 0;
+				del_obj.contains_count = 0;
 #elif defined(DXX_BUILD_DESCENT_II)
 				del_obj.contains.type = contained_object_type::powerup;
-				del_obj.contains.id.powerup = powerup_type_t::POW_SHIELD_BOOST;
+				del_obj.contains_id = POW_SHIELD_BOOST;
 #endif
 			}
 		}
@@ -1072,17 +1034,19 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 
 	//	If this robot was gated in by the boss and it now contains energy, make it contain nothing,
 	//	else the room gets full of energy.
-	if (del_obj.matcen_creator == BOSS_GATE_MATCEN_NUM && del_obj.contains.id.powerup == powerup_type_t::POW_ENERGY)
-		del_obj.contains.count = 0;
+	if (del_obj.matcen_creator == BOSS_GATE_MATCEN_NUM && del_obj.contains_id == POW_ENERGY && del_obj.contains.type == contained_object_type::powerup)
+	{
+		del_obj.contains_count = 0;
+	}
 
 	// Change multiplayer extra-lives into invulnerability
-	if ((Game_mode & GM_MULTI) && (del_obj.contains.id.powerup == powerup_type_t::POW_EXTRA_LIFE))
+	if ((Game_mode & GM_MULTI) && (del_obj.contains_id == POW_EXTRA_LIFE))
 	{
-		del_obj.contains.id.powerup = powerup_type_t::POW_INVULNERABILITY;
+		del_obj.contains_id = POW_INVULNERABILITY;
 	}
 }
 
-imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, powerup_type_t id, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum, const bool player)
+imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, int id, const vms_vector &init_vel, const vms_vector &pos, vmsegptridx_t segnum, bool player)
 {
 				int	rand_scale;
 				const auto old_mag = vm_vec_mag_quick(init_vel);
@@ -1091,8 +1055,8 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 				if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)) {
 					rand_scale = 4;
 					//	extra life powerups are converted to invulnerability in multiplayer, for what is an extra life, anyway?
-					if (id == powerup_type_t::POW_EXTRA_LIFE)
-						id = powerup_type_t::POW_INVULNERABILITY;
+					if (id == POW_EXTRA_LIFE)
+						id = POW_INVULNERABILITY;
 				} else
 					rand_scale = 2;
 
@@ -1108,7 +1072,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 					 return object_none;
 #endif
 				}
-				const auto &&objp = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(id), segnum, pos, &vmd_identity_matrix, Powerup_info[id].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP);
+				const auto &&objp = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, id, segnum, pos, &vmd_identity_matrix, Powerup_info[id].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP);
 
 				if (objp == object_none)
 					return objp;
@@ -1125,7 +1089,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 
 				// Give keys zero velocity so they can be tracked better in multi
 				auto &object_velocity = obj.mtype.phys_info.velocity;
-				if ((Game_mode & GM_MULTI) && (id >= powerup_type_t::POW_KEY_BLUE) && (id <= powerup_type_t::POW_KEY_GOLD))
+				if ((Game_mode & GM_MULTI) && (id >= POW_KEY_BLUE) && (id <= POW_KEY_GOLD))
 					object_velocity = {};
 				else
 				{
@@ -1149,22 +1113,22 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 
 				switch (id)
 				{
-					case powerup_type_t::POW_MISSILE_1:
-					case powerup_type_t::POW_MISSILE_4:
-					case powerup_type_t::POW_SHIELD_BOOST:
-					case powerup_type_t::POW_ENERGY:
+					case POW_MISSILE_1:
+					case POW_MISSILE_4:
+					case POW_SHIELD_BOOST:
+					case POW_ENERGY:
 						obj.lifeleft = (d_rand() + F1_0*3) * 64;		//	Lives for 3 to 3.5 binary minutes (a binary minute is 64 seconds)
 						if (Game_mode & GM_MULTI)
 							obj.lifeleft /= 2;
 						break;
 #if defined(DXX_BUILD_DESCENT_II)
-					case powerup_type_t::POW_OMEGA_WEAPON:
+					case POW_OMEGA_WEAPON:
 						if (!player)
 							obj.ctype.powerup_info.count = MAX_OMEGA_CHARGE;
 						break;
-					case powerup_type_t::POW_GAUSS_WEAPON:
+					case POW_GAUSS_WEAPON:
 #endif
-					case powerup_type_t::POW_VULCAN_WEAPON:
+					case POW_VULCAN_WEAPON:
 						if (!player)
 							obj.ctype.powerup_info.count = VULCAN_WEAPON_AMMO_AMOUNT;
 						break;
@@ -1174,7 +1138,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 	return objp;
 }
 
-bool drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, const powerup_type_t id, const unsigned num, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum, const bool player)
+bool drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const d_vclip_array &Vclip, int id, const unsigned num, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum, const bool player)
 {
 	bool created = false;
 	for (const auto i : xrange(num))
@@ -1192,18 +1156,18 @@ bool drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_l
 
 namespace {
 
-static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained_object_type type, const contained_object_id id, const unsigned num, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum)
+static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained_object_type type, const int id, const unsigned num, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum)
 {
 	if (!num)
 		return false;
 	switch (type)
 	{
 		case contained_object_type::powerup:
-			return drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, id.powerup, num, init_vel, pos, segnum, false);
+			return drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, id, num, init_vel, pos, segnum, false);
 		case contained_object_type::robot:
 			break;
 		default:
-			con_printf(CON_URGENT, DXX_STRINGIZE_FL(__FILE__, __LINE__, "ignoring invalid object type; expected OBJ_POWERUP or OBJ_ROBOT, got type=%i, id=%i"), underlying_value(type), underlying_value(id.powerup));
+			con_printf(CON_URGENT, DXX_STRINGIZE_FL(__FILE__, __LINE__, "ignoring invalid object type; expected OBJ_POWERUP or OBJ_ROBOT, got type=%i, id=%i"), underlying_value(type), id);
 			return false;
 	}
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
@@ -1233,7 +1197,7 @@ static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained
 //				new_pos.y += (d_rand()-16384)*7;
 //				new_pos.z += (d_rand()-16384)*6;
 
-				const auto rid = id.robot;
+				const auto rid = static_cast<robot_id>(id);
 				auto &robptr = Robot_info[rid];
 				const auto &&objp = robot_create(Robot_info, rid, segnum, new_pos, &vmd_identity_matrix, Polygon_models[robptr.model_num].rad, ai_behavior::AIB_NORMAL);
 				if (objp == object_none)
@@ -1275,7 +1239,7 @@ static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained
 			// sometimes drop shields.
 			if (d_rand() > 16384)
 			{
-				const auto &&objp = drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, powerup_type_t::POW_SHIELD_BOOST, init_vel, pos, segnum, false);
+				const auto &&objp = drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, POW_SHIELD_BOOST, init_vel, pos, segnum, false);
 				if (objp != object_none)
 					created = true;
 			}
@@ -1288,9 +1252,9 @@ static bool skip_create_egg_powerup(const object &player, powerup_type_t powerup
 {
 	fix current;
 	auto &player_info = player.ctype.player_info;
-	if (powerup == powerup_type_t::POW_SHIELD_BOOST)
+	if (powerup == POW_SHIELD_BOOST)
 		current = player.shields;
-	else if (powerup == powerup_type_t::POW_ENERGY)
+	else if (powerup == POW_ENERGY)
 		current = player_info.energy;
 	else
 		return false;
@@ -1307,7 +1271,7 @@ static bool skip_create_egg_powerup(const object &player, powerup_type_t powerup
 
 }
 
-bool object_create_robot_egg(const d_robot_info_array &Robot_info, const contained_object_type type, const contained_object_id id, const unsigned num, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum)
+bool object_create_robot_egg(const d_robot_info_array &Robot_info, const contained_object_type type, const int id, const unsigned num, const vms_vector &init_vel, const vms_vector &pos, const vmsegptridx_t segnum)
 {
 #if defined(DXX_BUILD_DESCENT_II)
 	auto &Objects = LevelUniqueObjectState.Objects;
@@ -1316,7 +1280,7 @@ bool object_create_robot_egg(const d_robot_info_array &Robot_info, const contain
 	{
 		if (type == contained_object_type::powerup)
 		{
-			if (skip_create_egg_powerup(get_local_plrobj(), id.powerup))
+			if (skip_create_egg_powerup(get_local_plrobj(), static_cast<powerup_type_t>(id)))
 				return false;
 		}
 	}
@@ -1326,18 +1290,18 @@ bool object_create_robot_egg(const d_robot_info_array &Robot_info, const contain
 
 bool object_create_robot_egg(const d_robot_info_array &Robot_info, object_base &objp)
 {
-	return object_create_robot_egg(Robot_info, objp.contains.type, objp.contains.id, objp.contains.count, objp.mtype.phys_info.velocity, objp.pos, vmsegptridx(objp.segnum));
+	return object_create_robot_egg(Robot_info, objp.contains.type, objp.contains_id, objp.contains_count, objp.mtype.phys_info.velocity, objp.pos, vmsegptridx(objp.segnum));
 }
 
 //	-------------------------------------------------------------------------------------------------------
 //	Put count objects of type type (eg, powerup), id = id (eg, energy) into *objp, then drop them!  Yippee!
 //	Returns created object number.
-imobjptridx_t call_object_create_egg(const object_base &objp, const powerup_type_t id)
+imobjptridx_t call_object_create_egg(const object_base &objp, const int id)
 {
 	return drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, id, objp.mtype.phys_info.velocity, objp.pos, vmsegptridx(objp.segnum), true);
 }
 
-void call_object_create_egg(const object_base &objp, const unsigned count, const powerup_type_t id)
+void call_object_create_egg(const object_base &objp, const unsigned count, const int id)
 {
 	if (count > 0) {
 		drop_powerup(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Vclip, id, count, objp.mtype.phys_info.velocity, objp.pos, vmsegptridx(objp.segnum), true);
@@ -1503,18 +1467,18 @@ void do_explosion_sequence(const d_robot_info_array &Robot_info, object &obj)
 			return object_create_explosion_without_damage(Vclip, vmsegptridx(del_obj->segnum), spawn_pos, fixmul(del_obj->size, EXPLOSION_SCALE), vclip_num);
 		}();
 
-		if (del_obj->contains.count > 0 && !(Game_mode & GM_MULTI)) { // Multiplayer handled outside of this code!!
+		if ((del_obj->contains_count > 0) && !(Game_mode & GM_MULTI)) { // Multiplayer handled outside of this code!!
 			//	If dropping a weapon that the player has, drop energy instead, unless it's vulcan, in which case drop vulcan ammo.
 			if (del_obj->contains.type == contained_object_type::powerup)
 				maybe_replace_powerup_with_energy(del_obj);
 			object_create_robot_egg(Robot_info, del_obj);
 		} else if ((del_obj->type == OBJ_ROBOT) && !(Game_mode & GM_MULTI)) { // Multiplayer handled outside this code!!
 			auto &robptr = Robot_info[get_robot_id(del_obj)];
-			if (const auto contains_count = robptr.contains.count)
-			{
+			if (robptr.contains_count) {
 				if (((d_rand() * 16) >> 15) < robptr.contains_prob) {
+					del_obj->contains_count = ((d_rand() * robptr.contains_count) >> 15) + 1;
 					del_obj->contains = robptr.contains;
-					del_obj->contains.count = ((d_rand() * contains_count) >> 15) + 1;
+					del_obj->contains_id = robptr.contains_id;
 					maybe_replace_powerup_with_energy(del_obj);
 					object_create_robot_egg(Robot_info, del_obj);
 				}
@@ -1585,7 +1549,8 @@ void explode_wall(fvcvertptr &vcvertptr, const vcsegptridx_t segnum, const siden
 	++ Num_exploding_walls;
 
 	//play one long sound for whole door wall explosion
-	digi_link_sound_to_pos(sound_effect::SOUND_EXPLODING_WALL, segnum, sidenum, compute_center_point_on_side(vcvertptr, segnum, sidenum), 0, F1_0);
+	const auto &&pos = compute_center_point_on_side(vcvertptr, segnum, sidenum);
+	digi_link_sound_to_pos( SOUND_EXPLODING_WALL,segnum, sidenum, pos, 0, F1_0 );
 }
 
 unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
@@ -1661,8 +1626,8 @@ unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
 	auto &v1 = *vcvertptr(vertnum_list[1]);
 	auto &v2 = *vcvertptr(vertnum_list[2]);
 
-	const auto &&vv0{vm_vec_sub(v0, v1)};
-	const auto &&vv1{vm_vec_sub(v2, v1)};
+	const auto &&vv0 = vm_vec_sub(v0, v1);
+	const auto &&vv1 = vm_vec_sub(v2, v1);
 
 	//now create all the next explosions
 
@@ -1671,7 +1636,7 @@ unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
 	{
 		//calc expl position
 
-		auto pos{vm_vec_scale_add(v1, vv0, d_rand() * 2)};
+		auto pos = vm_vec_scale_add(v1,vv0,d_rand() * 2);
 		vm_vec_scale_add2(pos,vv1,d_rand() * 2);
 
 		const fix size = EXPL_WALL_FIREBALL_SIZE + (2 * EXPL_WALL_FIREBALL_SIZE * e / EXPL_WALL_TOTAL_FIREBALLS);
@@ -1698,9 +1663,9 @@ unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
 //creates afterburner blobs behind the specified object
 void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime)
 {
-	auto pos_left{vm_vec_scale_add(obj.pos, obj.orient.fvec, -obj.size)};
+	auto pos_left = vm_vec_scale_add(obj.pos, obj.orient.fvec, -obj.size);
 	vm_vec_scale_add2(pos_left, obj.orient.rvec, -obj.size/4);
-	const auto pos_right{vm_vec_scale_add(pos_left, obj.orient.rvec, obj.size / 2)};
+	const auto pos_right = vm_vec_scale_add(pos_left, obj.orient.rvec, obj.size/2);
 
 	if (count == 1)
 		pos_left = vm_vec_avg(pos_left, pos_right);
@@ -1725,7 +1690,7 @@ void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime
 /*
  * reads n expl_wall structs from a PHYSFS_File and swaps if specified
  */
-void expl_wall_read_n_swap(fvmwallptr &vmwallptr, PHYSFS_File *const fp, const physfsx_endian swap, const unsigned count)
+void expl_wall_read_n_swap(fvmwallptr &vmwallptr, PHYSFS_File *const fp, const int swap, const unsigned count)
 {
 	assert(!Num_exploding_walls);
 	unsigned num_exploding_walls = 0;
@@ -1738,14 +1703,19 @@ void expl_wall_read_n_swap(fvmwallptr &vmwallptr, PHYSFS_File *const fp, const p
 	{
 		disk_expl_wall d;
 		PHYSFS_read(fp, &d, sizeof(d), 1);
-		if (swap != physfsx_endian::native)
+		if (swap)
 		{
 			d.segnum = SWAPINT(d.segnum);
 			d.sidenum = SWAPINT(d.sidenum);
 			d.time = SWAPINT(d.time);
 		}
-		if (const auto s{vcsegidx_t::check_nothrow_index(d.segnum)})
-			for (const vcsegidx_t dseg{*s}; auto &&wp : vmwallptr)
+		const auto s = segnum_t{static_cast<uint16_t>(d.segnum)};
+		if (!vmsegidx_t::check_nothrow_index(s))
+			continue;
+		const icsegidx_t dseg = s;
+		if (dseg == segment_none)
+			continue;
+		range_for (auto &&wp, vmwallptr)
 		{
 			auto &w = *wp;
 			if (w.segnum != dseg)

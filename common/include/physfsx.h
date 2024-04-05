@@ -115,7 +115,7 @@ static inline PHYSFS_sint64 PHYSFSX_check_write(PHYSFS_File *file, const std::ar
 {
 	static_assert(std::is_standard_layout<V>::value && std::is_trivial<V>::value, "C++ array of non-POD elements written");
 	DXX_PHYSFS_CHECK_WRITE_CONSTANTS(S,C);
-	return PHYSFSX_check_write(file, v.data(), S, C);
+	return PHYSFSX_check_write(file, &v[0], S, C);
 }
 
 template <typename T, typename D>
@@ -137,11 +137,23 @@ PHYSFS_sint64 PHYSFSX_check_write(PHYSFS_File *file, V **v, PHYSFS_uint32 S, PHY
 #define PHYSFS_read(F,V,S,C)	PHYSFSX_check_read(F,V,S,C)
 #define PHYSFS_write(F,V,S,C)	PHYSFSX_check_write(F,V,S,C)
 
-enum class physfsx_endian : bool
+static inline PHYSFS_sint16 PHYSFSX_readSXE16(PHYSFS_File *file, int swap)
 {
-	native,
-	foreign,
-};
+	PHYSFS_sint16 val;
+
+	PHYSFS_read(file, &val, sizeof(val), 1);
+
+	return swap ? SWAPSHORT(val) : val;
+}
+
+static inline PHYSFS_sint32 PHYSFSX_readSXE32(PHYSFS_File *file, int swap)
+{
+	PHYSFS_sint32 val;
+
+	PHYSFS_read(file, &val, sizeof(val), 1);
+
+	return swap ? SWAPINT(val) : val;
+}
 
 static inline int PHYSFSX_writeU8(PHYSFS_File *file, PHYSFS_uint8 val)
 {
@@ -196,38 +208,37 @@ static inline int PHYSFSX_fseek(PHYSFS_File *fp, long int offset, int where)
 }
 
 template <std::size_t N>
-struct PHYSFSX_gets_line_t :
-#if DXX_HAVE_POISON
-	/* Force onto heap to improve checker accuracy */
-	private std::unique_ptr<std::array<char, N>>
-#else
-	private std::array<char, N>
-#endif
+struct PHYSFSX_gets_line_t
 {
 	PHYSFSX_gets_line_t() = default;
 	PHYSFSX_gets_line_t(const PHYSFSX_gets_line_t &) = delete;
 	PHYSFSX_gets_line_t &operator=(const PHYSFSX_gets_line_t &) = delete;
 	using line_t = std::array<char, N>;
 #if DXX_HAVE_POISON
-	using base_type = std::unique_ptr<line_t>;
-	const line_t &line() const { return *this->base_type::get(); }
-	line_t &line() { return *this->base_type::get(); }
+	/* Force onto heap to improve checker accuracy */
+	std::unique_ptr<line_t> m_line;
+	const line_t &line() const { return *m_line.get(); }
+	line_t &line() { return *m_line.get(); }
 	std::span<char, N> next()
 	{
-		static_cast<base_type &>(*this) = std::make_unique<line_t>();
-		return line();
+		m_line = std::make_unique<line_t>();
+		return *m_line.get();
 	}
-	typename line_t::reference operator[](const typename line_t::size_type i) { return line()[i]; }
-	typename line_t::const_reference operator[](const typename line_t::size_type i) const { return line()[i]; }
 #else
-	const line_t &line() const { return *this; }
-	line_t &line() { return *this; }
-	std::span<char, N> next() { return line(); }
-	using line_t::operator[];
+	line_t m_line;
+	const line_t &line() const { return m_line; }
+	line_t &line() { return m_line; }
+	std::span<char, N> next() { return m_line; }
 #endif
+	operator line_t &() { return line(); }
+	operator const line_t &() const { return line(); }
 	operator char *() { return line().data(); }
 	operator const char *() const { return line().data(); }
-	static constexpr std::size_t size() { return N; }
+	typename line_t::reference operator[](typename line_t::size_type i) { return line()[i]; }
+	typename line_t::reference operator[](int i) { return operator[](static_cast<typename line_t::size_type>(i)); }
+	typename line_t::const_reference operator[](typename line_t::size_type i) const { return line()[i]; }
+	typename line_t::const_reference operator[](int i) const { return operator[](static_cast<typename line_t::size_type>(i)); }
+	constexpr std::size_t size() const { return N; }
 	typename line_t::const_iterator begin() const { return line().begin(); }
 	typename line_t::const_iterator end() const { return line().end(); }
 };
@@ -243,9 +254,9 @@ struct PHYSFSX_gets_line_t<0>
 	const std::size_t m_length;
 	PHYSFSX_gets_line_t(const std::size_t n) :
 #if !DXX_HAVE_POISON
-		m_line{DXX_ALLOCATE_PHYSFS_LINE(n)},
+		m_line(DXX_ALLOCATE_PHYSFS_LINE(n)),
 #endif
-		m_length{n}
+		m_length(n)
 	{
 	}
 	char *line() { return m_line.get(); }
@@ -261,16 +272,18 @@ struct PHYSFSX_gets_line_t<0>
 	std::size_t size() const { return m_length; }
 	operator const char *() const { return m_line.get(); }
 	const char *begin() const { return *this; }
-	const char *end() const { return std::next(begin(), m_length); }
+	const char *end() const { return begin() + m_length; }
 	operator const void *() const = delete;
 #undef DXX_ALLOCATE_PHYSFS_LINE
 };
 
 class PHYSFSX_fgets_t
 {
+	[[nodiscard]]
+	static char *get(std::span<char> buf, PHYSFS_File *const fp);
 	template <std::size_t Extent>
 		[[nodiscard]]
-		static auto get(const std::span<char, Extent> buf, const std::size_t offset, PHYSFS_File *const fp)
+		static char *get(const std::span<char, Extent> buf, std::size_t offset, PHYSFS_File *const fp)
 	{
 		if (offset > buf.size())
 			throw std::invalid_argument("offset too large");
@@ -280,35 +293,19 @@ public:
 	template <std::size_t n>
 		[[nodiscard]]
 		__attribute_nonnull()
-		auto operator()(PHYSFSX_gets_line_t<n> &buf, PHYSFS_File *const fp, const std::size_t offset = 0) const
+		char *operator()(PHYSFSX_gets_line_t<n> &buf, PHYSFS_File *const fp, std::size_t offset = 0) const
 		{
 			return get(buf.next(), offset, fp);
 		}
 	template <std::size_t n>
 		[[nodiscard]]
 		__attribute_nonnull()
-		auto operator()(ntstring<n> &buf, PHYSFS_File *const fp, const std::size_t offset = 0) const
+		char *operator()(ntstring<n> &buf, PHYSFS_File *const fp, std::size_t offset = 0) const
 		{
 			auto r = get(std::span(buf), offset, fp);
 			buf.back() = 0;
 			return r;
 		}
-	struct result : std::ranges::subrange<std::span<char>::iterator>
-	{
-		using std::ranges::subrange<std::span<char>::iterator>::subrange;
-		explicit operator bool() const
-		{
-			/* get() indicates a failure to read data (including failure due to
-			 * end-of-file) by returning a value-initialized `result`.  Treat a
-			 * value-initialized iterator as false, so that callers can readily
-			 * detect this case.
-			 */
-			return begin() != std::span<char>::iterator{};
-		}
-	};
-private:
-	[[nodiscard]]
-	static result get(std::span<char> buf, PHYSFS_File *const fp);
 };
 
 constexpr PHYSFSX_fgets_t PHYSFSX_fgets{};
@@ -341,88 +338,56 @@ static inline int PHYSFSX_writeVector(PHYSFS_File *file, const vms_vector &v)
 	return 1;
 }
 
-struct NamedPHYSFS_File
-{
-	PHYSFS_File *const fp;
-	const char *const filename;
-	operator PHYSFS_File *() const
-	{
-		return fp;
-	}
-};
-
 [[noreturn]]
 __attribute_cold
-void PHYSFSX_read_helper_report_error(const char *filename, unsigned line, const char *func, NamedPHYSFS_File file);
+void PHYSFSX_read_helper_report_error(const char *const filename, const unsigned line, const char *const func, PHYSFS_File *const file);
 
 template <typename T, auto F>
 struct PHYSFSX_read_helper
 {
-	T operator()(NamedPHYSFS_File file, const char *filename = __builtin_FILE(), unsigned line = __builtin_LINE(), const char *func = __builtin_FUNCTION()) const;
+	T operator()(PHYSFS_File *file, const char *filename = __builtin_FILE(), unsigned line = __builtin_LINE(), const char *func = __builtin_FUNCTION()) const;
 };
 
 template <typename T, auto F>
-[[nodiscard]]
-T PHYSFSX_read_helper<T, F>::operator()(const NamedPHYSFS_File file, const char *const filename, const unsigned line, const char *const func) const
+T PHYSFSX_read_helper<T, F>::operator()(PHYSFS_File *const file, const char *const filename, const unsigned line, const char *const func) const
 {
 	T i;
-	if (!F(file.fp, &i))
+	if (!F(file, &i))
 		PHYSFSX_read_helper_report_error(filename, line, func, file);
 	return i;
 }
 
-template <typename T, T (*swap_value)(const T &)>
-struct PHYSFSX_read_swap_helper
+template <typename T1, int (*F)(PHYSFS_File *, T1 *), typename T2, T1 T2::*m1, T1 T2::*m2, T1 T2::*m3>
+static void PHYSFSX_read_sequence_helper(const char *const filename, const unsigned line, const char *const func, PHYSFS_File *const file, T2 *const i)
 {
-	[[nodiscard]]
-	T operator()(PHYSFS_File *const file, physfsx_endian swap) const
-	{
-		T val{};
-		PHYSFS_readBytes(file, &val, sizeof(val));
-		return swap != physfsx_endian::native ? swap_value(val) : val;
-	}
-};
-
-template <typename T1, int (*F)(PHYSFS_File *, T1 *), typename T2, T1 T2::* ... m>
-struct PHYSFSX_read_sequence_helper
-{
-	void operator()(const NamedPHYSFS_File file, T2 &i, const char *filename = __builtin_FILE(), unsigned line = __builtin_LINE(), const char *func = __builtin_FUNCTION()) const;
-};
-
-template <typename T1, int (*F)(PHYSFS_File *, T1 *), typename T2, T1 T2::* ... m>
-void PHYSFSX_read_sequence_helper<T1, F, T2, m...>::operator()(const NamedPHYSFS_File file, T2 &i, const char *const filename, const unsigned line, const char *const func) const
-{
-	if (unlikely(!F(file.fp, &(i.*m)) || ...))
+	if (unlikely(!F(file, &(i->*m1)) ||
+		!F(file, &(i->*m2)) ||
+		!F(file, &(i->*m3))))
 		PHYSFSX_read_helper_report_error(filename, line, func, file);
 }
 
 static inline int PHYSFSX_readS8(PHYSFS_File *const file, int8_t *const b)
 {
-	return PHYSFS_readBytes(file, b, sizeof(*b)) == sizeof(*b);
+	return (PHYSFS_read(file, b, sizeof(*b), 1) == 1);
 }
 
 static constexpr PHYSFSX_read_helper<int8_t, PHYSFSX_readS8> PHYSFSX_readByte{};
 static constexpr PHYSFSX_read_helper<int16_t, PHYSFS_readSLE16> PHYSFSX_readShort{};
-static constexpr PHYSFSX_read_helper<uint16_t, PHYSFS_readULE16> PHYSFSX_readULE16{};
 static constexpr PHYSFSX_read_helper<int32_t, PHYSFS_readSLE32> PHYSFSX_readInt{};
-static constexpr PHYSFSX_read_helper<uint32_t, PHYSFS_readULE32> PHYSFSX_readULE32{};
 static constexpr PHYSFSX_read_helper<fix, PHYSFS_readSLE32> PHYSFSX_readFix{};
 static constexpr PHYSFSX_read_helper<fixang, PHYSFS_readSLE16> PHYSFSX_readFixAng{};
+#define PHYSFSX_readVector(F,V)	(PHYSFSX_read_sequence_helper<fix, PHYSFS_readSLE32, vms_vector, &vms_vector::x, &vms_vector::y, &vms_vector::z>(__FILE__, __LINE__, __func__, (F), &(V)))
+#define PHYSFSX_readAngleVec(V,F)	(PHYSFSX_read_sequence_helper<fixang, PHYSFS_readSLE16, vms_angvec, &vms_angvec::p, &vms_angvec::b, &vms_angvec::h>(__FILE__, __LINE__, __func__, (F), (V)))
 
-static constexpr PHYSFSX_read_swap_helper<PHYSFS_sint16, SWAPSHORT> PHYSFSX_readSXE16{};
-static constexpr PHYSFSX_read_swap_helper<PHYSFS_uint16, SWAPSHORT> PHYSFSX_readUXE16{};
-static constexpr PHYSFSX_read_swap_helper<PHYSFS_sint32, SWAPINT> PHYSFSX_readSXE32{};
-static constexpr PHYSFSX_read_swap_helper<PHYSFS_uint32, SWAPINT> PHYSFSX_readUXE32{};
-
-static constexpr PHYSFSX_read_sequence_helper<fix, PHYSFS_readSLE32, vms_vector, &vms_vector::x, &vms_vector::y, &vms_vector::z> PHYSFSX_readVector{};
-static constexpr PHYSFSX_read_sequence_helper<fixang, PHYSFS_readSLE16, vms_angvec, &vms_angvec::p, &vms_angvec::b, &vms_angvec::h> PHYSFSX_readAngleVec{};
-
-template <std::size_t N>
-static auto PHYSFSX_skipBytes(PHYSFS_File *const fp)
+static inline void PHYSFSX_readMatrix(const char *const filename, const unsigned line, const char *const func, vms_matrix *const m, PHYSFS_File *const file)
 {
-	std::array<uint8_t, N> skip;
-	return PHYSFS_readBytes(fp, std::data(skip), std::size(skip));
+	auto &PHYSFSX_readVector = PHYSFSX_read_sequence_helper<fix, PHYSFS_readSLE32, vms_vector, &vms_vector::x, &vms_vector::y, &vms_vector::z>;
+	(PHYSFSX_readVector)(filename, line, func, file, &m->rvec);
+	(PHYSFSX_readVector)(filename, line, func, file, &m->uvec);
+	(PHYSFSX_readVector)(filename, line, func, file, &m->fvec);
 }
+
+#define PHYSFSX_readMatrix(M,F)	((PHYSFSX_readMatrix)(__FILE__, __LINE__, __func__, (M), (F)))
 
 class PHYSFS_File_deleter
 {
@@ -458,28 +423,13 @@ public:
 		bool operator!=(T) const = delete;
 };
 
-class RAIINamedPHYSFS_File : public RAIIPHYSFS_File
-{
-public:
-	const char *filename{};
-	RAIINamedPHYSFS_File() = default;
-	RAIINamedPHYSFS_File(PHYSFS_File *fp, const char *filename) :
-		RAIIPHYSFS_File{fp}, filename{filename}
-	{
-	}
-	operator NamedPHYSFS_File() const
-	{
-		return {this->operator PHYSFS_File *(), filename};
-	}
-};
-
 typedef char file_extension_t[5];
 
 [[nodiscard]]
 __attribute_nonnull()
 int PHYSFSX_checkMatchingExtension(const char *filename, const ranges::subrange<const file_extension_t *> range);
 
-enum class physfs_search_path : bool
+enum class physfs_search_path : int
 {
 	prepend,
 	append,
@@ -539,7 +489,7 @@ extern int PHYSFSX_rename(const char *oldpath, const char *newpath);
 
 #define PHYSFSX_exists(F,I)	((I) ? PHYSFSX_exists_ignorecase(F) : PHYSFS_exists(F))
 int PHYSFSX_exists_ignorecase(const char *filename);
-std::pair<RAIINamedPHYSFS_File, PHYSFS_ErrorCode> PHYSFSX_openReadBuffered(const char *filename);
+std::pair<RAIIPHYSFS_File, PHYSFS_ErrorCode> PHYSFSX_openReadBuffered(const char *filename);
 std::pair<RAIIPHYSFS_File, PHYSFS_ErrorCode> PHYSFSX_openWriteBuffered(const char *filename);
 extern void PHYSFSX_addArchiveContent();
 extern void PHYSFSX_removeArchiveContent();

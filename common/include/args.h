@@ -25,7 +25,6 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #pragma once
 
-#include <span>
 #include <type_traits>
 #include "dxxsconf.h"
 #include <cstdint>
@@ -165,7 +164,7 @@ struct Arg : prohibit_void_ptr<Arg>
 
 extern struct Arg GameArg;
 
-bool InitArgs(std::span<char *> argv);
+bool InitArgs(int argc, char **argv);
 }
 
 namespace dcx {

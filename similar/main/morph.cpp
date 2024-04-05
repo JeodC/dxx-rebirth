@@ -23,7 +23,6 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
-#include "dxxsconf.h"
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,11 +60,9 @@ class invalid_morph_model_type : public std::runtime_error
 	__attribute_cold
 	static std::string prepare_message(const unsigned type)
 	{
-		std::array<char, 32 + sizeof("4294967295")> buf;
-		const auto bufdata{std::data(buf)};
-		const auto bufsize{std::size(buf)};
-		const auto written{std::snprintf(bufdata, bufsize, "invalid morph model type: %u", type)};
-		return std::string{bufdata, written < 0 ? std::size_t{0} : std::min(bufsize, static_cast<std::size_t>(written))};
+		char buf[32 + sizeof("4294967295")];
+		const auto len = std::snprintf(buf, sizeof buf, "invalid morph model type: %u", type);
+		return std::string(buf, len);
 	}
 public:
 	invalid_morph_model_type(const unsigned type) :
@@ -79,12 +76,10 @@ class invalid_morph_model_vertex_count : public std::runtime_error
 	__attribute_cold
 	static std::string prepare_message(const unsigned count, const polygon_model_index idx, const unsigned submodel_num)
 	{
-		std::array<char, 68 + 3 * sizeof("4294967295")> buf;
-		const unsigned uidx{underlying_value(idx)};
-		const auto bufdata{std::data(buf)};
-		const auto bufsize{std::size(buf)};
-		const auto written{std::snprintf(bufdata, bufsize, "too many vertices in morph model: found %u in model %u, submodel %u", count, uidx, submodel_num)};
-		return std::string{bufdata, written < 0 ? std::size_t{0} : std::min(bufsize, static_cast<std::size_t>(written))};
+		char buf[68 + 3 * sizeof("4294967295")];
+		const unsigned uidx = underlying_value(idx);
+		const auto len = std::snprintf(buf, sizeof buf, "too many vertices in morph model: found %u in model %u, submodel %u", count, uidx, submodel_num);
+		return std::string(buf, len);
 	}
 public:
 	invalid_morph_model_vertex_count(const unsigned count, const polygon_model_index idx, const unsigned submodel_num) :
@@ -103,18 +98,18 @@ struct submodel_data
 
 submodel_data parse_model_data_header(const polymodel &pm, const unsigned submodel_num)
 {
-	auto data{reinterpret_cast<const uint16_t *>(&pm.model_data[pm.submodel_ptrs[submodel_num]])};
-	const auto ptype{data++};
-	const uint16_t type{*ptype};
-	const auto pnverts{data++};
+	auto data = reinterpret_cast<const uint16_t *>(&pm.model_data[pm.submodel_ptrs[submodel_num]]);
+	const auto ptype = data++;
 
-	const uint16_t startpoint{(type == 7)
+	const uint16_t type = *ptype;
+	const auto pnverts = data++;
+
+	const uint16_t startpoint = (type == 7)
 		? *std::exchange(data, data + 2)		//get start point number, skip pad
 		: (type == 1)
-		? uint16_t{0}				//start at zero
-		: throw invalid_morph_model_type(type)
-	};
-	const uint16_t nverts{*pnverts};
+		? 0				//start at zero
+		: throw invalid_morph_model_type(type);
+	const uint16_t nverts = *pnverts;
 	return {data, type, nverts, startpoint};
 }
 
@@ -123,8 +118,8 @@ std::size_t count_submodel_points(const polymodel &pm, const polygon_model_index
 	/* Return the minimum array size that will not cause this submodel
 	 * to index past the end of the array.
 	 */
-	const auto &&sd{parse_model_data_header(pm, submodel_num)};
-	const std::size_t count{sd.startpoint + sd.nverts};
+	const auto &&sd = parse_model_data_header(pm, submodel_num);
+	const std::size_t count = sd.startpoint + sd.nverts;
 	if (count > morph_data::MAX_VECS)
 		throw invalid_morph_model_vertex_count(count, model_idx, submodel_num);
 	return count;
@@ -142,10 +137,11 @@ std::size_t count_model_points(const polymodel &pm, const polygon_model_index mo
 	 *
 	 * Submodel 0 is always used.
 	 */
-	auto count{count_submodel_points(pm, model_idx, 0)};
-	unsigned visited_submodels{1};
-	const unsigned mask_all_enabled_models{(1u << pm.n_models) - 1};
-	for (const auto &&submodel_parents{enumerate(partial_range(pm.submodel_parents, pm.n_models))};;)
+	auto count = count_submodel_points(pm, model_idx, 0);
+	unsigned visited_submodels = 1;
+	const unsigned mask_all_enabled_models = (1 << pm.n_models) - 1;
+	const auto &&submodel_parents = enumerate(partial_range(pm.submodel_parents, pm.n_models));
+	for (;;)
 	{
 		if (visited_submodels == mask_all_enabled_models)
 			/* Every submodel has been checked, so the next pass through
@@ -153,10 +149,10 @@ std::size_t count_model_points(const polymodel &pm, const polygon_model_index mo
 			 * avoid the extra iteration.
 			 */
 			break;
-		const auto previous_visited_submodels{visited_submodels};
+		const auto previous_visited_submodels = visited_submodels;
 		for (const auto &&[idx, value] : submodel_parents)
 		{
-			const unsigned mask_this_submodel{1u << idx};
+			const unsigned mask_this_submodel = 1 << idx;
 			if (mask_this_submodel & visited_submodels)
 				/* Already tested on a prior iteration */
 				continue;
@@ -166,12 +162,12 @@ std::size_t count_model_points(const polymodel &pm, const polygon_model_index mo
 				 * submodels have a parent of 0xff.
 				 */
 				continue;
-			const unsigned mask_parent_submodel{1u << value};
+			const unsigned mask_parent_submodel = 1 << value;
 			if (mask_parent_submodel & visited_submodels)
 			{
 				visited_submodels |= mask_this_submodel;
 				/* Parent is in use, so this submodel is also in use. */
-				const auto subcount{count_submodel_points(pm, model_idx, idx)};
+				const auto subcount = count_submodel_points(pm, model_idx, idx);
 				count = std::max(count, subcount);
 			}
 		}
@@ -188,7 +184,7 @@ std::size_t count_model_points(const polymodel &pm, const polygon_model_index mo
 
 void *morph_data::operator new(std::size_t, const max_vectors max_vecs)
 {
-	return ::operator new(sizeof(morph_data) + (underlying_value(max_vecs) * (sizeof(fix) + sizeof(vms_vector) + sizeof(vms_vector))));
+	return ::operator new(sizeof(morph_data) + (max_vecs.count * (sizeof(fix) + sizeof(vms_vector) + sizeof(vms_vector))));
 }
 
 morph_data::ptr morph_data::create(object_base &o, const polymodel &pm, const polygon_model_index model_idx)
@@ -207,11 +203,11 @@ morph_data::morph_data(object_base &o, const max_vectors m) :
 	obj(&o), Morph_sig(o.signature), max_vecs(m)
 {
 	DXX_POISON_VAR(submodel_active, 0xcc);
-	const auto morph_times{get_morph_times()};
+	const auto morph_times = get_morph_times();
 	DXX_POISON_MEMORY(morph_times, 0xcc);
-	const auto morph_vecs{get_morph_times()};
+	const auto morph_vecs = get_morph_times();
 	DXX_POISON_MEMORY(morph_vecs, 0xcc);
-	const auto morph_deltas{get_morph_times()};
+	const auto morph_deltas = get_morph_times();
 	DXX_POISON_MEMORY(morph_deltas, 0xcc);
 	DXX_POISON_VAR(n_morphing_points, 0xcc);
 	DXX_POISON_VAR(submodel_startpoints, 0xcc);
@@ -219,19 +215,19 @@ morph_data::morph_data(object_base &o, const max_vectors m) :
 
 std::span<fix> morph_data::get_morph_times()
 {
-	return {reinterpret_cast<fix *>(this + 1), {underlying_value(max_vecs)}};
+	return {reinterpret_cast<fix *>(this + 1), max_vecs.count};
 }
 
 std::span<vms_vector> morph_data::get_morph_vecs()
 {
-	const auto t{get_morph_times()};
-	return {reinterpret_cast<vms_vector *>(t.data() + t.size()), {underlying_value(max_vecs)}};
+	const auto t = get_morph_times();
+	return {reinterpret_cast<vms_vector *>(t.data() + t.size()), max_vecs.count};
 }
 
 std::span<vms_vector> morph_data::get_morph_deltas()
 {
-	const auto v{get_morph_vecs()};
-	return {v.data() + v.size(), {underlying_value(max_vecs)}};
+	const auto v = get_morph_vecs();
+	return {v.data() + v.size(), max_vecs.count};
 }
 
 d_level_unique_morph_object_state::~d_level_unique_morph_object_state() = default;
@@ -273,18 +269,18 @@ static void update_bounds(vms_vector &minv, vms_vector &maxv, const vms_vector &
 //takes pm, fills in min & max
 static void find_min_max(const polymodel &pm, const unsigned submodel_num, vms_vector &minv, vms_vector &maxv)
 {
-	const auto &&sd{parse_model_data_header(pm, submodel_num)};
-	const auto nverts{sd.nverts};
+	const auto &&sd = parse_model_data_header(pm, submodel_num);
+	const unsigned nverts = sd.nverts;
 	if (!nverts)
 	{
 		minv = maxv = {};
 		return;
 	}
-	const auto vp{reinterpret_cast<const vms_vector *>(sd.body)};
+	const auto vp = reinterpret_cast<const vms_vector *>(sd.body);
 
 	minv = maxv = *vp;
 
-	for (auto &v : std::span(vp, nverts).template subspan<1>())
+	range_for (auto &v, unchecked_partial_range(vp + 1, nverts - 1))
 	{
 		update_bounds(minv, maxv, v, &vms_vector::x);
 		update_bounds(minv, maxv, v, &vms_vector::y);
@@ -292,48 +288,52 @@ static void find_min_max(const polymodel &pm, const unsigned submodel_num, vms_v
 	}
 }
 
-constexpr fix morph_rate{F1_0 * 3};
-constexpr fix indeterminate_box_extent{INT32_MAX};
+#define MORPH_RATE (f1_0*3)
+
+constexpr fix morph_rate = MORPH_RATE;
 
 static fix update_bounding_box_extent(const vms_vector &vp, const vms_vector &box_size, fix vms_vector::*const p, const fix entry_extent)
 {
 	if (!(vp.*p))
 		return entry_extent;
-	const auto box_size_p{box_size.*p};
-	const auto abs_vp_p{abs(vp.*p)};
+	const auto box_size_p = box_size.*p;
+	const auto abs_vp_p = abs(vp.*p);
 	if (f2i(box_size_p) >= abs_vp_p / 2)
 		return entry_extent;
-	return std::min(entry_extent, fixdiv(box_size_p, abs_vp_p));
+	const fix t = fixdiv(box_size_p, abs_vp_p);
+	return std::min(entry_extent, t);
 }
 
-static fix compute_bounding_box_extents(const vms_vector &vp, const vms_vector *const box_size)
+static fix compute_bounding_box_extents(const vms_vector &vp, const vms_vector &box_size)
 {
-	return box_size
-		? update_bounding_box_extent(
-			vp, *box_size, &vms_vector::z,
-			update_bounding_box_extent(
-				vp, *box_size, &vms_vector::y,
-				update_bounding_box_extent(
-					vp, *box_size, &vms_vector::x, indeterminate_box_extent
-				)
-			)
-		)
-		: indeterminate_box_extent;
+	fix k = INT32_MAX;
+
+	k = update_bounding_box_extent(vp, box_size, &vms_vector::x, k);
+	k = update_bounding_box_extent(vp, box_size, &vms_vector::y, k);
+	k = update_bounding_box_extent(vp, box_size, &vms_vector::z, k);
+
+	return k;
 }
+
+}
+
+}
+
+namespace {
 
 static void init_points(const polymodel &pm, const vms_vector *const box_size, const unsigned submodel_num, morph_data *const md)
 {
-	const auto &&sd{parse_model_data_header(pm, submodel_num)};
-	const unsigned startpoint{sd.startpoint};
-	const unsigned endpoint{sd.startpoint + sd.nverts};
+	const auto &&sd = parse_model_data_header(pm, submodel_num);
+	const unsigned startpoint = sd.startpoint;
+	const unsigned endpoint = sd.startpoint + sd.nverts;
 
 	md->submodel_active[submodel_num] = morph_data::submodel_state::animating;
 	md->n_morphing_points[submodel_num] = 0;
 	md->submodel_startpoints[submodel_num] = startpoint;
 
-	const auto morph_times{md->get_morph_times()};
-	const auto morph_vecs{md->get_morph_vecs()};
-	const auto morph_deltas{md->get_morph_deltas()};
+	const auto morph_times = md->get_morph_times();
+	const auto morph_vecs = md->get_morph_vecs();
+	const auto morph_deltas = md->get_morph_deltas();
 	auto &&zr = zip(
 		unchecked_partial_range(reinterpret_cast<const vms_vector *>(sd.body), sd.nverts),
 		partial_range(morph_vecs, startpoint, endpoint),
@@ -342,17 +342,18 @@ static void init_points(const polymodel &pm, const vms_vector *const box_size, c
 	);
 	range_for (auto &&z, zr)
 	{
-		const auto vp{&std::get<0>(z)};
-		auto &morph_vec{std::get<1>(z)};
-		auto &morph_delta{std::get<2>(z)};
-		auto &morph_time{std::get<3>(z)};
+		const auto vp = &std::get<0>(z);
+		auto &morph_vec = std::get<1>(z);
+		auto &morph_delta = std::get<2>(z);
+		auto &morph_time = std::get<3>(z);
+		fix k;
 
-		if (const fix k{compute_bounding_box_extents(*vp, box_size)}; k != indeterminate_box_extent)
-			morph_vec = vm_vec_copy_scale(*vp, k);
+		if (box_size && (k = compute_bounding_box_extents(*vp, *box_size) != INT32_MAX))
+			vm_vec_copy_scale(morph_vec, *vp, k);
 		else
 			morph_vec = {};
 
-		const auto dist{vm_vec_normalized_dir_quick(morph_delta, *vp, morph_vec)};
+		const auto dist = vm_vec_normalized_dir_quick(morph_delta, *vp, morph_vec);
 		morph_time = fixdiv(dist, morph_rate);
 
 		if (morph_time != 0)
@@ -364,13 +365,13 @@ static void init_points(const polymodel &pm, const vms_vector *const box_size, c
 
 static void update_points(const polymodel &pm, const unsigned submodel_num, morph_data *const md)
 {
-	const auto &&sd{parse_model_data_header(pm, submodel_num)};
-	const unsigned startpoint{sd.startpoint};
-	const unsigned endpoint{startpoint + sd.nverts};
+	const auto &&sd = parse_model_data_header(pm, submodel_num);
+	const unsigned startpoint = sd.startpoint;
+	const unsigned endpoint = startpoint + sd.nverts;
 
-	const auto morph_times{md->get_morph_times()};
-	const auto morph_vecs{md->get_morph_vecs()};
-	const auto morph_deltas{md->get_morph_deltas()};
+	const auto morph_times = md->get_morph_times();
+	const auto morph_vecs = md->get_morph_vecs();
+	const auto morph_deltas = md->get_morph_deltas();
 	auto &&zr = zip(
 		unchecked_partial_range(reinterpret_cast<const vms_vector *>(sd.body), sd.nverts),
 		partial_range(morph_vecs, startpoint, endpoint),
@@ -379,10 +380,10 @@ static void update_points(const polymodel &pm, const unsigned submodel_num, morp
 	);
 	range_for (auto &&z, zr)
 	{
-		const auto vp{&std::get<0>(z)};
-		auto &morph_vec{std::get<1>(z)};
-		auto &morph_delta{std::get<2>(z)};
-		auto &morph_time{std::get<3>(z)};
+		const auto vp = &std::get<0>(z);
+		auto &morph_vec = std::get<1>(z);
+		auto &morph_delta = std::get<2>(z);
+		auto &morph_time = std::get<3>(z);
 		if (morph_time)		//not done yet
 		{
 			if ((morph_time -= FrameTime) <= 0) {
@@ -398,27 +399,24 @@ static void update_points(const polymodel &pm, const unsigned submodel_num, morp
 
 }
 
-}
-
 namespace dsx {
-
 //process the morphing object for one frame
 void do_morph_frame(object &obj)
 {
-	auto &LevelUniqueMorphObjectState{LevelUniqueObjectState.MorphObjectState};
-	const auto umd{find_morph_data(LevelUniqueMorphObjectState, obj)};
+	auto &LevelUniqueMorphObjectState = LevelUniqueObjectState.MorphObjectState;
+	const auto umd = find_morph_data(LevelUniqueMorphObjectState, obj);
 
 	if (!umd) {					//maybe loaded half-morphed from disk
 		obj.flags |= OF_SHOULD_BE_DEAD;		//..so kill it
 		return;
 	}
-	const auto md{umd->get()};
+	const auto md = umd->get();
 	assert(md->obj == &obj);
 
-	auto &Polygon_models{LevelSharedPolygonModelState.Polygon_models};
-	const polymodel &pm{Polygon_models[obj.rtype.pobj_info.model_num]};
+	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
+	const polymodel &pm = Polygon_models[obj.rtype.pobj_info.model_num];
 
-	const auto n_models{pm.n_models};
+	const auto n_models = pm.n_models;
 	for (auto &&[i, submodel_active, n_morphing_points] : enumerate(zip(unchecked_partial_range(md->submodel_active, n_models), md->n_morphing_points)))
 	{
 		if (submodel_active == morph_data::submodel_state::animating)
@@ -452,7 +450,7 @@ void do_morph_frame(object &obj)
 
 void init_morphs(d_level_unique_morph_object_state &LevelUniqueMorphObjectState)
 {
-	auto &morph_objects{LevelUniqueMorphObjectState.morph_objects};
+	auto &morph_objects = LevelUniqueMorphObjectState.morph_objects;
 	morph_objects = {};
 }
 
@@ -462,26 +460,26 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 	vms_vector pmmin,pmmax;
 	vms_vector box_size;
 
-	auto &morph_objects{LevelUniqueMorphObjectState.morph_objects};
-	const auto mob{morph_objects.begin()};
-	const auto moe{morph_objects.end()};
-	const auto mop{[](const morph_data::ptr &pmo) {
+	auto &morph_objects = LevelUniqueMorphObjectState.morph_objects;
+	const auto mob = morph_objects.begin();
+	const auto moe = morph_objects.end();
+	const auto mop = [](const morph_data::ptr &pmo) {
 		if (!pmo)
 			return true;
-		auto &mo{*pmo.get()};
+		auto &mo = *pmo.get();
 		return mo.obj->type == OBJ_NONE || mo.obj->signature != mo.Morph_sig;
-	}};
-	const auto moi{ranges::find_if(mob, moe, mop)};
+	};
+	const auto moi = ranges::find_if(mob, moe, mop);
 
 	if (moi == moe)		//no free slots
 		return;
 
-	auto &Polygon_models{LevelSharedPolygonModelState.Polygon_models};
-	const auto pmi{obj.rtype.pobj_info.model_num};
-	auto &pm{Polygon_models[pmi]};
+	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
+	const auto pmi = obj.rtype.pobj_info.model_num;
+	auto &pm = Polygon_models[pmi];
 
 	*moi = morph_data::create(obj, pm, pmi);
-	morph_data *const md{moi->get()};
+	morph_data *const md = moi->get();
 
 	assert(obj.render_type == render_type::RT_POLYOBJ);
 
@@ -504,8 +502,8 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 	box_size.z = max(-pmmin.z,pmmax.z) / 2;
 
 	//clear all points
-	const auto morph_times{md->get_morph_times()};
-	std::fill(morph_times.begin(), morph_times.end(), fix{});
+	const auto morph_times = md->get_morph_times();
+	std::fill(morph_times.begin(), morph_times.end(), fix());
 	//clear all parts
 	md->submodel_active = {};
 
@@ -515,7 +513,6 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 
 	init_points(pm,&box_size,0,md);
 }
-
 }
 
 namespace {
@@ -523,20 +520,24 @@ namespace {
 static void draw_model(grs_canvas &canvas, polygon_model_points &robot_points, polymodel *const pm, const unsigned submodel_num, const submodel_angles anim_angles, g3s_lrgb light, morph_data *const md)
 {
 	std::array<unsigned, MAX_SUBMODELS> sort_list;
-	//first, sort the submodels
-	sort_list[0] = submodel_num;
-	unsigned sort_n{1};
+	unsigned sort_n;
 
-	const uint_fast32_t n_models{pm->n_models};
+
+	//first, sort the submodels
+
+	sort_list[0] = submodel_num;
+	sort_n = 1;
+
+	const uint_fast32_t n_models = pm->n_models;
 	range_for (const uint_fast32_t i, xrange(n_models))
 		if (md->submodel_active[i] != morph_data::submodel_state::invisible && pm->submodel_parents[i] == submodel_num)
 		{
-			const auto facing{g3_check_normal_facing(pm->submodel_pnts[i],pm->submodel_norms[i])};
+			const auto facing = g3_check_normal_facing(pm->submodel_pnts[i],pm->submodel_norms[i]);
 			if (!facing)
 				sort_list[sort_n] = i;
 			else {		//put at start
-				const auto b{sort_list.begin()};
-				const auto e{std::next(b, sort_n)};
+				const auto b = sort_list.begin();
+				const auto e = std::next(b, sort_n);
 				std::move_backward(b, e, std::next(e));
 				sort_list[0] = i;
 			}
@@ -550,10 +551,10 @@ static void draw_model(grs_canvas &canvas, polygon_model_points &robot_points, p
 		if (mn == submodel_num) {
 			std::array<bitmap_index, MAX_POLYOBJ_TEXTURES> texture_list_index;
 			std::array<grs_bitmap *, MAX_POLYOBJ_TEXTURES> texture_list;
-			for (unsigned i{0}; i < pm->n_textures; ++i)
+			for (unsigned i = 0; i < pm->n_textures; ++i)
 			{
-				const auto ptr{ObjBitmapPtrs[pm->first_texture + i]};
-				const auto &bmp{ObjBitmaps[ptr]};
+				const auto ptr = ObjBitmapPtrs[pm->first_texture + i];
+				const auto &bmp = ObjBitmaps[ptr];
 				texture_list_index[i] = bmp;
 				texture_list[i] = &GameBitmaps[bmp];
 			}
@@ -564,12 +565,12 @@ static void draw_model(grs_canvas &canvas, polygon_model_points &robot_points, p
 			// Hmmm... cache got flushed in the middle of paging all these in,
 			// so we need to reread them all in.
 			// Make sure that they can all fit in memory.
-			const auto morph_vecs{md->get_morph_vecs()};
-			g3_draw_morphing_model(canvas, draw_tmap, &pm->model_data[pm->submodel_ptrs[submodel_num]], texture_list.data(), anim_angles, light, &morph_vecs[md->submodel_startpoints[submodel_num]], robot_points);
+			const auto morph_vecs = md->get_morph_vecs();
+			g3_draw_morphing_model(canvas, &pm->model_data[pm->submodel_ptrs[submodel_num]], &texture_list[0], anim_angles, light, &morph_vecs[md->submodel_startpoints[submodel_num]], robot_points);
 		}
 		else {
-			const auto &&orient{vm_angles_2_matrix(anim_angles[mn])};
-			auto &&ctx{g3_start_instance_matrix(pm->submodel_offsets[mn], orient)};
+			const auto &&orient = vm_angles_2_matrix(anim_angles[mn]);
+			auto &&ctx = g3_start_instance_matrix(pm->submodel_offsets[mn], orient);
 			draw_model(canvas, robot_points,pm,mn,anim_angles,light,md);
 			g3_done_instance(ctx);
 		}
@@ -585,20 +586,21 @@ void draw_morph_object(grs_canvas &canvas, const d_level_unique_light_state &Lev
 {
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		return;
+	polymodel *po;
 
-	auto &LevelUniqueMorphObjectState{LevelUniqueObjectState.MorphObjectState};
-	const auto umd{find_morph_data(LevelUniqueMorphObjectState, obj)};
+	auto &LevelUniqueMorphObjectState = LevelUniqueObjectState.MorphObjectState;
+	const auto umd = find_morph_data(LevelUniqueMorphObjectState, obj);
 	if (!umd)
 		throw std::runtime_error("missing morph data");
-	const auto md{umd->get()};
+	const auto md = umd->get();
 
-	auto &Polygon_models{LevelSharedPolygonModelState.Polygon_models};
-	polymodel *const po{&Polygon_models[obj->rtype.pobj_info.model_num]};
+	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
+	po=&Polygon_models[obj->rtype.pobj_info.model_num];
 
-	const auto light{compute_object_light(LevelUniqueLightState, obj)};
+	const auto light = compute_object_light(LevelUniqueLightState, obj);
 
 	{
-	auto &&ctx{g3_start_instance_matrix(obj->pos, obj->orient)};
+	auto &&ctx = g3_start_instance_matrix(obj->pos, obj->orient);
 	polygon_model_points robot_points;
 	draw_model(canvas, robot_points, po, 0, obj->rtype.pobj_info.anim_angles, light, md);
 	g3_done_instance(ctx);

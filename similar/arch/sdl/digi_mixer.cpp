@@ -586,14 +586,9 @@ void digi_mixer_end_sound(const sound_channel channel)
 
 void digi_mixer_set_digi_volume( int dvolume )
 {
-	/*
-	* Double-scale Mix_Volume to more closely match old pre-20a0166c Rebirth builds
-	* This also preserves the (unintentionally?) more accurate percieved volume scaling of those builds
-	* (e.g. perceived sound volume will match perceived midi volume more closely)
-	*/
 	digi_volume = dvolume;
 	if (!digi_initialised) return;
-	Mix_Volume(-1, fix2byte(fixmul(dvolume, dvolume)));
+	Mix_Volume(-1, fix2byte(dvolume));
 }
 
 int digi_mixer_is_channel_playing(const sound_channel c)

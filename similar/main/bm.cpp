@@ -134,12 +134,11 @@ void gamedata_close()
  */
 #if defined(DXX_BUILD_DESCENT_I)
 namespace {
-
-static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
+static void tmap_info_read(tmap_info &ti, PHYSFS_File *fp)
 {
-	PHYSFS_read(fp.fp, ti.filename, 13, 1);
+	PHYSFS_read(fp, ti.filename, 13, 1);
 	uint8_t flags;
-	PHYSFS_read(fp.fp, &flags, 1, 1);
+	PHYSFS_read(fp, &flags, 1, 1);
 	ti.flags = tmapinfo_flags{flags};
 	ti.lighting = PHYSFSX_readFix(fp);
 	ti.damage = PHYSFSX_readFix(fp);
@@ -162,7 +161,7 @@ int gamedata_init(d_level_shared_robot_info_state &LevelSharedRobotInfoState)
 
 // Read compiled properties data from descent.pig
 // (currently only ever called if D1)
-void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_vclip_array &Vclip, const NamedPHYSFS_File fp)
+void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_vclip_array &Vclip, PHYSFS_File * fp)
 {
 	auto &Effects = LevelUniqueEffectsClipState.Effects;
 	auto &Robot_joints = LevelSharedRobotJointState.Robot_joints;
@@ -270,12 +269,14 @@ void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoSt
 }
 #elif defined(DXX_BUILD_DESCENT_II)
 namespace {
-static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
+static void tmap_info_read(tmap_info &ti, PHYSFS_File *fp)
 {
 	uint8_t flags;
 	PHYSFS_read(fp, &flags, 1, 1);
 	ti.flags = tmapinfo_flags{flags};
-	PHYSFSX_skipBytes<3>(fp);
+	PHYSFSX_readByte(fp);
+	PHYSFSX_readByte(fp);
+	PHYSFSX_readByte(fp);
 	ti.lighting = PHYSFSX_readFix(fp);
 	ti.damage = PHYSFSX_readFix(fp);
 	ti.eclip_num = PHYSFSX_readShort(fp);
@@ -304,7 +305,7 @@ int gamedata_init(d_level_shared_robot_info_state &LevelSharedRobotInfoState)
 	return 0;
 }
 
-void bm_read_all(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_vclip_array &Vclip, const NamedPHYSFS_File fp)
+void bm_read_all(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_vclip_array &Vclip, PHYSFS_File * fp)
 {
 	auto &Effects = LevelUniqueEffectsClipState.Effects;
 	auto &Robot_joints = LevelSharedRobotJointState.Robot_joints;

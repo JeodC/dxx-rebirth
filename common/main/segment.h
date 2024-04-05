@@ -524,122 +524,129 @@ extern d_level_unique_segment_state LevelUniqueSegmentState;
 #endif
 
 template <unsigned bits>
-requires(
-	/* For every segment, require that the bits of the mask for that segment
-	 * all reside in a single byte.  Since a byte is 8 bits wide, this
-	 * constrains `bits` to be 1, 2, 4, or 8.  Any other value would mean that
-	 * some segments have a mask that straddles 2 bytes.  Current logic would
-	 * not handle a cross-byte value correctly, so disallow such attempts.
-	 *
-	 * A mask of 8 is not useful, since the caller could use
-	 * `enumerated_array<uint8_t, MAX_SEGMENTS, segnum_t>` for that and avoid
-	 * the shifting/masking logic on assignment.  Therefore, exclude
-	 * `bits == 8`, even though the class should work correctly in that case.
-	 */
-	bits == 1 || bits == 2 || bits == 4
-)
-class visited_segment_mask_t
+class visited_segment_mask_base
 {
-	/* For a segment with index `n`, the mask for that segment is stored in
-	 * `a[n / divisor]`.
-	 */
-	static constexpr unsigned divisor{8u / bits};
-	static constexpr unsigned bitmask_low_aligned{(1u << bits) - 1u};
+	static_assert(bits == 1 || bits == 2 || bits == 4, "bits must align in bytes");
+protected:
+	enum
+	{
+		divisor = 8 / bits,
+	};
 	using array_t = std::array<uint8_t, (MAX_SEGMENTS + (divisor - 1)) / divisor>;
-	/* Initialize `a` so that the storage is cleared. */
-	array_t a{};
-	/* The shift count depends on `bits`, but not on the type of the data being
-	 * tracked, so store it in a base class, to avoid redundant instantiations.
-	 */
+	typedef typename array_t::size_type size_type;
+	array_t a;
 	struct maskproxy_shift_count_type
 	{
-		const unsigned shift;
+		using bitmask_low_aligned = std::integral_constant<unsigned, (1 << bits) - 1>;
+		const unsigned m_shift;
+		unsigned shift() const
+		{
+			return m_shift;
+		}
 		typename array_t::value_type mask() const
 		{
-			return bitmask_low_aligned << shift;
+			return bitmask_low_aligned() << shift();
 		}
-		constexpr maskproxy_shift_count_type(const unsigned s) :
-			shift{s * bits}
+		maskproxy_shift_count_type(const unsigned s) :
+			m_shift(s * bits)
 		{
 		}
 	};
-	template <typename byte_type>
-	struct maskproxy_assignable_type : maskproxy_shift_count_type
+	template <typename R>
+	struct maskproxy_byte_reference : public maskproxy_shift_count_type
 	{
-		using maskproxy_shift_count_type::shift;
-		byte_type &byte;
-		constexpr maskproxy_assignable_type(const unsigned s, byte_type &byte) :
-			maskproxy_shift_count_type{s}, byte{byte}
+		R m_byte;
+		maskproxy_byte_reference(R byte, const unsigned s) :
+			maskproxy_shift_count_type(s), m_byte(byte)
 		{
 		}
-		constexpr operator uint8_t() const
+		operator uint8_t() const
 		{
-			return (byte >> shift) & bitmask_low_aligned;
+			return (this->m_byte >> this->shift()) & typename maskproxy_shift_count_type::bitmask_low_aligned();
 		}
-		/* For the special case that the mask is 1 bit wide, accept only
-		 * `bool`.  This version can avoid clearing the mask bits before
-		 * assigning them, since `(old_value | true) == true`, and
-		 * `(old_value & false) == false`.
-		 */
-		maskproxy_assignable_type &operator=(const bool value)
-			requires(bits == 1)
-		{
-			const auto m{this->mask()};
-			if (value)
-				byte |= m;
-			else
-				byte &= ~m;
-			return *this;
-		}
-		/* For the general case that the mask is not 1 bit wide, the bits to be
-		 * written must be cleared before the new value is bitwise-or'd in,
-		 * since `(old_value | 2) == 2` is not guaranteed.
-		 */
+	};
+	template <typename R>
+	struct maskproxy_assignable_type : maskproxy_byte_reference<R>
+	{
+		using maskproxy_byte_reference<R>::maskproxy_byte_reference;
+		using typename maskproxy_shift_count_type::bitmask_low_aligned;
 		maskproxy_assignable_type &operator=(const uint8_t u)
-			requires(bits != 1)
 		{
-			assert(!(u & ~bitmask_low_aligned));
-			byte = (byte & ~this->mask()) | (u << shift);
+			assert(!(u & ~bitmask_low_aligned()));
+			auto &byte = this->m_byte;
+			byte = (byte & ~this->mask()) | (u << this->shift());
+			return *this;
+		}
+		maskproxy_assignable_type &operator|=(const uint8_t u)
+		{
+			assert(!(u & ~bitmask_low_aligned()));
+			this->m_byte |= (u << this->shift());
 			return *this;
 		}
 	};
-	/* clang Class Template Argument Deduction fails to deduce from the
-	 * available non-template constructor.  Define an explicit deduction guide
-	 * to tell it what it should have implicitly deduced on its own.
-	 *
-	 * - [gcc-9, gcc-14]: succeed without this
-	 * - [clang-14, clang-17]: fail without this
-	 * - (clang-17, ...): untested
-	 */
-	template <typename byte_type>
-		maskproxy_assignable_type(unsigned, byte_type &) -> maskproxy_assignable_type<byte_type>;
-	static constexpr auto make_maskproxy(auto &a, const segnum_t s)
+	template <typename R, typename A>
+	static R make_maskproxy(A &a, const size_type segnum)
 	{
-		const auto segnum{static_cast<std::underlying_type_t<segnum_t>>(s)};
-		const std::size_t idx{segnum / divisor};
+		const size_type idx = segnum / divisor;
 		if (idx >= a.size())
 			throw std::out_of_range("index exceeds segment range");
-		return maskproxy_assignable_type{{segnum % divisor}, a[idx]};
+		const size_type bit = segnum % divisor;
+		return R(a[idx], bit);
 	}
 public:
-	auto operator[](const segnum_t segnum)
+	/* Explicitly invoke the default constructor for `a` so that the
+	 * storage is cleared.
+	 */
+	visited_segment_mask_base() :
+		a()
 	{
-		return make_maskproxy(a, segnum);
 	}
-	auto operator[](const segnum_t segnum) const
+	void clear()
 	{
-		return make_maskproxy(a, segnum);
+		a = {};
 	}
 };
 
-using visited_segment_bitarray_t = visited_segment_mask_t<1>;
+template <>
+template <typename R>
+struct visited_segment_mask_base<1>::maskproxy_assignable_type : maskproxy_byte_reference<R>
+{
+	using maskproxy_byte_reference<R>::maskproxy_byte_reference;
+	maskproxy_assignable_type &operator=(const bool b)
+	{
+		const auto m = this->mask();
+		auto &byte = this->m_byte;
+		if (b)
+			byte |= m;
+		else
+			byte &= ~m;
+		return *this;
+	}
+};
 
-#ifdef dsx
-imsegidx_t read_untrusted_segnum_le16(NamedPHYSFS_File fp);
-imsegidx_t read_untrusted_segnum_le32(NamedPHYSFS_File fp);
-imsegidx_t read_untrusted_segnum_xe16(NamedPHYSFS_File fp, physfsx_endian swap);
-imsegidx_t read_untrusted_segnum_xe32(NamedPHYSFS_File fp, physfsx_endian swap);
-#endif
+/* This type must be separate so that its members are defined after the
+ * specialization of maskproxy_assignable_type.  If these are defined
+ * inline in visited_segment_mask_base, gcc crashes.
+ * Known bad:
+ *	gcc-4.9.4
+ *	gcc-5.4.0
+ *	gcc-6.4.0
+ *	gcc-7.2.0
+ */
+template <unsigned bits>
+class visited_segment_mask_t : visited_segment_mask_base<bits>
+{
+	using base_type = visited_segment_mask_base<bits>;
+public:
+	auto operator[](const typename base_type::size_type segnum)
+	{
+		return this->template make_maskproxy<typename base_type::template maskproxy_assignable_type<typename base_type::array_t::reference>>(this->a, segnum);
+	}
+	auto operator[](const typename base_type::size_type segnum) const
+	{
+		return this->template make_maskproxy<typename base_type::template maskproxy_assignable_type<typename base_type::array_t::const_reference>>(this->a, segnum);
+	}
+};
 
 }
 

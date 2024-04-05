@@ -163,20 +163,6 @@ imobjptridx_t obj_find_first_of_type(fvmobjptridx &vmobjptridx, const object_typ
 
 namespace dcx {
 
-namespace {
-
-static powerup_type_t build_contained_object_powerup_id_from_untrusted(const uint8_t untrusted)
-{
-	return untrusted < MAX_POWERUP_TYPES ? powerup_type_t{untrusted} : powerup_type_t{};
-}
-
-static robot_id build_contained_object_robot_id_from_untrusted(const uint8_t untrusted)
-{
-	return untrusted < MAX_ROBOT_TYPES ? robot_id{untrusted} : robot_id{};
-}
-
-}
-
 icobjidx_t laser_info::get_last_hitobj() const
 {
 	if (!hitobj_count)
@@ -202,33 +188,6 @@ contained_object_type build_contained_object_type_from_untrusted(const uint8_t u
 			return contained_object_type{untrusted};
 		default:
 			return contained_object_type::None;
-	}
-}
-
-contained_object_parameters build_contained_object_parameters_from_untrusted(const uint8_t untrusted_type, const uint8_t untrusted_id, const uint8_t untrusted_contains_count)
-{
-	if (untrusted_contains_count > 4)
-		/* This is an arbitrary cap, chosen to match GOODY_COUNT_MAX.  Any
-		 * value higher than this is likely an error, so force the object to
-		 * contain nothing instead.
-		 */
-		return {};
-	switch (const auto type = build_contained_object_type_from_untrusted(untrusted_type))
-	{
-		case contained_object_type::powerup:
-			return {
-				.type = type,
-				.id = contained_object_id{.powerup = build_contained_object_powerup_id_from_untrusted(untrusted_id)},
-				.count = untrusted_contains_count,
-			};
-		case contained_object_type::robot:
-			return {
-				.type = type,
-				.id = contained_object_id{.robot = build_contained_object_robot_id_from_untrusted(untrusted_id)},
-				.count = untrusted_contains_count,
-			};
-		default:
-			return {};
 	}
 }
 
@@ -269,12 +228,13 @@ void draw_object_tmap_rod(grs_canvas &canvas, const d_level_unique_light_state *
 
 	auto &bitmap = GameBitmaps[bitmapi];
 
-	const auto delta{vm_vec_copy_scale(obj->orient.uvec, obj->size)};
+	const auto delta = vm_vec_copy_scale(obj->orient.uvec,obj->size);
 
 	const auto top_v = vm_vec_add(obj->pos,delta);
+	const auto bot_v = vm_vec_sub(obj->pos,delta);
 
 	const auto top_p = g3_rotate_point(top_v);
-	const auto bot_p{g3_rotate_point(vm_vec_sub(obj->pos, delta))};
+	const auto bot_p = g3_rotate_point(bot_v);
 
 	if (LevelUniqueLightState)
 	{
@@ -284,7 +244,7 @@ void draw_object_tmap_rod(grs_canvas &canvas, const d_level_unique_light_state *
 	{
 		light.r = light.g = light.b = f1_0;
 	}
-	g3_draw_rod_tmap(canvas, bitmap, bot_p, obj->size, top_p, obj->size, light, draw_tmap);
+	g3_draw_rod_tmap(canvas, bitmap, bot_p, obj->size, top_p, obj->size, light);
 }
 
 //used for robot engine glow
@@ -304,18 +264,22 @@ namespace {
 //do special cloaked render
 static void draw_cloaked_object(grs_canvas &canvas, const object_base &obj, const g3s_lrgb light, glow_values_t glow, const fix64 cloak_start_time, const fix total_cloaked_time, const fix Cloak_fadein_duration, const fix Cloak_fadeout_duration)
 {
+	fix cloak_delta_time;
 	fix light_scale=F1_0;
 	int cloak_value=0;
-	bool fading{};		//if true, fading, else cloaking
+	int fading=0;		//if true, fading, else cloaking
 
-	if (const auto cloak_delta_time{GameTime64 - cloak_start_time}; cloak_delta_time < Cloak_fadein_duration/2) {
+	cloak_delta_time = GameTime64 - cloak_start_time;
+
+	if (cloak_delta_time < Cloak_fadein_duration/2) {
 
 #if defined(DXX_BUILD_DESCENT_I)
 		light_scale = Cloak_fadein_duration/2 - cloak_delta_time;
 #elif defined(DXX_BUILD_DESCENT_II)
 		light_scale = fixdiv(Cloak_fadein_duration/2 - cloak_delta_time,Cloak_fadein_duration/2);
 #endif
-		fading = true;
+		fading = 1;
+
 	}
 	else if (cloak_delta_time < Cloak_fadein_duration) {
 
@@ -344,6 +308,7 @@ static void draw_cloaked_object(grs_canvas &canvas, const object_base &obj, cons
 		}
 
 		cloak_value = CLOAKED_FADE_LEVEL - cloak_delta;
+	
 	} else if (GameTime64 < (cloak_start_time + total_cloaked_time) -Cloak_fadeout_duration/2) {
 
 #if defined(DXX_BUILD_DESCENT_I)
@@ -359,48 +324,48 @@ static void draw_cloaked_object(grs_canvas &canvas, const object_base &obj, cons
 #elif defined(DXX_BUILD_DESCENT_II)
 		light_scale = fixdiv(Cloak_fadeout_duration/2 - (total_cloaked_time - cloak_delta_time),Cloak_fadeout_duration/2);
 #endif
-		fading = true;
+		fading = 1;
 	}
 
-	const auto alt_textures{
+	alternate_textures alt_textures;
 #if defined(DXX_BUILD_DESCENT_II)
-		!fading
-			? alternate_textures{}
-			:
+	if (fading)
 #endif
-				({
-					const std::size_t ati{static_cast<std::size_t>(obj.rtype.pobj_info.alt_textures) - 1u};
-					ati < std::size(multi_player_textures)
-					? alternate_textures{multi_player_textures[ati]}
-					: alternate_textures{};
-				})
-	};
+	{
+		const unsigned ati = static_cast<unsigned>(obj.rtype.pobj_info.alt_textures) - 1;
+		if (ati < multi_player_textures.size())
+		{
+			alt_textures = multi_player_textures[ati];
+		}
+	}
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	if (fading) {
+		g3s_lrgb new_light;
+
+		new_light.r = fixmul(light.r,light_scale);
+		new_light.g = fixmul(light.g,light_scale);
+		new_light.b = fixmul(light.b,light_scale);
 		glow[0] = fixmul(glow[0],light_scale);
-		draw_polygon_model(Polygon_models, canvas, draw_tmap, obj.pos,
+		draw_polygon_model(Polygon_models, canvas, obj.pos,
 				   obj.orient,
 				   obj.rtype.pobj_info.anim_angles,
 				   obj.rtype.pobj_info.model_num, obj.rtype.pobj_info.subobj_flags,
-				   g3s_lrgb{
-						.r = fixmul(light.r, light_scale),
-						.g = fixmul(light.g, light_scale),
-						.b = fixmul(light.b, light_scale)
-				   },
+				   new_light,
 				   &glow,
 				   alt_textures );
 	}
 	else {
 		gr_settransblend(canvas, static_cast<gr_fade_level>(cloak_value), gr_blend::normal);
-		//use special flat drawer
-		draw_polygon_model(Polygon_models, canvas, draw_tmap_flat, obj.pos,
+		g3_set_special_render(draw_tmap_flat);		//use special flat drawer
+		draw_polygon_model(Polygon_models, canvas, obj.pos,
 				   obj.orient,
 				   obj.rtype.pobj_info.anim_angles,
 				   obj.rtype.pobj_info.model_num, obj.rtype.pobj_info.subobj_flags,
 				   light,
 				   &glow,
 				   alt_textures );
+		g3_set_special_render(draw_tmap);
 		gr_settransblend(canvas, GR_FADE_OFF, gr_blend::normal);
 	}
 
@@ -484,7 +449,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 
 		//fill whole array, in case simple model needs more
 		bm_ptrs.fill(Textures[obj->rtype.pobj_info.tmap_override]);
-		draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
+		draw_polygon_model(Polygon_models, canvas, obj->pos,
 				   obj->orient,
 				   obj->rtype.pobj_info.anim_angles,
 				   obj->rtype.pobj_info.model_num,
@@ -509,6 +474,11 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 				cloak_duration = {GameTime64-F1_0*10, F1_0 * 20};
 			cloak_fade = {CLOAK_FADEIN_DURATION_ROBOT, CLOAK_FADEOUT_DURATION_ROBOT};
 		} else {
+			alternate_textures alt_textures;
+			const unsigned ati = static_cast<unsigned>(obj->rtype.pobj_info.alt_textures) - 1;
+			if (ati < multi_player_textures.size())
+				alt_textures = multi_player_textures[ati];
+
 #if defined(DXX_BUILD_DESCENT_II)
 			if (obj->type == OBJ_ROBOT)
 			{
@@ -524,14 +494,6 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 			}
 #endif
 
-			const auto alt_textures{
-				({
-					const std::size_t ati{static_cast<std::size_t>(obj->rtype.pobj_info.alt_textures) - 1u};
-					ati < std::size(multi_player_textures)
-					? alternate_textures{multi_player_textures[ati]}
-					: alternate_textures{};
-				})
-			};
 			const auto is_weapon_with_inner_model = (obj->type == OBJ_WEAPON && Weapon_info[get_weapon_id(obj)].model_num_inner != polygon_model_index::None);
 			bool draw_simple_model;
 			if (is_weapon_with_inner_model)
@@ -539,7 +501,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 				gr_settransblend(canvas, GR_FADE_OFF, gr_blend::additive_a);
 				draw_simple_model = static_cast<fix>(vm_vec_dist_quick(Viewer->pos, obj->pos)) < Simple_model_threshhold_scale * F1_0*2;
 				if (draw_simple_model)
-					draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
+					draw_polygon_model(Polygon_models, canvas, obj->pos,
 							   obj->orient,
 							   obj->rtype.pobj_info.anim_angles,
 							   Weapon_info[get_weapon_id(obj)].model_num_inner,
@@ -548,7 +510,8 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 							   &engine_glow_value,
 							   alt_textures);
 			}
-			draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
+			
+			draw_polygon_model(Polygon_models, canvas, obj->pos,
 					   obj->orient,
 					   obj->rtype.pobj_info.anim_angles,obj->rtype.pobj_info.model_num,
 					   obj->rtype.pobj_info.subobj_flags,
@@ -561,7 +524,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 #if !DXX_USE_OGL // in software rendering must draw inner model last
 				gr_settransblend(canvas, GR_FADE_OFF, gr_blend::additive_a);
 				if (draw_simple_model)
-					draw_polygon_model(Polygon_models, canvas, tmap_drawer_ptr, obj->pos,
+					draw_polygon_model(Polygon_models, canvas, obj->pos,
 							   obj->orient,
 							   obj->rtype.pobj_info.anim_angles,
 							   Weapon_info[obj->id].model_num_inner,
@@ -810,57 +773,57 @@ void render_object(grs_canvas &canvas, const d_level_unique_light_state &LevelUn
 			if (PlayerCfg.AlphaBlendPowerups) // set nice transparency/blending for certrain objects
 				switch ( get_powerup_id(obj) )
 				{
-					case powerup_type_t::POW_EXTRA_LIFE:
-					case powerup_type_t::POW_ENERGY:
-					case powerup_type_t::POW_SHIELD_BOOST:
-					case powerup_type_t::POW_CLOAK:
-					case powerup_type_t::POW_INVULNERABILITY:
+					case POW_EXTRA_LIFE:
+					case POW_ENERGY:
+					case POW_SHIELD_BOOST:
+					case POW_CLOAK:
+					case POW_INVULNERABILITY:
 #if defined(DXX_BUILD_DESCENT_II)
-					case powerup_type_t::POW_HOARD_ORB:
+					case POW_HOARD_ORB:
 #endif
 						alpha = true;
 						gr_settransblend(canvas, gr_fade_level{7}, gr_blend::additive_a);
 						break;
-					case powerup_type_t::POW_LASER:
-					case powerup_type_t::POW_KEY_BLUE:
-					case powerup_type_t::POW_KEY_RED:
-					case powerup_type_t::POW_KEY_GOLD:
-					case powerup_type_t::POW_MISSILE_1:
-					case powerup_type_t::POW_MISSILE_4:
-					case powerup_type_t::POW_QUAD_FIRE:
-					case powerup_type_t::POW_VULCAN_WEAPON:
-					case powerup_type_t::POW_SPREADFIRE_WEAPON:
-					case powerup_type_t::POW_PLASMA_WEAPON:
-					case powerup_type_t::POW_FUSION_WEAPON:
-					case powerup_type_t::POW_PROXIMITY_WEAPON:
-					case powerup_type_t::POW_HOMING_AMMO_1:
-					case powerup_type_t::POW_HOMING_AMMO_4:
-					case powerup_type_t::POW_SMARTBOMB_WEAPON:
-					case powerup_type_t::POW_MEGA_WEAPON:
-					case powerup_type_t::POW_VULCAN_AMMO:
-					case powerup_type_t::POW_TURBO:
-					case powerup_type_t::POW_MEGAWOW:
+					case POW_LASER:
+					case POW_KEY_BLUE:
+					case POW_KEY_RED:
+					case POW_KEY_GOLD:
+					case POW_MISSILE_1:
+					case POW_MISSILE_4:
+					case POW_QUAD_FIRE:
+					case POW_VULCAN_WEAPON:
+					case POW_SPREADFIRE_WEAPON:
+					case POW_PLASMA_WEAPON:
+					case POW_FUSION_WEAPON:
+					case POW_PROXIMITY_WEAPON:
+					case POW_HOMING_AMMO_1:
+					case POW_HOMING_AMMO_4:
+					case POW_SMARTBOMB_WEAPON:
+					case POW_MEGA_WEAPON:
+					case POW_VULCAN_AMMO:
+					case POW_TURBO:
+					case POW_MEGAWOW:
 #if defined(DXX_BUILD_DESCENT_II)
-					case powerup_type_t::POW_FULL_MAP:
-					case powerup_type_t::POW_HEADLIGHT:
-					case powerup_type_t::POW_GAUSS_WEAPON:
-					case powerup_type_t::POW_HELIX_WEAPON:
-					case powerup_type_t::POW_PHOENIX_WEAPON:
-					case powerup_type_t::POW_OMEGA_WEAPON:
-					case powerup_type_t::POW_SUPER_LASER:
-					case powerup_type_t::POW_CONVERTER:
-					case powerup_type_t::POW_AMMO_RACK:
-					case powerup_type_t::POW_AFTERBURNER:
-					case powerup_type_t::POW_SMISSILE1_1:
-					case powerup_type_t::POW_SMISSILE1_4:
-					case powerup_type_t::POW_GUIDED_MISSILE_1:
-					case powerup_type_t::POW_GUIDED_MISSILE_4:
-					case powerup_type_t::POW_SMART_MINE:
-					case powerup_type_t::POW_MERCURY_MISSILE_1:
-					case powerup_type_t::POW_MERCURY_MISSILE_4:
-					case powerup_type_t::POW_EARTHSHAKER_MISSILE:
-					case powerup_type_t::POW_FLAG_BLUE:
-					case powerup_type_t::POW_FLAG_RED:
+					case POW_FULL_MAP:
+					case POW_HEADLIGHT:
+					case POW_GAUSS_WEAPON:
+					case POW_HELIX_WEAPON:
+					case POW_PHOENIX_WEAPON:
+					case POW_OMEGA_WEAPON:
+					case POW_SUPER_LASER:
+					case POW_CONVERTER:
+					case POW_AMMO_RACK:
+					case POW_AFTERBURNER:
+					case POW_SMISSILE1_1:
+					case POW_SMISSILE1_4:
+					case POW_GUIDED_MISSILE_1:
+					case POW_GUIDED_MISSILE_4:
+					case POW_SMART_MINE:
+					case POW_MERCURY_MISSILE_1:
+					case POW_MERCURY_MISSILE_4:
+					case POW_EARTHSHAKER_MISSILE:
+					case POW_FLAG_BLUE:
+					case POW_FLAG_RED:
 #endif
 						break;
 				}
@@ -896,10 +859,10 @@ void reset_player_object(object_base &ConsoleObject)
 {
 	//Init physics
 
-	ConsoleObject.mtype.phys_info.velocity = {};
-	ConsoleObject.mtype.phys_info.thrust = {};
-	ConsoleObject.mtype.phys_info.rotvel = {};
-	ConsoleObject.mtype.phys_info.rotthrust = {};
+	vm_vec_zero(ConsoleObject.mtype.phys_info.velocity);
+	vm_vec_zero(ConsoleObject.mtype.phys_info.thrust);
+	vm_vec_zero(ConsoleObject.mtype.phys_info.rotvel);
+	vm_vec_zero(ConsoleObject.mtype.phys_info.rotthrust);
 	ConsoleObject.mtype.phys_info.turnroll = 0;
 	ConsoleObject.mtype.phys_info.mass = Player_ship->mass;
 	ConsoleObject.mtype.phys_info.drag = Player_ship->drag;
@@ -1243,7 +1206,7 @@ imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, co
 	obj->control_source 		        = ctype;
 	obj->movement_source = mtype;
 	obj->render_type 			= rtype;
-	obj->contains.count                     = 0;
+        obj->contains_count                     = 0;
         obj->matcen_creator                     = 0;
 	obj->lifeleft 				= IMMORTAL_TIME;		//assume immortal
 	obj->attached_obj			= object_none;
@@ -1453,8 +1416,8 @@ static void set_camera_pos(vms_vector &camera_pos, const vcobjptridx_t objp)
 		//	Camera is too close to player object, so move it away.
 		fvi_info		hit_data;
 
-		auto player_camera_vec{vm_vec_sub(camera_pos, objp->pos)};
-		if (player_camera_vec == vms_vector{})
+		auto player_camera_vec = vm_vec_sub(camera_pos, objp->pos);
+		if ((player_camera_vec.x == 0) && (player_camera_vec.y == 0) && (player_camera_vec.z == 0))
 			player_camera_vec.x += F1_0/16;
 
 		auto hit_type = fvi_hit_type::Wall;
@@ -1527,8 +1490,8 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 		// the following line uncommented by WraithX, 4-12-00
 		if (time_dead < DEATH_SEQUENCE_EXPLODE_TIME + F1_0 * 2)
 		{
-			const auto fvec{vm_vec_sub(ConsoleObject->pos, Dead_player_camera->pos)};
-			vm_vector_to_matrix(Dead_player_camera->orient, fvec);
+			const auto fvec = vm_vec_sub(ConsoleObject->pos, Dead_player_camera->pos);
+			vm_vector_2_matrix(Dead_player_camera->orient, fvec, nullptr, nullptr);
 			Dead_player_camera->mtype.phys_info = ConsoleObject->mtype.phys_info;
 
 			// the following "if" added by WraithX to get rid of camera "wiggle"
@@ -1555,7 +1518,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 				if (hostages_lost > 1)
 					HUD_init_message(HM_DEFAULT, TXT_SHIP_DESTROYED_2, hostages_lost);
 				else
-					HUD_init_message_literal(HM_DEFAULT, hostages_lost == 1 ? ( { const auto &&m = TXT_SHIP_DESTROYED_1; std::span<const char>(m, strlen(m)); } ) : ( { const auto &&m = TXT_SHIP_DESTROYED_0; std::span<const char>(m, strlen(m)); } ));
+					HUD_init_message_literal(HM_DEFAULT, hostages_lost == 1 ? TXT_SHIP_DESTROYED_1 : TXT_SHIP_DESTROYED_0);
 
 				Player_dead_state = player_dead_state::exploded;
 				
@@ -1671,8 +1634,8 @@ static void start_player_death_sequence(object &player)
 	PaletteRedAdd = 40;
 	Player_dead_state = player_dead_state::yes;
 
-	player.mtype.phys_info.rotthrust = {};
-	player.mtype.phys_info.thrust = {};
+	vm_vec_zero(player.mtype.phys_info.rotthrust);
+	vm_vec_zero(player.mtype.phys_info.thrust);
 
 	const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_CAMERA, 0, vmsegptridx(player.segnum), player.pos, &player.orient, 0, object::control_type::None, object::movement_type::None, render_type::RT_NONE);
 	Viewer_save = Viewer;
@@ -2326,7 +2289,7 @@ unsigned laser_parent_object_exists(fvcobjptr &vcobjptr, const laser_parent &l)
 
 void set_powerup_id(const d_powerup_info_array &Powerup_info, const d_vclip_array &Vclip, object_base &o, powerup_type_t id)
 {
-	o.id = underlying_value(id);
+	o.id = id;
 	o.size = Powerup_info[id].size;
 	const auto vclip_num = Powerup_info[id].vclip_num;
 	o.rtype.vclip_info.vclip_num = vclip_num;
@@ -2351,7 +2314,7 @@ void fix_object_segs()
 			{
 				const auto pos = o->pos;
 				const auto segnum = o->segnum;
-				o->pos = compute_segment_center(vcvertptr, vcsegptr(segnum));
+				compute_segment_center(vcvertptr, o->pos, vcsegptr(segnum));
 				con_printf(CON_URGENT, "Object %hu claims segment %hu, but has position {%i,%i,%i}; moving to %hu:{%i,%i,%i}", o.get_unchecked_index(), oldsegnum, pos.x, pos.y, pos.z, segnum, o->pos.x, o->pos.y, o->pos.z);
 			}
 		}
@@ -2609,9 +2572,9 @@ void wake_up_rendered_objects(const object &viewer, window_rendered_data &window
 #endif
 
 // Swap endianess of given object_rw if swap == 1
-void object_rw_swap(object_rw *obj, const physfsx_endian swap)
+void object_rw_swap(object_rw *obj, int swap)
 {
-	if (swap == physfsx_endian::native)
+	if (!swap)
 		return;
 
 	obj->signature     = SWAPINT(obj->signature);

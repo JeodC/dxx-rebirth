@@ -64,25 +64,28 @@ class valptridx :
 	{
 		using type = std::array<managed_type, array_size>;
 	};
-	/* Note: index_type must be an `enum` type, but
-	 * `requires(std::is_enum<index_type>::value)` cannot be checked
-	 * here, because the name `array_base_storage_enum<index_type>` may be
+	/* Note: integral_type must be an `enum` type, but
+	 * `requires(std::is_enum<integral_type>::value)` cannot be checked
+	 * here, because the name `array_base_storage_enum<integral_type>` may be
 	 * formed for non-enum types, but the internal type `type` will not be
 	 * used in those cases.
 	 */
-	template <typename index_type>
+	template <typename integral_type>
 	struct array_base_storage_enum
 	{
-		using type = dcx::enumerated_array<managed_type, array_size, index_type>;
+		using type = dcx::enumerated_array<managed_type, array_size, integral_type>;
 	};
 protected:
 	using const_pointer_type = const managed_type *;
 	using const_reference_type = const managed_type &;
 	using mutable_pointer_type = managed_type *;
+	/* integral_type must be a primitive integer type capable of holding
+	 * all legal values used with managed_type.  Legal values are valid
+	 * indexes in array_managed_type and any magic out-of-range values.
+	 */
 	using typename specialized_types::integral_type;
-	using typename specialized_types::index_type;
-	static_assert(std::is_enum_v<index_type> || std::unsigned_integral<index_type>);
-	using array_base_storage_type = typename std::conditional_t<std::is_integral<index_type>::value, array_base_storage_integral, array_base_storage_enum<index_type>>::type;
+	using index_type = integral_type;	// deprecated; should be dedicated UDT
+	using array_base_storage_type = typename std::conditional<std::is_integral<integral_type>::value, array_base_storage_integral, array_base_storage_enum<integral_type>>::type::type;
 
 public:
 	class array_managed_type;
@@ -218,11 +221,11 @@ public:
 	template <typename T>
 		using null_pointer_error_type = typename specialized_types::template dispatch_null_pointer_error<T, null_pointer_exception>;
 
-	template <index_type constant>
+	template <integral_type constant>
 		class magic_constant
 		{
 		public:
-			constexpr operator index_type() const { return constant; }
+			constexpr operator integral_type() const { return constant; }	// integral_type conversion deprecated
 		};
 };
 

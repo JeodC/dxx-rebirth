@@ -709,7 +709,7 @@ hmpmid_result hmp2mid(const char *hmp_name)
 	std::vector<uint8_t> midbuf;
 	// write MIDI-header
 	midbuf.resize(serial::message_type<decltype(mh)>::maximum_size);
-	be_bytebuffer_t bb(midbuf.data());
+	be_bytebuffer_t bb(&midbuf[0]);
 	serial::process_buffer(bb, mh);
 
 	// tracks

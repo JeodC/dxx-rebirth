@@ -144,7 +144,7 @@ int generate_curve(const fix r1scale, const fix r4scale)
 
 	const shared_segment &cursegp = Cursegp;
 	auto &vcvertptr = Vertices.vcptr;
-	p1 = compute_center_point_on_side(vcvertptr, cursegp, Curside);
+	compute_center_point_on_side(vcvertptr, p1, cursegp, Curside);
 
     switch( Curside ) {
 		case sidenum_t::WLEFT:
@@ -152,55 +152,55 @@ int generate_curve(const fix r1scale, const fix r4scale)
             vm_vec_scale(r1, -F1_0 );
             break;
 		case sidenum_t::WTOP:
-			r1 = extract_up_vector_from_segment(vcvertptr, cursegp);
+            extract_up_vector_from_segment(vcvertptr, cursegp, r1);
             break;
 		case sidenum_t::WRIGHT:
 			r1 = extract_right_vector_from_segment(vcvertptr, cursegp);
             break;
 		case sidenum_t::WBOTTOM:
-			r1 = extract_up_vector_from_segment(vcvertptr, cursegp);
+            extract_up_vector_from_segment(vcvertptr, cursegp, r1);
             vm_vec_scale(r1, -F1_0 );
             break;
 		case sidenum_t::WBACK:
-			r1 = extract_forward_vector_from_segment(vcvertptr, cursegp);
+            extract_forward_vector_from_segment(vcvertptr, cursegp, r1);
             break;
 		case sidenum_t::WFRONT:
-			r1 = extract_forward_vector_from_segment(vcvertptr, cursegp);
+            extract_forward_vector_from_segment(vcvertptr, cursegp, r1);
             vm_vec_scale(r1, -F1_0 );
             break;
         }            
 
 	const shared_segment &markedsegp = Markedsegp;
-	p4 = compute_center_point_on_side(vcvertptr, markedsegp, Markedside);
+	compute_center_point_on_side(vcvertptr, p4, markedsegp, Markedside);
 
     switch( Markedside ) {
 		case sidenum_t::WLEFT:
 			r4 = extract_right_vector_from_segment(vcvertptr, markedsegp);
-			r4t = extract_up_vector_from_segment(vcvertptr, markedsegp);
+            extract_up_vector_from_segment(vcvertptr, markedsegp, r4t);
             break;
 		case sidenum_t::WTOP:
-			r4 = extract_up_vector_from_segment(vcvertptr, markedsegp);
+            extract_up_vector_from_segment(vcvertptr, markedsegp, r4);
             vm_vec_scale(r4, -F1_0 );
-			r4t = extract_forward_vector_from_segment(vcvertptr, markedsegp);
+            extract_forward_vector_from_segment(vcvertptr, markedsegp, r4t);
             vm_vec_scale(r4t, -F1_0 );
             break;
 		case sidenum_t::WRIGHT:
 			r4 = extract_right_vector_from_segment(vcvertptr, markedsegp);
             vm_vec_scale(r4, -F1_0 );
-			r4t = extract_up_vector_from_segment(vcvertptr, markedsegp);
+            extract_up_vector_from_segment(vcvertptr, markedsegp, r4t);
             break;
 		case sidenum_t::WBOTTOM:
-			r4 = extract_up_vector_from_segment(vcvertptr, markedsegp);
-			r4t = extract_forward_vector_from_segment(vcvertptr, markedsegp);
+            extract_up_vector_from_segment(vcvertptr, markedsegp, r4);
+            extract_forward_vector_from_segment(vcvertptr, markedsegp, r4t);
             break;
 		case sidenum_t::WBACK:
-			r4 = extract_forward_vector_from_segment(vcvertptr, markedsegp);
+            extract_forward_vector_from_segment(vcvertptr, markedsegp, r4);
             vm_vec_scale(r4, -F1_0 );
-			r4t = extract_up_vector_from_segment(vcvertptr, markedsegp);
+            extract_up_vector_from_segment(vcvertptr, markedsegp, r4t);
             break;
 		case sidenum_t::WFRONT:
-			r4 = extract_forward_vector_from_segment(vcvertptr, markedsegp);
-			r4t = extract_up_vector_from_segment(vcvertptr, markedsegp);
+            extract_forward_vector_from_segment(vcvertptr, markedsegp, r4);
+            extract_up_vector_from_segment(vcvertptr, markedsegp, r4t);
             break;
         }
 
@@ -225,7 +225,7 @@ int generate_curve(const fix r1scale, const fix r4scale)
             if (firstsegflag==1)
                 firstsegflag=0;
             else
-				tvec = extract_forward_vector_from_segment(vcvertptr, cursegp);
+                extract_forward_vector_from_segment(vcvertptr, cursegp, tvec);
             nextdist = vm_vec_mag(tvec);                                   // nextdist := distance to next point
             t = curve_dist(&coeffs, 3, t, prev_point, nextdist);               // t = argument at which function is forward vector magnitude units away from prev_point (in 3-space, not along curve)
             coord = evaluate_curve(&coeffs, 3, t);                                          // coord := point about forward vector magnitude units away from prev_point
@@ -238,11 +238,9 @@ int generate_curve(const fix r1scale, const fix r4scale)
 			const auto tdest = vm_vec_rotate(vec_dir,rotmat);	// tdest := vec_dir in reference frame of Cursegp
 			vec_dir = tdest;
 
-			{
-				vms_matrix rotmat2;
-				vm_vector_to_matrix(rotmat2, vec_dir);
+            const auto rotmat2 = vm_vector_2_matrix(vec_dir,nullptr,nullptr);
+
             med_rotate_segment( Cursegp, rotmat2 );
-			}
 			prev_point = coord;
             Curside = Side_opposite[AttachSide];
 
@@ -251,7 +249,7 @@ int generate_curve(const fix r1scale, const fix r4scale)
         } else return 0;
 	}
 
-	tvec = extract_up_vector_from_segment(vcvertptr, cursegp);
+    extract_up_vector_from_segment(vcvertptr, cursegp, tvec);
     uangle = vm_vec_delta_ang( tvec, r4t, r4 );
     if (uangle >= F1_0 * 1/8) uangle -= F1_0 * 1/4;
     if (uangle >= F1_0 * 1/8) uangle -= F1_0 * 1/4;
@@ -308,7 +306,7 @@ void generate_banked_curve(const fix maxscale, vms_equation coeffs)
 
 		const shared_segment &cursegp = Cursegp;
 		auto &vcvertptr = Vertices.vcptr;
-		b4r4t = extract_up_vector_from_segment(vcvertptr, cursegp);
+		extract_up_vector_from_segment(vcvertptr, cursegp, b4r4t);
     uangle = vm_vec_delta_ang( b4r4t, r4t, r4 );
     if (uangle >= F1_0 * 1/8) uangle -= F1_0 * 1/4;
     if (uangle >= F1_0 * 1/8) uangle -= F1_0 * 1/4;
@@ -343,7 +341,7 @@ void generate_banked_curve(const fix maxscale, vms_equation coeffs)
             if (firstsegflag==1)
                 firstsegflag=0;
             else
-				tvec = extract_forward_vector_from_segment(vcvertptr, cursegp);
+				extract_forward_vector_from_segment(vcvertptr, cursegp, tvec);
             nextdist = vm_vec_mag(tvec);                                   // nextdist := distance to next point
             t = curve_dist(&coeffs, 3, t, prev_point, nextdist);               // t = argument at which function is forward vector magnitude units away from prev_point (in 3-space, not along curve)
             coord = evaluate_curve(&coeffs, 3, t);                                          // coord := point about forward vector magnitude units away from prev_point

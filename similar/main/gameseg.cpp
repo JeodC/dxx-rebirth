@@ -52,7 +52,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "d_levelstate.h"
 #include "d_range.h"
 #include "d_zip.h"
-#include "partial_range.h"
+#include "cast_range_result.h"
 
 using std::min;
 
@@ -116,22 +116,22 @@ namespace {
 // How far a point can be from a plane, and still be "in" the plane
 #define PLANE_DIST_TOLERANCE	250
 
-static vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const enumerated_array<vertnum_t, MAX_VERTICES_PER_SEGMENT, segment_relative_vertnum> &verts, const sidenum_t side)
+static void compute_center_point_on_side(fvcvertptr &vcvertptr, vms_vector &r, const enumerated_array<vertnum_t, MAX_VERTICES_PER_SEGMENT, segment_relative_vertnum> &verts, const sidenum_t side)
 {
-	vms_vector vp{};
+	vms_vector vp;
+	vm_vec_zero(vp);
 	range_for (auto &v, Side_to_verts[side])
 		vm_vec_add2(vp, vcvertptr(verts[v]));
-	vm_vec_scale(vp, F1_0 / 4);
-	return vp;
+	vm_vec_copy_scale(r, vp, F1_0 / 4);
 }
 
-static vms_vector compute_segment_center(fvcvertptr &vcvertptr, const std::array<vertnum_t, MAX_VERTICES_PER_SEGMENT> &verts)
+static void compute_segment_center(fvcvertptr &vcvertptr, vms_vector &r, const std::array<vertnum_t, MAX_VERTICES_PER_SEGMENT> &verts)
 {
-	vms_vector vp{};
+	vms_vector vp;
+	vm_vec_zero(vp);
 	range_for (auto &v, verts)
 		vm_vec_add2(vp, vcvertptr(v));
-	vm_vec_scale(vp, F1_0 / 8);
-	return vp;
+	vm_vec_copy_scale(r, vp, F1_0 / 8);
 }
 
 [[noreturn]]
@@ -154,17 +154,17 @@ static void get_side_verts(side_vertnum_list_t &vertlist, const enumerated_array
 // ------------------------------------------------------------------------------------------
 // Compute the center point of a side of a segment.
 //	The center point is defined to be the average of the 4 points defining the side.
-vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const shared_segment &sp, const sidenum_t side)
+void compute_center_point_on_side(fvcvertptr &vcvertptr, vms_vector &vp, const shared_segment &sp, const sidenum_t side)
 {
-	return compute_center_point_on_side(vcvertptr, sp.verts, side);
+	compute_center_point_on_side(vcvertptr, vp, sp.verts, side);
 }
 
 // ------------------------------------------------------------------------------------------
 // Compute segment center.
 //	The center point is defined to be the average of the 8 points defining the segment.
-vms_vector compute_segment_center(fvcvertptr &vcvertptr, const shared_segment &sp)
+void compute_segment_center(fvcvertptr &vcvertptr, vms_vector &vp, const shared_segment &sp)
 {
-	return compute_segment_center(vcvertptr, sp.verts);
+	compute_segment_center(vcvertptr, vp, sp.verts);
 }
 
 // -----------------------------------------------------------------------------
@@ -946,7 +946,7 @@ fcd_done1: ;
 
 		this_seg = seg_queue[qtail].end;
 		parent_seg = seg_queue[qtail].start;
-		point_segs[num_points].point = compute_segment_center(vcvertptr, vcsegptr(this_seg));
+		compute_segment_center(vcvertptr, point_segs[num_points].point, vcsegptr(this_seg));
 		num_points++;
 
 		if (parent_seg == seg0)
@@ -956,7 +956,7 @@ fcd_done1: ;
 			Assert(qtail >= 0);
 	}
 
-	point_segs[num_points].point = compute_segment_center(vcvertptr, seg0);
+	compute_segment_center(vcvertptr, point_segs[num_points].point,seg0);
 	num_points++;
 
 	if (num_points == 1) {
@@ -1144,7 +1144,7 @@ void extract_orient_from_segment(fvcvertptr &vcvertptr, vms_matrix &m, const sha
 	const auto uvec{extract_vector_from_segment(vcvertptr, seg, sidenum_t::WBOTTOM, sidenum_t::WTOP)};
 
 	//vector to matrix does normalizations and orthogonalizations
-	vm_vector_to_matrix_u(m, fvec, uvec);
+	vm_vector_2_matrix(m, fvec, &uvec, nullptr);
 }
 
 #if !DXX_USE_EDITOR
@@ -1155,9 +1155,9 @@ namespace {
 //	Extract the forward vector from segment *sp, return in *vp.
 //	The forward vector is defined to be the vector from the the center of the front face of the segment
 // to the center of the back face of the segment.
-vms_vector extract_forward_vector_from_segment(fvcvertptr &vcvertptr, const shared_segment &sp)
+void extract_forward_vector_from_segment(fvcvertptr &vcvertptr, const shared_segment &sp, vms_vector &vp)
 {
-	return extract_vector_from_segment(vcvertptr, sp, sidenum_t::WFRONT, sidenum_t::WBACK);
+	vp = extract_vector_from_segment(vcvertptr, sp, sidenum_t::WFRONT, sidenum_t::WBACK);
 }
 
 // ------------------------------------------------------------------------------------------
@@ -1173,9 +1173,9 @@ vms_vector extract_right_vector_from_segment(fvcvertptr &vcvertptr, const shared
 //	Extract the up vector from segment *sp, return in *vp.
 //	The forward vector is defined to be the vector from the the center of the bottom face of the segment
 // to the center of the top face of the segment.
-vms_vector extract_up_vector_from_segment(fvcvertptr &vcvertptr, const shared_segment &sp)
+void extract_up_vector_from_segment(fvcvertptr &vcvertptr, const shared_segment &sp, vms_vector &vp)
 {
-	return extract_vector_from_segment(vcvertptr, sp, sidenum_t::WBOTTOM, sidenum_t::WTOP);
+	vp = extract_vector_from_segment(vcvertptr, sp, sidenum_t::WBOTTOM, sidenum_t::WTOP);
 }
 
 #if !DXX_USE_EDITOR
@@ -1194,9 +1194,9 @@ static unsigned check_for_degenerate_side(fvcvertptr &vcvertptr, const shared_se
 	fix			dot;
 	int			degeneracy_flag = 0;
 
-	const auto segc{compute_segment_center(vcvertptr, sp)};
-	const auto sidec{compute_center_point_on_side(vcvertptr, sp, sidenum)};
-	const auto vec_to_center{vm_vec_sub(segc, sidec)};
+	const auto segc = compute_segment_center(vcvertptr, sp);
+	const auto &&sidec = compute_center_point_on_side(vcvertptr, sp, sidenum);
+	const auto vec_to_center = vm_vec_sub(segc, sidec);
 
 	//vm_vec_sub(&vec1, &Vertices[sp->verts[vp[1]]], &Vertices[sp->verts[vp[0]]]);
 	//vm_vec_sub(&vec2, &Vertices[sp->verts[vp[2]]], &Vertices[sp->verts[vp[1]]]);
@@ -1234,12 +1234,13 @@ static unsigned check_for_degenerate_side(fvcvertptr &vcvertptr, const shared_se
 //	If so, set global Degenerate_segment_found and return 1, else return 0.
 static unsigned check_for_degenerate_segment(fvcvertptr &vcvertptr, const shared_segment &sp)
 {
+	vms_vector	fvec, uvec;
 	fix			dot;
 	int			degeneracy_flag = 0;				// degeneracy flag for current segment
 
-	auto fvec{extract_forward_vector_from_segment(vcvertptr, sp)};
+	extract_forward_vector_from_segment(vcvertptr, sp, fvec);
 	auto rvec{extract_right_vector_from_segment(vcvertptr, sp)};
-	auto uvec{extract_up_vector_from_segment(vcvertptr, sp)};
+	extract_up_vector_from_segment(vcvertptr, sp, uvec);
 
 	vm_vec_normalize(fvec);
 	vm_vec_normalize(rvec);
@@ -1332,6 +1333,7 @@ namespace {
 static void add_side_as_2_triangles(fvcvertptr &vcvertptr, shared_segment &sp, const sidenum_t sidenum)
 {
 	auto &vs = Side_to_verts[sidenum];
+	fix			dot;
 
 	const auto sidep = &sp.sides[sidenum];
 
@@ -1348,7 +1350,8 @@ static void add_side_as_2_triangles(fvcvertptr &vcvertptr, shared_segment &sp, c
 		auto &vvs2 = *vcvertptr(verts[vs[side_relative_vertnum::_2]]);
 		auto &vvs3 = *vcvertptr(verts[vs[side_relative_vertnum::_3]]);
 		const auto norm{vm_vec_normal(vvs0, vvs1, vvs2)};
-		const fix dot{vm_vec_dot(norm, vm_vec_sub(vvs3, vvs1))};
+		const auto &&vec_13 =	vm_vec_sub(vvs3, vvs1);	//	vector from vertex 1 to vertex 3
+		dot = vm_vec_dot(norm, vec_13);
 
 		const vertex *n0v3, *n1v1;
 		//	Now, signifiy whether to triangulate from 0:2 or 1:3
@@ -1584,15 +1587,15 @@ void validate_segment_all(d_level_shared_segment_state &LevelSharedSegmentState)
 //	------------------------------------------------------------------------------------------------------
 //	Picks a random point in a segment like so:
 //		From center, go up to 50% of way towards any of the 8 vertices.
-vms_vector pick_random_point_in_seg(fvcvertptr &vcvertptr, const shared_segment &sp, std::minstd_rand r)
+void pick_random_point_in_seg(fvcvertptr &vcvertptr, vms_vector &new_pos, const shared_segment &sp, std::minstd_rand r)
 {
-	auto new_pos{compute_segment_center(vcvertptr, sp)};
+	compute_segment_center(vcvertptr, new_pos, sp);
 	const auto vnum = segment_relative_vertnum{std::uniform_int_distribution<uint8_t>(0, MAX_VERTICES_PER_SEGMENT - 1)(r)};
-	auto &&vec2{vm_vec_sub(vcvertptr(sp.verts[vnum]), new_pos)};
+	auto &&vec2 = vm_vec_sub(vcvertptr(sp.verts[vnum]), new_pos);
 	vm_vec_scale(vec2, std::uniform_int_distribution<fix>(0, f0_5 - 1)(r));          // always in 0..1/2 fix
 	vm_vec_add2(new_pos, vec2);
-	return new_pos;
 }
+
 
 //	----------------------------------------------------------------------------------------------------------
 //	Set the segment depth of all segments from start_seg in *segbuf.
@@ -1657,7 +1660,7 @@ static void apply_light_to_segment(visited_segment_bitarray_t &visited, const vm
 	{
 		visited_ref = true;
 		auto &vcvertptr = Vertices.vcptr;
-		const auto r_segment_center{compute_segment_center(vcvertptr, segp)};
+		const auto r_segment_center = compute_segment_center(vcvertptr, segp);
 		dist_to_rseg = vm_vec_dist_quick(r_segment_center, segment_center);
 	
 		if (dist_to_rseg <= LIGHT_DISTANCE_THRESHOLD) {
@@ -1712,7 +1715,7 @@ static void change_segment_light(const vmsegptridx_t segp, const sidenum_t siden
 		const auto light_intensity = TmapInfo[get_texture_index(sidep.tmap_num)].lighting + TmapInfo[get_texture_index(sidep.tmap_num2)].lighting;
 		if (light_intensity) {
 			auto &vcvertptr = Vertices.vcptr;
-			const auto segment_center{compute_segment_center(vcvertptr, segp)};
+			const auto segment_center = compute_segment_center(vcvertptr, segp);
 			visited_segment_bitarray_t visited;
 			apply_light_to_segment(visited, segp, segment_center, light_intensity * dir, 0);
 		}
@@ -1733,16 +1736,10 @@ static void change_light(const d_level_shared_destructible_light_state &LevelSha
 {
 	const fix ds = dir * DL_SCALE;
 	auto &Dl_indices = LevelSharedDestructibleLightState.Dl_indices;
-	struct projector
-	{
-		const dl_index &operator()(const valptridx<dl_index>::vcptr v) const
-		{
-			return v;
-		}
-	};
-	const auto &&er = std::ranges::equal_range(Dl_indices.vcptr, dl_index{segnum.get_unchecked_index(), sidenum, {}, {}}, {}, projector{});
+	const auto &&pr = cast_range_result<const dl_index &>(Dl_indices.vcptr);
+	const auto &&er = std::equal_range(pr.begin(), pr.end(), dl_index{segnum, sidenum, 0, {}});
 	auto &Delta_lights = LevelSharedDestructibleLightState.Delta_lights;
-	for (const dl_index &i : er)
+	range_for (auto &i, partial_range_t<const dl_index *>(er.first.base().base(), er.second.base().base()))
 	{
 		const std::size_t idx = underlying_value(i.index);
 		for (auto &j : partial_const_range(Delta_lights, idx, idx + i.count))

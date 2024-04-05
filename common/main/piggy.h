@@ -31,7 +31,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "fwd-piggy.h"
 #include "fwd-robot.h"
 #include "gr.h"
-#include "physfsx.h"
 
 #if defined(DXX_BUILD_DESCENT_II)
 namespace dsx {
@@ -55,7 +54,7 @@ struct BitmapFile
 	std::array<char, 13> name;
 };
 
-void bitmap_index_read_n(NamedPHYSFS_File fp, std::ranges::subrange<bitmap_index *> r);
+void bitmap_index_read_n(PHYSFS_File *fp, ranges::subrange<bitmap_index *> r);
 }
 
 #ifdef dsx
@@ -76,7 +75,7 @@ enum class properties_init_result : int8_t
 	shareware,
 };
 #elif defined(DXX_BUILD_DESCENT_II)
-enum class properties_init_result : bool
+enum class properties_init_result : int8_t
 {
 	failure,
 	success,

@@ -538,7 +538,7 @@ void DropBuddyMarker(object &objp)
 	static_assert(MarkerState.message.valid_index(marker_num), "not enough markers");
 
 	auto &MarkerMessage = MarkerState.message[marker_num];
-	snprintf(MarkerMessage.data(), MarkerMessage.size(), "RIP: %s", static_cast<const char *>(PlayerCfg.GuidebotName));
+	snprintf(&MarkerMessage[0u], MarkerMessage.size(), "RIP: %s", static_cast<const char *>(PlayerCfg.GuidebotName));
 
 	auto &marker_objidx = MarkerState.imobjidx[marker_num];
 	if (marker_objidx != object_none)
@@ -647,21 +647,21 @@ static void draw_player(const g3_draw_line_context &context, const object_base &
 	g3_draw_sphere(context.canvas, sphere_point, obj_size, context.color);
 
 	// Draw shaft of arrow
-	const auto head_pos{vm_vec_scale_add(obj.pos, obj.orient.fvec, obj_size * 2)};
+	const auto &&head_pos = vm_vec_scale_add(obj.pos, obj.orient.fvec, obj_size * 2);
 	{
 	auto &&arrow_point = g3_rotate_point(vm_vec_scale_add(obj.pos, obj.orient.fvec, obj_size * 3));
 	g3_draw_line(context, sphere_point, arrow_point);
 
 	// Draw right head of arrow
 	{
-		const auto rhead_pos{vm_vec_scale_add(head_pos, obj.orient.rvec, obj_size)};
+		const auto &&rhead_pos = vm_vec_scale_add(head_pos, obj.orient.rvec, obj_size);
 		auto head_point = g3_rotate_point(rhead_pos);
 		g3_draw_line(context, arrow_point, head_point);
 	}
 
 	// Draw left head of arrow
 	{
-		const auto lhead_pos{vm_vec_scale_add(head_pos, obj.orient.rvec, -obj_size)};
+		const auto &&lhead_pos = vm_vec_scale_add(head_pos, obj.orient.rvec, -obj_size);
 		auto head_point = g3_rotate_point(lhead_pos);
 		g3_draw_line(context, arrow_point, head_point);
 	}
@@ -669,7 +669,7 @@ static void draw_player(const g3_draw_line_context &context, const object_base &
 
 	// Draw player's up vector
 	{
-		const auto arrow_pos{vm_vec_scale_add(obj.pos, obj.orient.uvec, obj_size * 2)};
+		const auto &&arrow_pos = vm_vec_scale_add(obj.pos, obj.orient.uvec, obj_size * 2);
 	auto arrow_point = g3_rotate_point(arrow_pos);
 		g3_draw_line(context, sphere_point, arrow_point);
 	}
@@ -734,7 +734,7 @@ static void automap_apply_input(automap &am, const vms_matrix &plrorient, const 
 			// Reset orientation
 			am.controls.state.fire_primary = 0;
 			am.viewMatrix = plrorient;
-			am.view_position = vm_vec_scale_add(plrpos, am.viewMatrix.fvec, -ZOOM_DEFAULT);
+			vm_vec_scale_add(am.view_position, plrpos, am.viewMatrix.fvec, -ZOOM_DEFAULT);
 		}
 		
 		if (am.controls.pitch_time || am.controls.heading_time || am.controls.bank_time)
@@ -865,7 +865,7 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 	render_start_frame();
 
 	if (!PlayerCfg.AutomapFreeFlight)
-		am.view_position = vm_vec_scale_add(am.view_target, am.viewMatrix.fvec, -am.viewDist);
+		vm_vec_scale_add(am.view_position,am.view_target,am.viewMatrix.fvec,-am.viewDist);
 
 	g3_set_view_matrix(am.view_position,am.viewMatrix,am.zoom);
 
@@ -881,7 +881,7 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 #endif
 	
 	// Draw player(s)...
-	const unsigned show_all_players = (Game_mode & GM_MULTI_COOP) || underlying_value(Netgame.game_flag & netgame_rule_flags::show_all_players_on_automap);
+	const unsigned show_all_players = (Game_mode & GM_MULTI_COOP) || Netgame.game_flag.show_on_map;
 	if (show_all_players || (Game_mode & GM_TEAM))
 	{
 		const auto local_player_team = get_team(Player_num);
@@ -920,13 +920,13 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 #endif
 				)
 			{
-				const auto id = get_powerup_id(objp);
+				ubyte id = get_powerup_id(objp);
 				unsigned r, g, b;
-				if (id == powerup_type_t::POW_KEY_RED)
+				if (id==POW_KEY_RED)
 					r = 63 * 2, g = 5 * 2, b = 5 * 2;
-				else if (id == powerup_type_t::POW_KEY_BLUE)
+				else if (id==POW_KEY_BLUE)
 					r = 5 * 2, g = 5 * 2, b = 63 * 2;
-				else if (id == powerup_type_t::POW_KEY_GOLD)
+				else if (id==POW_KEY_GOLD)
 					r = 63 * 2, g = 63 * 2, b = 10 * 2;
 				else
 					break;
@@ -1249,7 +1249,7 @@ void do_automap()
 	am->view_target = plrobj.pos;
 	
 	if (PlayerCfg.AutomapFreeFlight)
-		am->view_position = vm_vec_scale_add(plrobj.pos, am->viewMatrix.fvec, -ZOOM_DEFAULT);
+		vm_vec_scale_add(am->view_position, plrobj.pos, am->viewMatrix.fvec, -ZOOM_DEFAULT);
 
 	am->t1 = am->entry_time = timer_query();
 	am->t2 = am->t1;

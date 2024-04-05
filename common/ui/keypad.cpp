@@ -389,8 +389,11 @@ int ui_pad_read( int n, const char * filename )
 	auto &kpn = *(KeyPad[n] = std::make_unique<UI_KEYPAD>());
 
 	PHYSFSX_gets_line_t<100> buffer;
-	while (linenumber < 22 && PHYSFSX_fgets(buffer, infile))
+	while ( linenumber < 22)
 	{
+		if (!PHYSFSX_fgets(buffer, infile))
+			break;
+
 		auto &line = buffer.line();
 		const auto lb = line.begin();
 		const auto le = line.end();
@@ -462,7 +465,8 @@ int ui_pad_read( int n, const char * filename )
 
 	// Get the keycodes...
 
-	for (PHYSFSX_gets_line_t<200> line_buffer; PHYSFSX_fgets(line_buffer, infile);)
+	PHYSFSX_gets_line_t<200> line_buffer;
+	while (PHYSFSX_fgets(line_buffer, infile))
 	{
 		if (!line_buffer[0])
 			continue;

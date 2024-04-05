@@ -113,7 +113,8 @@ constexpr std::array<uint8_t, MAX_WEAPON_TYPES> Weapon_is_energy{{
 namespace dcx {
 void bump_one_object(object_base &obj0, const vms_vector &hit_dir, const fix damage)
 {
-	phys_apply_force(obj0, vm_vec_copy_scale(hit_dir, damage));
+	const auto hit_vec = vm_vec_copy_scale(hit_dir, damage);
+	phys_apply_force(obj0,hit_vec);
 }
 
 namespace {
@@ -336,11 +337,12 @@ static void bump_two_objects(const d_robot_info_array &Robot_info, const vmobjpt
 	{
 		object_base &t = *pt;
 		Assert(t.movement_source == object::movement_type::physics);
-		phys_apply_force(t, vm_vec_copy_scale(t.mtype.phys_info.velocity, -t.mtype.phys_info.mass));
+		const auto force = vm_vec_copy_scale(t.mtype.phys_info.velocity, -t.mtype.phys_info.mass);
+		phys_apply_force(t,force);
 		return;
 	}
 
-	auto force{vm_vec_sub(obj0->mtype.phys_info.velocity, obj1->mtype.phys_info.velocity)};
+	auto force = vm_vec_sub(obj0->mtype.phys_info.velocity,obj1->mtype.phys_info.velocity);
 	vm_vec_scale2(force,2*fixmul(obj0->mtype.phys_info.mass,obj1->mtype.phys_info.mass),(obj0->mtype.phys_info.mass+obj1->mtype.phys_info.mass));
 
 	bump_this_object(Robot_info, obj1, obj0, force, damage_flag);
@@ -799,8 +801,7 @@ static window_event_result collide_weapon_and_wall(
 		}
 	#endif
 
-	if (weapon->mtype.phys_info.velocity == vms_vector{})
-	{
+	if ((weapon->mtype.phys_info.velocity.x == 0) && (weapon->mtype.phys_info.velocity.y == 0) && (weapon->mtype.phys_info.velocity.z == 0)) {
 		Int3();	//	Contact Matt: This is impossible.  A weapon with 0 velocity hit a wall, which doesn't move.
 		return window_event_result::ignored;
 	}
@@ -1311,11 +1312,11 @@ static void collide_weapon_and_controlcen(const d_robot_info_array &Robot_info, 
 
 		if ( Weapon_info[get_weapon_id(weapon)].damage_radius )
 		{
-			const auto obj2weapon{vm_vec_sub(collision_point, controlcen->pos)};
+			const auto obj2weapon = vm_vec_sub(collision_point, controlcen->pos);
 			const auto mag = vm_vec_mag(obj2weapon);
 			if(mag < controlcen->size && mag > 0) // FVI code does not necessarily update the collision point for object2object collisions. Do that now.
 			{
-				collision_point = vm_vec_scale_add(controlcen->pos, obj2weapon, fixdiv(controlcen->size, mag)); 
+				vm_vec_scale_add(collision_point, controlcen->pos, obj2weapon, fixdiv(controlcen->size, mag)); 
 				weapon->pos = collision_point;
 			}
 #if defined(DXX_BUILD_DESCENT_I)
@@ -1707,11 +1708,11 @@ static void collide_robot_and_weapon(const d_robot_info_array &Robot_info, const
 	weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 	if ( wi->damage_radius )
 	{
-		const auto obj2weapon{vm_vec_sub(collision_point, robot->pos)};
+		const auto obj2weapon = vm_vec_sub(collision_point, robot->pos);
 		const auto mag = vm_vec_mag(obj2weapon);
 		if(mag < robot->size && mag > 0) // FVI code does not necessarily update the collision point for object2object collisions. Do that now.
 		{
-			collision_point = vm_vec_scale_add(robot->pos, obj2weapon, fixdiv(robot->size, mag)); 
+			vm_vec_scale_add(collision_point, robot->pos, obj2weapon, fixdiv(robot->size, mag)); 
 			weapon->pos = collision_point;
 		}
 #if defined(DXX_BUILD_DESCENT_I)
@@ -1914,7 +1915,7 @@ static void drop_missile_1_or_4(const object &playerobj, const secondary_weapon_
 	if (num_missiles > 10)
 		num_missiles = 10;
 
-	call_object_create_egg(playerobj, num_missiles / 4, static_cast<powerup_type_t>(underlying_value(powerup_id) + 1));
+	call_object_create_egg(playerobj, num_missiles / 4, powerup_id + 1);
 	call_object_create_egg(playerobj, num_missiles % 4, powerup_id);
 }
 
@@ -1991,55 +1992,51 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 			}
 		}
 		};
-		drop_armed_bomb(secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX], weapon_id_type::SUPERPROX_ID);
+		drop_armed_bomb(secondary_ammo[SMART_MINE_INDEX], weapon_id_type::SUPERPROX_ID);
 
 		//	If the player had proximity bombs, maybe arm one of them.
 		if (Game_mode & GM_MULTI)
-			drop_armed_bomb(secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX], weapon_id_type::PROXIMITY_ID);
+			drop_armed_bomb(secondary_ammo[PROXIMITY_INDEX], weapon_id_type::PROXIMITY_ID);
 #endif
 
 		//	If the player dies and he has powerful lasers, create the powerups here.
 
-		if (plr_laser_level != laser_level::_1)
-		{
-			auto &&[laser_count, laser_powerup] =
+		std::pair<unsigned, int> laser_level_and_id;
+		if (
 #if defined(DXX_BUILD_DESCENT_II)
-				(plr_laser_level > MAX_LASER_LEVEL)
-				? std::tuple(static_cast<unsigned>(plr_laser_level) - static_cast<unsigned>(MAX_LASER_LEVEL), powerup_type_t::POW_SUPER_LASER)
-				:
+			(plr_laser_level > MAX_LASER_LEVEL && (laser_level_and_id = {static_cast<unsigned>(plr_laser_level) - static_cast<unsigned>(MAX_LASER_LEVEL), POW_SUPER_LASER}, true)) ||
 #endif
-				std::tuple(static_cast<unsigned>(plr_laser_level), powerup_type_t::POW_LASER);
-			call_object_create_egg(playerobj, laser_count, laser_powerup);
-		}
+			(plr_laser_level != laser_level::_1 && (laser_level_and_id = {static_cast<unsigned>(plr_laser_level), POW_LASER}, true)))
+			call_object_create_egg(playerobj, laser_level_and_id.first, laser_level_and_id.second);
 
 		//	Drop quad laser if appropos
 		if (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS)
-			call_object_create_egg(playerobj, powerup_type_t::POW_QUAD_FIRE);
+			call_object_create_egg(playerobj, POW_QUAD_FIRE);
 
 		if (player_info.powerup_flags & PLAYER_FLAGS_CLOAKED)
-			call_object_create_egg(playerobj, powerup_type_t::POW_CLOAK);
+			call_object_create_egg(playerobj, POW_CLOAK);
 
 #if defined(DXX_BUILD_DESCENT_II)
 		if (player_info.powerup_flags & PLAYER_FLAGS_MAP_ALL)
-			call_object_create_egg(playerobj, powerup_type_t::POW_FULL_MAP);
+			call_object_create_egg(playerobj, POW_FULL_MAP);
 
 		if (player_info.powerup_flags & PLAYER_FLAGS_AFTERBURNER)
-			call_object_create_egg(playerobj, powerup_type_t::POW_AFTERBURNER);
+			call_object_create_egg(playerobj, POW_AFTERBURNER);
 
 		if (player_info.powerup_flags & PLAYER_FLAGS_AMMO_RACK)
-			call_object_create_egg(playerobj, powerup_type_t::POW_AMMO_RACK);
+			call_object_create_egg(playerobj, POW_AMMO_RACK);
 
 		if (player_info.powerup_flags & PLAYER_FLAGS_CONVERTER)
-			call_object_create_egg(playerobj, powerup_type_t::POW_CONVERTER);
+			call_object_create_egg(playerobj, POW_CONVERTER);
 
 		if (player_info.powerup_flags & PLAYER_FLAGS_HEADLIGHT)
-			call_object_create_egg(playerobj, powerup_type_t::POW_HEADLIGHT);
+			call_object_create_egg(playerobj, POW_HEADLIGHT);
 
 		// drop the other enemies flag if you have it
 
 		if (game_mode_capture_flag() && (player_info.powerup_flags & PLAYER_FLAGS_FLAG))
 		{
-			call_object_create_egg(playerobj, get_team(get_player_id(playerobj)) == team_number::blue ? powerup_type_t::POW_FLAG_RED : powerup_type_t::POW_FLAG_BLUE);
+			call_object_create_egg(playerobj, get_team(get_player_id(playerobj)) == team_number::blue ? POW_FLAG_RED : POW_FLAG_BLUE);
 		}
 
 
@@ -2047,7 +2044,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		{
 			// Drop hoard orbs
 			for (unsigned max_count = std::min<uint8_t>(player_info.hoard.orbs, player_info.max_hoard_orbs); max_count--;)
-				call_object_create_egg(playerobj, powerup_type_t::POW_HOARD_ORB);
+				call_object_create_egg(playerobj, POW_HOARD_ORB);
 		}
 #endif
 
@@ -2070,25 +2067,25 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		//	Drop the secondary weapons
 		//	Note, proximity weapon only comes in packets of 4.  So drop n/2, but a max of 3 (handled inside maybe_drop..)  Make sense?
 
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::PROXIMITY_INDEX, secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX] / 4);
+		maybe_drop_secondary_weapon_egg(playerobj, PROXIMITY_INDEX, secondary_ammo[PROXIMITY_INDEX] / 4);
 
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::SMART_INDEX, secondary_ammo[secondary_weapon_index_t::SMART_INDEX]);
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::MEGA_INDEX, secondary_ammo[secondary_weapon_index_t::MEGA_INDEX]);
+		maybe_drop_secondary_weapon_egg(playerobj, SMART_INDEX, secondary_ammo[SMART_INDEX]);
+		maybe_drop_secondary_weapon_egg(playerobj, MEGA_INDEX, secondary_ammo[MEGA_INDEX]);
 
 #if defined(DXX_BUILD_DESCENT_II)
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::SMART_MINE_INDEX, secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX] / 4);
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::SMISSILE5_INDEX, secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX]);
+		maybe_drop_secondary_weapon_egg(playerobj, SMART_MINE_INDEX,(secondary_ammo[SMART_MINE_INDEX])/4);
+		maybe_drop_secondary_weapon_egg(playerobj, SMISSILE5_INDEX, secondary_ammo[SMISSILE5_INDEX]);
 #endif
 
 		//	Drop the player's missiles in packs of 1 and/or 4
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::HOMING_INDEX);
+		drop_missile_1_or_4(playerobj,HOMING_INDEX);
 #if defined(DXX_BUILD_DESCENT_II)
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::GUIDED_INDEX);
+		drop_missile_1_or_4(playerobj,GUIDED_INDEX);
 #endif
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::CONCUSSION_INDEX);
+		drop_missile_1_or_4(playerobj,CONCUSSION_INDEX);
 #if defined(DXX_BUILD_DESCENT_II)
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::SMISSILE1_INDEX);
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::SMISSILE4_INDEX);
+		drop_missile_1_or_4(playerobj,SMISSILE1_INDEX);
+		drop_missile_1_or_4(playerobj,SMISSILE4_INDEX);
 #endif
 
 		//	If player has vulcan ammo, but no vulcan or gauss cannon, drop the ammo.
@@ -2101,7 +2098,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 			if (amount)
 				for (;;)
 			{
-				call_object_create_egg(playerobj, powerup_type_t::POW_VULCAN_AMMO);
+				call_object_create_egg(playerobj, POW_VULCAN_AMMO);
 				if (amount <= VULCAN_AMMO_AMOUNT)
 					break;
 				amount -= VULCAN_AMMO_AMOUNT;
@@ -2110,8 +2107,8 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 
 		//	Always drop a shield and energy powerup.
 		if (Game_mode & GM_MULTI) {
-			call_object_create_egg(playerobj, powerup_type_t::POW_SHIELD_BOOST);
-			call_object_create_egg(playerobj, powerup_type_t::POW_ENERGY);
+			call_object_create_egg(playerobj, POW_SHIELD_BOOST);
+			call_object_create_egg(playerobj, POW_ENERGY);
 		}
 	}
 }
@@ -2217,11 +2214,11 @@ static void collide_player_and_weapon(const d_robot_info_array &Robot_info, cons
 	object_create_explosion_without_damage(Vclip, player_segp, collision_point, i2f(10) / 2, vclip_index::player_hit);
 	if ( Weapon_info[get_weapon_id(weapon)].damage_radius )
 	{
-		const auto obj2weapon{vm_vec_sub(collision_point, playerobj->pos)};
+		const auto obj2weapon = vm_vec_sub(collision_point, playerobj->pos);
 		const auto mag = vm_vec_mag(obj2weapon);
 		if(mag > 0) // FVI code does not necessarily update the collision point for object2object collisions. Do that now.
 		{
-			collision_point = vm_vec_scale_add(playerobj->pos, obj2weapon, fixdiv(playerobj->size, mag)); 
+			vm_vec_scale_add(collision_point, playerobj->pos, obj2weapon, fixdiv(playerobj->size, mag)); 
 			weapon->pos = collision_point;
 		}
 #if defined(DXX_BUILD_DESCENT_I)
@@ -2278,7 +2275,7 @@ static vms_vector find_exit_direction(vms_vector result, const object &objp, con
 	for (const auto side : MAX_SIDES_PER_SEGMENT)
 		if (WALL_IS_DOORWAY(GameBitmaps, Textures, vcwallptr, segp, side) & WALL_IS_DOORWAY_FLAG::fly)
 		{
-			const auto exit_point{compute_center_point_on_side(vcvertptr, segp, side)};
+			const auto &&exit_point = compute_center_point_on_side(vcvertptr, segp, side);
 			vm_vec_add2(result, vm_vec_normalized_quick(vm_vec_sub(exit_point, objp.pos)));
 			break;
 		}
@@ -2351,13 +2348,13 @@ static void collide_player_and_powerup(const d_robot_info_array &, object &playe
 	else if ((Game_mode & GM_MULTI_COOP) && (get_player_id(playerobj) != Player_num))
 	{
 		switch (get_powerup_id(powerup)) {
-			case powerup_type_t::POW_KEY_BLUE:
+			case POW_KEY_BLUE:
 				playerobj.ctype.player_info.powerup_flags |= PLAYER_FLAGS_BLUE_KEY;
 				break;
-			case powerup_type_t::POW_KEY_RED:
+			case POW_KEY_RED:
 				playerobj.ctype.player_info.powerup_flags |= PLAYER_FLAGS_RED_KEY;
 				break;
-			case powerup_type_t::POW_KEY_GOLD:
+			case POW_KEY_GOLD:
 				playerobj.ctype.player_info.powerup_flags |= PLAYER_FLAGS_GOLD_KEY;
 				break;
 			default:

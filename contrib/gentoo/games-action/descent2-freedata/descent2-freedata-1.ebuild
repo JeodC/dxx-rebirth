@@ -1,1 +1,0 @@
-../descent1-freedata/descent1-freedata-1.ebuild

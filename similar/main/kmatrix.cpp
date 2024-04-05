@@ -64,7 +64,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 namespace {
 
-enum class kmatrix_status_mode : uint8_t
+enum class kmatrix_status_mode
 {
 	reactor_countdown_running,
 	level_finished,

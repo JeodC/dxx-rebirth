@@ -44,7 +44,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "aistruct.h"
 #include "robot.h"
 #include "valptridx.h"
-#include "physfsx.h"
 #endif
 
 namespace dcx {
@@ -294,19 +293,19 @@ static inline std::size_t operator-(point_seg_array_t::iterator i, point_seg_arr
 	return std::distance(p.begin(), i);
 }
 
-enum class create_path_random_flag : bool
+enum class create_path_random_flag : uint8_t
 {
 	nonrandom,
 	random,
 };
 
-enum class create_path_safety_flag : bool
+enum class create_path_safety_flag : uint8_t
 {
 	unsafe,
 	safe,
 };
 
-enum class create_path_result : bool
+enum class create_path_result : uint8_t
 {
 	early,
 	finished,
@@ -333,7 +332,7 @@ void create_path_to_guidebot_player_segment(vmobjptridx_t objp, const robot_info
 std::pair<create_path_result, unsigned> create_path_points(vmobjptridx_t objp, const robot_info *robptr, vcsegidx_t start_seg, icsegidx_t end_seg, point_seg_array_t::iterator point_segs, unsigned max_depth, create_path_random_flag random_flag, create_path_safety_flag safety_flag, icsegidx_t avoid_seg);
 
 int ai_save_state(PHYSFS_File * fp);
-int ai_restore_state(const d_robot_info_array &Robot_info, NamedPHYSFS_File fp, int version, physfsx_endian swap);
+int ai_restore_state(const d_robot_info_array &Robot_info, PHYSFS_File *fp, int version, int swap);
 
 #if DXX_USE_EDITOR
 void player_follow_path(object &objp);

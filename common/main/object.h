@@ -76,9 +76,7 @@ enum object_type_t : uint8_t
 	OBJ_GHOST	= 12,  // what the player turns into when dead
 	OBJ_LIGHT	= 13,  // a light source, & not much else
 	OBJ_COOP	= 14,  // a cooperative player object.
-	/* if DXX_BUILD_DESCENT_II */
 	OBJ_MARKER	= 15,  // a map marker
-	/* endif */
 };
 
 enum class render_type : uint8_t
@@ -129,20 +127,10 @@ static inline bool valid_render_type(const uint8_t r)
 	}
 }
 
-#ifdef dsx
-union contained_object_id
-{
-	powerup_type_t powerup;
-	robot_id robot;
-};
-
 struct contained_object_parameters
 {
 	contained_object_type type;	// Type of object this robot contains (eg, spider contains powerup)
-	contained_object_id id;		// ID of object this robot contains (eg, id = blue type = key)
-	uint8_t count;	// number of objects of type:id this robot contains
 };
-#endif
 
 }
 
@@ -184,7 +172,7 @@ struct player_info
 	player_selected_weapon<primary_weapon_index_t> Primary_weapon;
 	player_selected_weapon<secondary_weapon_index_t> Secondary_weapon;
 	enum laser_level laser_level;
-	enumerated_array<uint8_t, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t>  secondary_ammo; // How much ammo of each type.
+	std::array<uint8_t, MAX_SECONDARY_WEAPONS>  secondary_ammo; // How much ammo of each type.
 	uint8_t Spreadfire_toggle;
 #if defined(DXX_BUILD_DESCENT_II)
 	uint8_t Primary_last_was_super;
@@ -302,7 +290,7 @@ struct laser_info_rw
 	short   parent_num;         // The object's parent's number
 	int     parent_signature;   // The object's parent's signature...
 	fix     creation_time;      // Absolute time of creation.
-	uint16_t   last_hitobj;        // For persistent weapons (survive object collision), object it most recently hit.
+	short   last_hitobj;        // For persistent weapons (survive object collision), object it most recently hit.
 	short   track_goal;         // Object this object is tracking.
 	fix     multiplier;         // Power if this is a fusion bolt (or other super weapon to be added).
 } __pack__;
@@ -415,6 +403,8 @@ struct object_base
 	fix     size;           // 3d size of object - for collision detection
 	fix     shields;        // Starts at maximum, when <0, object dies..
 	contained_object_parameters contains;
+	sbyte   contains_id;    // ID of object this object contains (eg, id = blue type = key)
+	sbyte   contains_count; // number of objects of type:id this object contains
 	sbyte   matcen_creator; // Materialization center that created this object, high bit set if matcen-created
 	fix     lifeleft;       // how long until goes away, or 7fff if immortal
 	// -- Removed, MK, 10/16/95, using lifeleft instead: int     lightlevel;
@@ -688,7 +678,7 @@ static inline player_marker_index &operator++(player_marker_index &i)
 
 struct d_unique_buddy_state
 {
-	enum class Escort_goal_reachability : bool
+	enum class Escort_goal_reachability : uint8_t
 	{
 		unreachable,
 		reachable,
@@ -785,16 +775,11 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info);
 // move all objects for the current frame
 window_event_result game_move_all_objects(const d_level_shared_robot_info_state &LevelSharedRobotInfoState);     // moves all objects
 window_event_result endlevel_move_all_objects(const d_level_shared_robot_info_state &LevelSharedRobotInfoState);
-
 }
 
 namespace dcx {
 
-#ifdef dsx
 contained_object_type build_contained_object_type_from_untrusted(uint8_t untrusted);
-contained_object_id build_contained_object_id_from_untrusted(contained_object_type, uint8_t untrusted);
-contained_object_parameters build_contained_object_parameters_from_untrusted(uint8_t type, uint8_t id, uint8_t count);
-#endif
 
 static inline unsigned get_player_id(const object_base &o)
 {

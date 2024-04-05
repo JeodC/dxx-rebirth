@@ -39,8 +39,8 @@ namespace dcx {
 enum class vclip_index : uint8_t
 {
 	player_hit = 1,
-	volatile_wall_hit = 5,
 	small_explosion = 2,
+	volatile_wall_hit = 5,
 	morphing_robot = 10,
 	big_player_explosion = 58,
 	player_appearance = 61,
@@ -81,7 +81,7 @@ namespace dcx {
 /*
  * reads n vclip structs from a PHYSFS_File
  */
-void vclip_read(NamedPHYSFS_File fp, vclip &vc);
+void vclip_read(PHYSFS_File *fp, vclip &vc);
 #if 0
 void vclip_write(PHYSFS_File *fp, const vclip &vc);
 #endif

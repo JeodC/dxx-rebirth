@@ -44,7 +44,7 @@ extern unsigned state_game_id;
 #include "fwd-player.h"
 namespace dsx {
 
-enum class secret_save : uint8_t
+enum class secret_save
 {
 	none,
 #if defined(DXX_BUILD_DESCENT_II)
@@ -53,7 +53,7 @@ enum class secret_save : uint8_t
 #endif
 };
 
-enum class secret_restore : uint8_t
+enum class secret_restore
 {
 	none,
 #if defined(DXX_BUILD_DESCENT_II)
@@ -67,13 +67,13 @@ enum class secret_restore : uint8_t
 
 namespace dcx {
 
-enum class blind_save : bool
+enum class blind_save
 {
 	no,
 	yes,
 };
 
-enum class deny_save_result : bool
+enum class deny_save_result
 {
 	allowed,
 	denied,

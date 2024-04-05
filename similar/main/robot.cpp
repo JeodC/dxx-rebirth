@@ -179,7 +179,7 @@ namespace {
 /*
  * reads n jointlist structs from a PHYSFS_File
  */
-static void jointlist_read(const NamedPHYSFS_File fp, std::array<jointlist, N_ANIM_STATES> &jl)
+static void jointlist_read(PHYSFS_File *fp, std::array<jointlist, N_ANIM_STATES> &jl)
 {
 	range_for (auto &i, jl)
 	{
@@ -213,7 +213,7 @@ imobjptridx_t robot_create(const d_robot_info_array &Robot_info, const robot_id 
 /*
  * reads n robot_info structs from a PHYSFS_File
  */
-void robot_info_read(const NamedPHYSFS_File fp, robot_info &ri)
+void robot_info_read(PHYSFS_File *fp, robot_info &ri)
 {
 	ri.model_num = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
 #if defined(DXX_BUILD_DESCENT_I)
@@ -237,11 +237,11 @@ void robot_info_read(const NamedPHYSFS_File fp, robot_info &ri)
 	ri.weapon_type2 = static_cast<weapon_id_type>(PHYSFSX_readByte(fp));
 	ri.n_guns = PHYSFSX_readByte(fp);
 #endif
-	const uint8_t contains_id = PHYSFSX_readByte(fp);
-	const uint8_t contains_count = PHYSFSX_readByte(fp);
+	ri.contains_id = PHYSFSX_readByte(fp);
+
+	ri.contains_count = PHYSFSX_readByte(fp);
 	ri.contains_prob = PHYSFSX_readByte(fp);
-	const auto contains_type = PHYSFSX_readByte(fp);
-	ri.contains = build_contained_object_parameters_from_untrusted(contains_type, contains_id, contains_count);
+	ri.contains.type = build_contained_object_type_from_untrusted(PHYSFSX_readByte(fp));
 #if defined(DXX_BUILD_DESCENT_I)
 	ri.score_value = PHYSFSX_readInt(fp);
 #elif defined(DXX_BUILD_DESCENT_II)
@@ -269,7 +269,8 @@ void robot_info_read(const NamedPHYSFS_File fp, robot_info &ri)
 	range_for (auto &j, ri.turn_time)
 		j = PHYSFSX_readFix(fp);
 #if defined(DXX_BUILD_DESCENT_I)
-	PHYSFSX_skipBytes<4 * (NDL * 2)>(fp);
+	for (unsigned j = 0; j < NDL * 2; j++)
+			PHYSFSX_readFix(fp);
 #endif
 	range_for (auto &j, ri.max_speed)
 		j = PHYSFSX_readFix(fp);
@@ -324,10 +325,10 @@ void robot_info_read(const NamedPHYSFS_File fp, robot_info &ri)
 /*
  * reads n jointpos structs from a PHYSFS_File
  */
-void jointpos_read(const NamedPHYSFS_File fp, jointpos &jp)
+void jointpos_read(PHYSFS_File *fp, jointpos &jp)
 {
 	jp.jointnum = PHYSFSX_readShort(fp);
-	PHYSFSX_readAngleVec(fp, jp.angles);
+	PHYSFSX_readAngleVec(&jp.angles, fp);
 }
 
 #if 0

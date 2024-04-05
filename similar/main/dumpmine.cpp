@@ -148,7 +148,7 @@ static const char *object_ids(const object_base &objp)
 static void err_puts(PHYSFS_File *f, const std::span<const char> str)
 {
 	++Errors_in_mine;
-	con_puts(CON_CRITICAL, str);
+	con_puts(CON_CRITICAL, str.data(), str.size());
 	PHYSFSX_puts(f, str);
 }
 
@@ -174,7 +174,7 @@ static void err_printf(PHYSFS_File *my_file, const char * format, ... )
 
 static void warning_puts(PHYSFS_File *f, const std::span<const char> str)
 {
-	con_puts(CON_URGENT, str);
+	con_puts(CON_URGENT, str.data(), str.size());
 	PHYSFSX_puts(f, str);
 }
 
@@ -351,25 +351,25 @@ static void write_key_text(fvcobjptridx &vcobjptridx, segment_array &segments, f
 			const char *color;
 			const auto id = get_powerup_id(objp);
 			if (
-				(id == powerup_type_t::POW_KEY_BLUE && (blue.found_powerup(), color = "BLUE", true)) ||
-				(id == powerup_type_t::POW_KEY_RED && (red.found_powerup(), color = "RED", true)) ||
-				(id == powerup_type_t::POW_KEY_GOLD && (gold.found_powerup(), color = "GOLD", true))
+				(id == POW_KEY_BLUE && (blue.found_powerup(), color = "BLUE", true)) ||
+				(id == POW_KEY_RED && (red.found_powerup(), color = "RED", true)) ||
+				(id == POW_KEY_GOLD && (gold.found_powerup(), color = "GOLD", true))
 			)
 			{
 				PHYSFSX_printf(my_file, "The %s key is object %hu in segment %i\n", color, static_cast<objnum_t>(objp), objp->segnum);
 			}
 		}
 
-		if (const auto contains_count = objp->contains.count)
+		if (const auto contains_count = objp->contains_count)
 		{
 			if (objp->contains.type == contained_object_type::powerup)
 			{
 				const char *color;
-				const auto id = objp->contains.id.powerup;
+				const auto id = objp->contains_id;
 				if (
-					(id == powerup_type_t::POW_KEY_BLUE && (blue.found_powerup(contains_count), color = "BLUE", true)) ||
-					(id == powerup_type_t::POW_KEY_RED && (red.found_powerup(contains_count), color = "RED", true)) ||
-					(id == powerup_type_t::POW_KEY_GOLD && (gold.found_powerup(contains_count), color = "GOLD", true))
+					(id == POW_KEY_BLUE && (blue.found_powerup(contains_count), color = "BLUE", true)) ||
+					(id == POW_KEY_RED && (red.found_powerup(contains_count), color = "RED", true)) ||
+					(id == POW_KEY_GOLD && (gold.found_powerup(contains_count), color = "GOLD", true))
 				)
 					PHYSFSX_printf(my_file, "The %s key is contained in object %hu (a %s %s) in segment %hu\n", color, static_cast<objnum_t>(objp), object_types(objp), Robot_names[get_robot_id(objp)].data(), objp->segnum);
 			}

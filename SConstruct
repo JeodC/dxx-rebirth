@@ -1,11 +1,9 @@
 #SConstruct
 # vim: set fenc=utf-8 sw=4 ts=4 :
-# $Format:%H$
+# c22de974133f407e6413dafde8c0769019881fec
 
 # needed imports
 from collections import (defaultdict, Counter as collections_counter)
-import collections.abc
-from dataclasses import dataclass
 import base64
 import binascii
 import errno
@@ -13,7 +11,6 @@ import itertools
 import shlex
 import subprocess
 import sys
-import typing
 import os
 import SCons.Util
 import SCons.Script
@@ -21,10 +18,10 @@ import SCons.Script
 # Disable injecting tools into default namespace
 SCons.Defaults.DefaultEnvironment(tools = [])
 
-def message(program, msg: str):
+def message(program,msg):
 	print(f'{program.program_message_prefix}: {msg}')
 
-def get_Werror_sequence(active_cxxflags: list[str], warning_flags: collections.abc.Sequence[str]) -> list[str]:
+def get_Werror_sequence(active_cxxflags, warning_flags):
 	# The leading -W is passed in each element in warning_flags so that if
 	# -Werror is already set, the warning_flags can be returned as-is.  This
 	# also means that the warning flag is written in the caller as it will be
@@ -54,23 +51,14 @@ class StaticSubprocess:
 	# SConstruct run, but before the next, will not cause any
 	# inconsistencies.
 	shlex_split = shlex.split
-
-	@dataclass(eq=False)
 	class CachedCall:
-		out: bytes
-		err: bytes
-		returncode: int
-
-	@dataclass(eq=False)
-	class CachedVersionCall:
-		version_head: str
-		def __init__(self, out: bytes, err: bytes, returncode: int):
-			oe = out or err
-			self.version_head = oe.splitlines()[0].decode() if not returncode and oe else None
-
+		def __init__(self,out,err,returncode):
+			self.out = out
+			self.err = err
+			self.returncode = returncode
 	# @staticmethod delayed so that default arguments pick up the
 	# undecorated form.
-	def pcall(args: list[bytes | str], stderr=None, CachedCall=CachedCall, _call_cache: dict[str, CachedCall]={}) -> CachedCall:
+	def pcall(args,stderr=None,_call_cache={},_CachedCall=CachedCall):
 		# Use repr since callers may construct the same argument
 		# list independently.
 		## >>> a = ['git', '--version']
@@ -89,28 +77,33 @@ class StaticSubprocess:
 			return c
 		p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=stderr)
 		(o, e) = p.communicate()
-		_call_cache[a] = c = CachedCall(o, e, p.wait())
+		_call_cache[a] = c = _CachedCall(o, e, p.wait())
 		return c
-	def qcall(args: str, stderr=None, _pcall=pcall, _shlex_split=shlex_split) -> CachedCall:
+	def qcall(args,stderr=None,_pcall=pcall,_shlex_split=shlex_split):
 		return _pcall(_shlex_split(args),stderr)
-	@classmethod
-	def get_version_head(cls, cmd: bytes | str, _pcall=pcall, _shlex_split=shlex_split) -> str:
+	@staticmethod
+	def get_version_head(cmd,_pcall=pcall,_shlex_split=shlex_split):
 		# If cmd is bytes, then it is output from a program and should
 		# not be reparsed.
-		return _pcall(([cmd] if isinstance(cmd, bytes) else _shlex_split(cmd)) + ['--version'], stderr=subprocess.PIPE, CachedCall=cls.CachedVersionCall).version_head
+		v = _pcall(([cmd] if isinstance(cmd, bytes) else _shlex_split(cmd)) + ['--version'], stderr=subprocess.PIPE)
+		try:
+			return v.__version_head
+		except AttributeError:
+			v.__version_head = r = (v.out or v.err).splitlines()[0].decode() if not v.returncode and (v.out or v.err) else None
+			return r
 	pcall = staticmethod(pcall)
 	qcall = staticmethod(qcall)
 	shlex_split = staticmethod(shlex_split)
 
 class ToolchainInformation(StaticSubprocess):
 	@staticmethod
-	def get_tool_path(env: SCons.Environment, tool: str, _qcall=StaticSubprocess.qcall):
+	def get_tool_path(env,tool,_qcall=StaticSubprocess.qcall):
 		# Include $LINKFLAGS since -fuse-ld=gold influences the path
 		# printed for the linker.
 		tool = env.subst(f'$CXX $CXXFLAGS $LINKFLAGS -print-prog-name={tool}')
 		return tool, _qcall(tool).out.strip()
 	@staticmethod
-	def show_partial_environ(env: SCons.Environment, user_settings, f: collections.abc.Callable[[str], None], msgprefix: str, append_newline='\n'):
+	def show_partial_environ(env, user_settings, f, msgprefix, append_newline='\n'):
 		f(f'{msgprefix}: CHOST: {(user_settings.CHOST)!r}{append_newline}')
 		for v in (
 			'CXX',
@@ -139,24 +132,26 @@ class ToolchainInformation(StaticSubprocess):
 			f(f'{msgprefix}: ${v}: {(penv.get(v, None))!r}{append_newline}')
 
 class Git(StaticSubprocess):
-	@dataclass(eq=False)
 	class ComputedExtraVersion:
-		describe: str
-		status: str
-		diffstat_HEAD: str
-		revparse_HEAD: str
 		__slots__ = ('describe', 'status', 'diffstat_HEAD', 'revparse_HEAD')
+		def __init__(self,describe,status,diffstat_HEAD,revparse_HEAD):
+			self.describe = describe
+			self.status = status
+			self.diffstat_HEAD = diffstat_HEAD
+			self.revparse_HEAD = revparse_HEAD
+		def __repr__(self):
+			return f'ComputedExtraVersion({self.describe!r},{self.status!r},{self.diffstat_HEAD!r},{self.revparse_HEAD!r})'
 	UnknownExtraVersion = (
 		# If the string is alphanumeric, then `git archive` has rewritten the
 		# string to be a commit ID.  Use that commit ID as a guessed default
 		# when Git is not available to resolve a current commit ID.
-		ComputedExtraVersion('$Format:%(describe:tags,abbrev=12)$', None, None, 'archive_$Format:%H$') if '$Format:%H$'.isalnum() else
+		ComputedExtraVersion('', None, None, 'archive_c22de974133f407e6413dafde8c0769019881fec') if 'c22de974133f407e6413dafde8c0769019881fec'.isalnum() else
 		# Otherwise, assume that this is a checked-in copy.
 		ComputedExtraVersion(None, None, None, None)
 		)
-	# None until computed, then ComputedExtraVersion once cached.
-	__computed_extra_version: typing.ClassVar[None | ComputedExtraVersion] = None
-	__path_git: typing.ClassVar[None | list[str]] = None
+	# None when unset.  Instance of ComputedExtraVersion once cached.
+	__computed_extra_version = None
+	__path_git = None
 	# `__pcall_missing_git`, `__pcall_found_git`, and `pcall` must have
 	# compatible signatures.  In any given run, there will be at most
 	# one call to `pcall`, which then patches itself out of the call
@@ -182,7 +177,7 @@ class Git(StaticSubprocess):
 			return None
 		return g.out
 	@classmethod
-	def compute_extra_version(cls, _spcall=spcall) -> ComputedExtraVersion:
+	def compute_extra_version(cls,_spcall=spcall):
 		c = cls.__computed_extra_version
 		if c is None:
 			v = cls.__compute_extra_version()
@@ -200,7 +195,7 @@ class Git(StaticSubprocess):
 	#	'*' if there are unstaged changes else ''
 	#	'+' if there are staged changes else ''
 	@classmethod
-	def __compute_extra_version(cls) -> None | str:
+	def __compute_extra_version(cls):
 		try:
 			g = cls.pcall(['describe', '--tags', '--abbrev=12'], stderr=subprocess.PIPE)
 		except OSError as e:
@@ -216,25 +211,28 @@ class Git(StaticSubprocess):
 		).decode()
 
 class _ConfigureTests:
-	@dataclass(eq=False)
 	class Collector:
-		record: collections.abc.Callable[['ConfigureTest'], None]
-
-		@dataclass(eq=False, slots=True)
 		class RecordedTest:
-			name: str
-			desc: str
-			# predicate is a sequence of zero-or-more functions that take a
-			# UserSettings object as the only argument.  A recorded test is
-			# only passed to the SConf logic if at most zero predicates return
-			# a false-like value.
-			#
-			# Callers use this to exclude from execution tests which make no
-			# sense in the current environment, such as a Windows-specific test
-			# when building for a Linux target.
-			predicate: tuple[collections.abc.Callable[['UserSettings'], bool]] = ()
+			__slots__ = ('desc', 'name', 'predicate')
+			def __init__(self,name,desc,predicate=()):
+				self.name = name
+				self.desc = desc
+				# predicate is a sequence of zero-or-more functions that
+				# take a UserSettings object as the only argument.
+				# A recorded test is only passed to the SConf logic if
+				# at most zero predicates return a false-like value.
+				#
+				# Callers use this to exclude from execution tests which
+				# make no sense in the current environment, such as a
+				# Windows-specific test when building for a
+				# Linux target.
+				self.predicate = predicate
+			def __repr__(self):
+				return f'_ConfigureTests.Collector.RecordedTest({self.name!r}, {self.desc!r}, {self.predicate!r})'
 
-		def __call__(self, f: collections.abc.Callable) -> collections.abc.Callable:
+		def __init__(self,record):
+			self.record = record
+		def __call__(self,f):
 			desc = None
 			doc = getattr(f, '__doc__', None)
 			if doc is not None:
@@ -272,7 +270,7 @@ class ConfigureTests(_ConfigureTests):
 
 	class CxxRequiredFeature:
 		__slots__ = ('main', 'name', 'text')
-		def __init__(self, name: str, text: str, main: str = ''):
+		def __init__(self,name,text,main=''):
 			self.name = name
 			# Avoid generating consecutive underscores if the input
 			# string has multiple adjacent unacceptable characters.
@@ -292,7 +290,7 @@ class ConfigureTests(_ConfigureTests):
 		std = 20
 	class CxxRequiredFeatures:
 		__slots__ = ('features', 'main', 'text')
-		def __init__(self, features: list['CxxRequiredFeature']):
+		def __init__(self,features):
 			self.features = features
 			s = '/* C++{} {} */\n{}'.format
 			self.main = '\n'.join((s(f.std, f.name, f.main) for f in features if f.main))
@@ -322,14 +320,14 @@ class ConfigureTests(_ConfigureTests):
 		# One empty list for all the defaults.  The comprehension
 		# creates copies, so it is safe for the default value to be
 		# shared.
-		def __init__(self, env: SCons.Environment, keyviews, _l=[]):
+		def __init__(self,env,keyviews,_l=[]):
 			self.flags = {k: env.get(k, _l).copy() for k in itertools.chain.from_iterable(keyviews)}
-		def restore(self, env: SCons.Environment):
+		def restore(self,env):
 			env.Replace(**self.flags)
-		def __getitem__(self, name: str):
+		def __getitem__(self,name):
 			return self.flags.__getitem__(name)
 	class ForceVerboseLog(PreservedEnvironment):
-		def __init__(self, env: SCons.Environment):
+		def __init__(self,env):
 			# Force verbose output to sconf.log
 			self.flags = {}
 			for k in (
@@ -466,33 +464,6 @@ class ConfigureTests(_ConfigureTests):
 	__python_import_struct = None
 	_cxx_conformance_cxx20 = 20
 	__cxx_std_required_features = CxxRequiredFeatures([
-		# As of this writing, <gcc-12 is already unsupported, but some
-		# platforms, such as Ubuntu 22.04, still try to use gcc-11 by default.
-		# Use this test both to verify that Class Template Argument Deduction
-		# is generally supported, since it is used in the game, and to exclude
-		# an unsupported compiler that does not accept CTAD in one of the
-		# contexts the game uses.
-		Cxx20RequiredFeature('class template argument deduction', '''
-struct Outer_%(N)s
-{
-	template <typename byte_type>
-	struct Inner
-	{
-		constexpr Inner(byte_type &)
-		{
-		}
-	};
-	/* <gcc-12 does not allow declaring a deduction guide in the immediately
-	 * enclosing scope:
-```
-error: deduction guide 'Outer_test_class_20template_20argument
-_20deduction::Inner(byte_type&) -> Outer_test_class_20template_20argument_20deduction::Inner<byte_type>' must be declared at namespace scope
-```
-	 */
-	template <typename byte_type>
-		Inner(byte_type &) -> Inner<byte_type>;
-};
-'''),
 		Cxx20RequiredFeature('explicitly defaulted operator==', '''
 struct A_%(N)s
 {
@@ -946,27 +917,6 @@ help:assume C++ compiler works
 		user_settings = self.user_settings
 		use_distcc = user_settings.distcc
 		use_ccache = user_settings.ccache
-		text = '''
-/* When compiling using gcc, defining a virtual function requires linking to a
- * symbol from gcc libstdc++.  If the linker is `gcc`, rather than `g++`, (which
- * can happen if the user sets `CXX=gcc`), then libstdc++ is not linked, and the
- * build fails with an error like:
-
-```
-undefined reference to `vtable for __cxxabiv1::__class_type_info'
-```
-
- * Test for that combination here, so that the test will report that the C++
- * linker does not work, rather than waiting for the user to get a link
- * failure in the game binary at the end of the build.
- */
-struct test_virtual_function_supported
-{
-	virtual void a();
-};
-
-void test_virtual_function_supported::a() {}
-'''
 		if user_settings.show_tool_version:
 			CXX = cenv['CXX']
 			self._show_tool_version(context, CXX, 'C++ compiler')
@@ -997,17 +947,17 @@ void test_virtual_function_supported::a() {}
 		ToolchainInformation.show_partial_environ(cenv, user_settings, context.Display, self.msgprefix)
 		if use_ccache:
 			if use_distcc:
-				if Link(context, text=text, msg='whether ccache, distcc, C++ compiler, and linker work', calling_function='ccache_distcc_ld_works'):
+				if Link(context, text='', msg='whether ccache, distcc, C++ compiler, and linker work', calling_function='ccache_distcc_ld_works'):
 					return
 				most_recent_error = 'ccache and C++ linker work, but distcc does not work.'
 				# Disable distcc so that the next call to self.Link tests only
 				# ccache+linker.
 				del cenv['ENV']['CCACHE_PREFIX']
-			if Link(context, text=text, msg='whether ccache, C++ compiler, and linker work', calling_function='ccache_ld_works'):
+			if Link(context, text='', msg='whether ccache, C++ compiler, and linker work', calling_function='ccache_ld_works'):
 				return most_recent_error
 			most_recent_error = 'C++ linker works, but ccache does not work.'
 		elif use_distcc:
-			if Link(context, text=text, msg='whether distcc, C++ compiler, and linker work', calling_function='distcc_ld_works'):
+			if Link(context, text='', msg='whether distcc, C++ compiler, and linker work', calling_function='distcc_ld_works'):
 				return
 			most_recent_error = 'C++ linker works, but distcc does not work.'
 		else:
@@ -1021,18 +971,18 @@ void test_virtual_function_supported::a() {}
 		#
 		# If they are not in use, this assignment is a no-op.
 		cenv['CXXCOM'] = cenv._dxx_cxxcom_no_prefix
-		if Link(context, text=text, msg='whether C++ compiler and linker work', calling_function='ld_works'):
+		if Link(context, text='', msg='whether C++ compiler and linker work', calling_function='ld_works'):
 			# If ccache or distcc are in use, this block is only reached
 			# when one or both of them failed.  `most_recent_error` will
 			# be a description of the failure.  If neither are in use,
 			# `most_recent_error` will be None.
 			return most_recent_error
 		# Force only compile, even if LTO is enabled.
-		elif self._Compile(context, text=text, msg='whether C++ compiler works', calling_function='cxx_works'):
+		elif self._Compile(context, text='', msg='whether C++ compiler works', calling_function='cxx_works'):
 			specified_LIBS = 'or ' if cenv.get('LIBS') else ''
 			if specified_LIBS:
 				cenv['LIBS'] = []
-				if Link(context, text=text, msg='whether C++ compiler and linker work with blank $LIBS', calling_function='ld_blank_libs_works'):
+				if Link(context, text='', msg='whether C++ compiler and linker work with blank $LIBS', calling_function='ld_blank_libs_works'):
 					# Using $LIBS="" allowed the test to succeed.  $LIBS
 					# specifies one or more unusable libraries.  Usually
 					# this is because it specifies a library which does
@@ -1040,7 +990,7 @@ void test_virtual_function_supported::a() {}
 					return 'C++ compiler works.  C++ linker works with blank $LIBS.  C++ linker does not work with specified $LIBS.'
 			if cenv['LINKFLAGS']:
 				cenv['LINKFLAGS'] = []
-				if Link(context, text=text, msg='whether C++ compiler and linker work with blank $LIBS and blank $LDFLAGS', calling_function='ld_blank_libs_ldflags_works'):
+				if Link(context, text='', msg='whether C++ compiler and linker work with blank $LIBS and blank $LDFLAGS', calling_function='ld_blank_libs_ldflags_works'):
 					# Using LINKFLAGS="" allowed the test to succeed.
 					# To avoid bloat, there is no further test to see
 					# whether the link will work with user-specified
@@ -1055,7 +1005,7 @@ void test_virtual_function_supported::a() {}
 		else:
 			if cenv['CXXFLAGS']:
 				cenv['CXXFLAGS'] = []
-				if self._Compile(context, text=text, msg='whether C++ compiler works with blank $CXXFLAGS', calling_function='cxx_blank_cxxflags_works'):
+				if self._Compile(context, text='', msg='whether C++ compiler works with blank $CXXFLAGS', calling_function='cxx_blank_cxxflags_works'):
 					return 'C++ compiler works with blank $CXXFLAGS.  C++ compiler does not work with specified $CXXFLAGS.'
 			return 'C++ compiler does not work.'
 	implicit_tests.append(_implicit_test.RecordedTest('check_cxx20', "assume C++ compiler supports C++20"))
@@ -1543,9 +1493,7 @@ static void terminate_handler()
 	PHYSFS_close(f);
 	f = PHYSFS_openRead("a");
 	PHYSFS_sint64 r = PHYSFS_read(f, b, 1, 1);
-	PHYSFS_sint64 rb = PHYSFS_readBytes(f, b, 1);
 	(void)r;
-	(void)rb;
 	PHYSFS_close(f);
 	PHYSFS_mount("", nullptr, 0);
 	PHYSFS_unmount("");
@@ -1929,11 +1877,6 @@ return __builtin_expect(argc == 1, 1) ? 1 : 0;
 			self.Compile(context, text='''
 static void f(const char * = __builtin_FILE(), unsigned = __builtin_LINE())
 {
-	struct A
-	{
-		unsigned line{__builtin_LINE()};
-	};
-	static_assert(A{}.line == __LINE__);
 }
 ''', main='f();', msg='whether compiler accepts __builtin_FILE, __builtin_LINE'))
 
@@ -2429,7 +2372,7 @@ $ x86_64-pc-linux-gnu-g++-5.4.0 -x c++ -S -Wformat -o /dev/null -
 	return SDL_Swap32(argc);
 ''', msg='whether compiler argument -Wuseless-cast works with SDL', successflags=flags):
 			return
-		# <=clang-16 does not understand -Wuseless-cast
+		# <=clang-3.7 does not understand -Wuseless-cast
 		# This test does not influence the compile environment, but is
 		# run to distinguish in the output whether the failure is
 		# because the compiler does not accept -Wuseless-cast or because
@@ -2465,18 +2408,6 @@ platforms where the cast is required and expands to nothing on platforms
 where the cast is useless.
 '''
 		)
-
-	@_custom_test
-	def check_compiler_size_t_cast_unsigned_int(self,context):
-		context.sconf.Define('DXX_size_t_cast_unsigned_int', 'static_cast<unsigned>'
-			if self.Compile(context, text='''
-#include <cstddef>
-''', main='''
-	std::size_t i{1000};
-	unsigned u{static_cast<unsigned>(i)};
-	(void)u;
-''', msg='whether to cast std::size_t to unsigned int')
-			else '')
 
 	@_custom_test
 	def check_strcasecmp_present(self,context,_successflags={'CPPDEFINES' : ['DXX_HAVE_STRCASECMP']}):
@@ -2800,16 +2731,9 @@ static void requires_borrowed_range(R &&) {}
 		raise SCons.Errors.StopError("C++ compiler does not support std::ranges.")
 
 	__preferred_compiler_options = (
-		# Support for option '-fstrict-flex-arrays':
-		# <=gcc-12: no
-		# >=gcc-13: yes
-		# <=clang-16: no
-		# >=clang-17: untested
-		'-fstrict-flex-arrays',
 		'-fvisibility=hidden',
 		'-Wduplicated-branches',
 		'-Wduplicated-cond',
-		'-Wstrict-flex-arrays',
 		'-Wsuggest-attribute=noreturn',
 		'-Wsuggest-final-types',
 		'-Wsuggest-override',
@@ -3072,9 +2996,9 @@ class FilterHelpText:
 		return f' {opt:{self._sconf_align if opt[:6] == "sconf_" else 15}}  {help}{f""" [{"; ".join(l)}]""" if l else ""}\n'
 
 class PCHManager:
-	@dataclass(eq=False)
 	class ScannedFile:
-		candidates: defaultdict(set)
+		def __init__(self,candidates):
+			self.candidates = candidates
 
 	syspch_cpp_filename = None
 	ownpch_cpp_filename = None
@@ -3088,7 +3012,7 @@ class PCHManager:
 	_re_singleline_comments_sub = None
 	# Source files are tracked at class scope because all builds share
 	# the same source tree.
-	_cls_scanned_files: dict[str, ScannedFile] = None
+	_cls_scanned_files = None
 
 	# Import required modules when the first PCHManager is created.
 	@classmethod
@@ -3612,7 +3536,7 @@ class DXXCommon(LazyObjectConstructor):
 	# writing all the records for a build into a single file, even
 	# though the build will use multiple SCons.Environment instances to
 	# compile its source files.
-	compilation_database_dict_fn_to_entries: dict[str, tuple[SCons.Environment, list]] = {}
+	compilation_database_dict_fn_to_entries = {}
 
 	class RuntimeTest(LazyObjectConstructor):
 		nodefaultlibs = True
@@ -4952,13 +4876,10 @@ SConf test results
 		if user_settings.wrap_PHYSFS_read:
 			add_flags['LINKFLAGS'].extend((
 					'-Wl,--wrap,PHYSFS_read',
-					'-Wl,--wrap,PHYSFS_readBytes',
 					'-Wl,--wrap,PHYSFS_readSBE16',
 					'-Wl,--wrap,PHYSFS_readSBE32',
 					'-Wl,--wrap,PHYSFS_readSLE16',
 					'-Wl,--wrap,PHYSFS_readSLE32',
-					'-Wl,--wrap,PHYSFS_readULE16',
-					'-Wl,--wrap,PHYSFS_readULE32',
 					))
 		if user_settings.wrap_PHYSFS_write:
 			add_flags['LINKFLAGS'].extend((

@@ -260,19 +260,19 @@ public:
 		}
 };
 
-enum class tab_processing_flag : bool
+enum class tab_processing_flag : uint8_t
 {
 	ignore,
 	process,
 };
 
-enum class tiny_mode_flag : bool
+enum class tiny_mode_flag : uint8_t
 {
 	normal,
 	tiny,
 };
 
-enum class draw_box_flag : bool
+enum class draw_box_flag : uint8_t
 {
 	none,
 	menu_background,
@@ -384,34 +384,32 @@ struct listbox_layout
 {
 	struct marquee
 	{
-		using ptr = std::unique_ptr<marquee>;
+		class deleter : std::default_delete<fix64[]>
+		{
+		public:
+			void operator()(marquee *const m) const
+			{
+				static_assert(std::is_trivially_destructible<marquee>::value, "marquee destructor not called");
+				std::default_delete<fix64[]>::operator()(reinterpret_cast<fix64 *>(m));
+			}
+		};
+		using ptr = std::unique_ptr<marquee, deleter>;
 		static ptr allocate(const unsigned maxchars)
 		{
-			return std::unique_ptr<marquee>(new(maxchars) marquee{maxchars});
-		}
-		void *operator new(std::size_t /* sizeof(marquee) */) = delete;
-		static void *operator new(std::size_t /* sizeof(marquee) */, const unsigned maxchars)
-		{
-			return ::operator new(sizeof(marquee) + maxchars);
-		}
-		/* std::default_delete uses regular `delete` */
-		static void operator delete(void *p)
-		{
-			::operator delete(p);
-		}
-		/* recovery from a constructor exception calls placement `delete` */
-		static void operator delete(void *p, unsigned /* maxchars */)
-		{
-			::operator delete(p);
+			const unsigned max_bytes = maxchars + 1 + sizeof(marquee);
+			auto pf = std::make_unique<fix64[]>(1 + (max_bytes / sizeof(fix64)));
+			auto pm = ptr(new(pf.get()) marquee(maxchars));
+			pf.release();
+			return pm;
 		}
 		marquee(const unsigned mc) :
-			maxchars{mc}
+			maxchars(mc)
 		{
 		}
 		fix64 lasttime; // to scroll text if string does not fit in box
 		const unsigned maxchars;
 		int pos = 0, scrollback = 0;
-		char text[];	/* flexible array must be last */
+		char text[0];	/* must be last */
 	};
 	listbox_layout(int citem, unsigned nitems, const char **item, menu_title title, grs_canvas &parent_canvas) :
 		citem(citem), nitems(nitems), item(item), title(title),

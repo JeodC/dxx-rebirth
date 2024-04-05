@@ -50,12 +50,8 @@ constexpr std::integral_constant<uint8_t, 127> MAX_SECRET_LEVELS_PER_MISSION{};	
 #define D1_OEM_MISSION_NAME             "Destination Saturn"
 #define D1_SHAREWARE_MISSION_NAME       "Descent Demo"
 
-#ifdef dsx
-namespace dsx {
-
 enum class descent_hog_size : int
 {
-	None = 0,
 	pc_retail_v15 = 6856701, // v1.4 - 1.5
 	pc_retail_v15_alt1 = 6856183, // v1.4 - 1.5 - different patch-way
 	pc_retail_v10 = 7261423, // v1.0
@@ -65,27 +61,22 @@ enum class descent_hog_size : int
 	pc_shareware_v14 = 2339773, // v1.4
 	pc_shareware_v10 = 2365676, // v1.0 - 1.2
 	mac_shareware = 3370339,
+};
+
 #if defined(DXX_BUILD_DESCENT_II)
 #define SHAREWARE_MISSION_FILENAME  "d2demo"
 #define SHAREWARE_MISSION_NAME      "Descent 2 Demo"
-	d2_shareware = 2292566, // v1.0 (d2demo.hog)
-	d2_mac_shareware = 4292746,
-	d2_oem_v11 = 6132957, // v1.1
-	d2_full = 7595079, // v1.1 - 1.2
-	d2_full_v10 = 7107354, // v1.0
-	d2_mac_full = 7110007, // v1.1 - 1.2
+#define SHAREWARE_MISSION_HOGSIZE   2292566 // v1.0 (d2demo.hog)
+#define MAC_SHARE_MISSION_HOGSIZE   4292746
 
 #define OEM_MISSION_FILENAME        "d2"
 #define OEM_MISSION_NAME            "D2 Destination:Quartzon"
+#define OEM_MISSION_HOGSIZE         6132957 // v1.1
 
 #define FULL_MISSION_FILENAME       "d2"
-#endif
-};
-
-}
-#endif
-
-#if defined(DXX_BUILD_DESCENT_II)
+#define FULL_MISSION_HOGSIZE        7595079 // v1.1 - 1.2
+#define FULL_10_MISSION_HOGSIZE     7107354 // v1.0
+#define MAC_FULL_MISSION_HOGSIZE    7110007 // v1.1 - 1.2
 #include "movie.h"
 #endif
 
@@ -109,8 +100,8 @@ public:
 		filename = std::next(path.begin(), std::distance(m.path.cbegin(), m.filename));
 		return *this;
 	}
-	Mission_path(std::string_view p, const std::ptrdiff_t offset) :
-		path{p},
+	Mission_path(std::string &&p, const std::ptrdiff_t offset) :
+		path{std::move(p)},
 		filename{std::next(path.cbegin(), {offset})}
 	{
 	}
@@ -159,7 +150,7 @@ struct Mission : Mission_path
 	// arrays of names of the level files
 	std::unique_ptr<d_fname[]>	level_names;
 	std::unique_ptr<d_fname[]>	secret_level_names;
-	descent_hog_size builtin_hogsize;    // the size of the hogfile for a builtin mission, and 0 for an add-on mission
+	int     builtin_hogsize;    // the size of the hogfile for a builtin mission, and 0 for an add-on mission
 	ntstring<MISSION_NAME_LEN> mission_name;
 	d_fname	briefing_text_filename{}; // name of briefing file
 	d_fname	ending_text_filename{}; // name of ending file
@@ -194,13 +185,13 @@ extern Mission_ptr Current_mission; // current mission
 /* Wrap in parentheses to avoid precedence problems.  Put constant on
  * the left to silence clang's overzealous -Wparentheses-equality messages.
  */
-#define is_SHAREWARE (descent_hog_size::d2_shareware == Current_mission->builtin_hogsize)
-#define is_MAC_SHARE (descent_hog_size::d2_mac_shareware == Current_mission->builtin_hogsize)
-#define is_D2_OEM (descent_hog_size::d2_oem_v11 == Current_mission->builtin_hogsize)
+#define is_SHAREWARE (SHAREWARE_MISSION_HOGSIZE == Current_mission->builtin_hogsize)
+#define is_MAC_SHARE (MAC_SHARE_MISSION_HOGSIZE == Current_mission->builtin_hogsize)
+#define is_D2_OEM (OEM_MISSION_HOGSIZE == Current_mission->builtin_hogsize)
 
 #define EMULATING_D1		(Mission::descent_version_type::descent1 == Current_mission->descent_version)
 #endif
-#define PLAYING_BUILTIN_MISSION	(Current_mission->builtin_hogsize != descent_hog_size::None)
+#define PLAYING_BUILTIN_MISSION	(Current_mission->builtin_hogsize != 0)
 #define ANARCHY_ONLY_MISSION	(Mission::anarchy_only_level::only_anarchy_games == Current_mission->anarchy_only_flag)
 
 }

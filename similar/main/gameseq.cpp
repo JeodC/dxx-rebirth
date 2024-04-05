@@ -330,7 +330,7 @@ static unsigned generate_extra_starts_by_displacement_within_segment(const unsig
 		const shared_segment &seg = *vcsegptr(segnum);
 		auto &plr = *Players.vcptr(i);
 		auto &old_player_obj = *vcobjptr(plr.objnum);
-		const vm_distance_squared size2{fixmul64(old_player_obj.size * old_player_obj.size, size_scalar)};
+		const vm_distance_squared size2(fixmul64(old_player_obj.size * old_player_obj.size, size_scalar));
 		auto &v0 = *vcvertptr(seg.verts[segment_relative_vertnum::_0]);
 		sidemask_t capacity_flag{};
 		if (vm_vec_dist2(v0, vcvertptr(seg.verts[segment_relative_vertnum::_1])) > size2)
@@ -364,7 +364,7 @@ static unsigned generate_extra_starts_by_displacement_within_segment(const unsig
 		 */
 		for (auto &&[side, displacement] : zip(displacement_sides, vec_displacement))
 		{
-			const auto center_on_side{compute_center_point_on_side(vcvertptr, seg, side)};
+			const auto &&center_on_side = compute_center_point_on_side(vcvertptr, seg, side);
 			displacement = vm_vec_sub(center_on_side, old_player_init.pos);
 		}
 		const auto displace_player = [&](const unsigned plridx, object_base &plrobj, const unsigned displacement_direction) {
@@ -576,7 +576,7 @@ static void init_ammo_and_energy(object &plrobj)
 	{
 		auto &energy = player_info.energy;
 #if defined(DXX_BUILD_DESCENT_II)
-		if (player_info.primary_weapon_flags & HAS_OMEGA_FLAG)
+		if (player_info.primary_weapon_flags & HAS_PRIMARY_FLAG(OMEGA_INDEX))
 		{
 			const auto old_omega_charge = player_info.Omega_charge;
 			if (old_omega_charge < MAX_OMEGA_CHARGE)
@@ -595,7 +595,7 @@ static void init_ammo_and_energy(object &plrobj)
 			shields = StartingShields;
 	}
 	const unsigned minimum_missiles = get_starting_concussion_missile_count();
-	auto &concussion = player_info.secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX];
+	auto &concussion = player_info.secondary_ammo[CONCUSSION_INDEX];
 	if (concussion < minimum_missiles)
 		concussion = minimum_missiles;
 }
@@ -675,9 +675,9 @@ void init_player_stats_new_ship(const playernum_t pnum)
 	plrobj->shields = StartingShields;
 	auto &player_info = plrobj->ctype.player_info;
 	player_info.energy = INITIAL_ENERGY;
-	player_info.secondary_ammo = {{{
+	player_info.secondary_ammo = {{
 		static_cast<uint8_t>(get_starting_concussion_missile_count())
-	}}};
+	}};
 	const auto GrantedItems = (Game_mode & GM_MULTI) ? Netgame.SpawnGrantedItems : packed_spawn_granted_items{};
 	player_info.vulcan_ammo = map_granted_flags_to_vulcan_ammo(GrantedItems);
 	const auto granted_laser_level = map_granted_flags_to_laser_level(GrantedItems);
@@ -708,7 +708,7 @@ void init_player_stats_new_ship(const playernum_t pnum)
 		set_primary_weapon(player_info, [=]{
 			range_for (auto i, PlayerCfg.PrimaryOrder)
 			{
-				if (underlying_value(i) >= MAX_PRIMARY_WEAPONS)
+				if (i >= MAX_PRIMARY_WEAPONS)
 					break;
 				if (i == primary_weapon_index_t::LASER_INDEX)
 					break;
@@ -725,19 +725,19 @@ void init_player_stats_new_ship(const playernum_t pnum)
 				}
 #endif
 				if (HAS_PRIMARY_FLAG(i) & static_cast<unsigned>(granted_primary_weapon_flags))
-					return i;
+					return static_cast<primary_weapon_index_t>(i);
 			}
 			return primary_weapon_index_t::LASER_INDEX;
 		}());
 #if defined(DXX_BUILD_DESCENT_II)
 		auto primary_last_was_super = player_info.Primary_last_was_super;
-		for (uint8_t i = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX), mask = 1 << i; i != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++i, mask <<= 1)
+		for (uint_fast32_t i = primary_weapon_index_t::VULCAN_INDEX, mask = 1 << i; i != primary_weapon_index_t::SUPER_LASER_INDEX; ++i, mask <<= 1)
 		{
 			/* If no super granted, force to non-super. */
-			if (!(HAS_PRIMARY_FLAG(primary_weapon_index_t{static_cast<uint8_t>(i + 5)}) & granted_primary_weapon_flags))
+			if (!(HAS_PRIMARY_FLAG(i + 5) & granted_primary_weapon_flags))
 				primary_last_was_super &= ~mask;
 			/* If only super granted, force to super. */
-			else if (!(HAS_PRIMARY_FLAG(primary_weapon_index_t{i}) & granted_primary_weapon_flags))
+			else if (!(HAS_PRIMARY_FLAG(i) & granted_primary_weapon_flags))
 				primary_last_was_super |= mask;
 			/* else both granted, so leave as-is. */
 			else
@@ -872,7 +872,7 @@ static void set_sound_sources(fvcsegptridx &vcsegptridx, fvcvertptr &vcvertptr)
 						}
 #endif
 
-						const auto pnt{compute_center_point_on_side(vcvertptr, seg, sidenum)};
+						const auto &&pnt = compute_center_point_on_side(vcvertptr, seg, sidenum);
 						digi_link_sound_to_pos(sn, seg, sidenum, pnt, 1, F1_0/2);
 					}
 			}
@@ -899,7 +899,7 @@ void create_player_appearance_effect(const d_vclip_array &Vclip, const object_ba
 
 		const auto sound_num = Vclip[vclip_index::player_appearance].sound_num;
 		if (sound_num > -1)
-			digi_link_sound_to_pos(sound_num, seg, sidenum_t::WLEFT, effect_obj->pos, 0, F1_0);
+			digi_link_sound_to_pos(sound_num, seg, sidenum_t::WLEFT, effect_obj->pos, 0, F0_5);
 	}
 }
 }
@@ -1521,7 +1521,7 @@ static void filter_objects_from_level(const d_powerup_info_array &Powerup_info, 
 		if (obj.type == OBJ_POWERUP)
 		{
 			const auto powerup_id = get_powerup_id(obj);
-			if (powerup_id == powerup_type_t::POW_FLAG_RED || powerup_id == powerup_type_t::POW_FLAG_BLUE)
+			if (powerup_id == POW_FLAG_RED || powerup_id == POW_FLAG_BLUE)
 				bash_to_shield(Powerup_info, Vclip, obj);
 		}
 	}
@@ -2111,7 +2111,7 @@ window_event_result StartNewLevelSub(const d_robot_info_array &Robot_info, const
 
 void bash_to_shield(const d_powerup_info_array &Powerup_info, const d_vclip_array &Vclip, object_base &i)
 {
-	set_powerup_id(Powerup_info, Vclip, i, powerup_type_t::POW_SHIELD_BOOST);
+	set_powerup_id(Powerup_info, Vclip, i, POW_SHIELD_BOOST);
 }
 
 #if defined(DXX_BUILD_DESCENT_II)

@@ -115,6 +115,10 @@ struct cw_removal_predicate
 struct find_cloaked_wall_predicate
 {
 	const vmwallidx_t w;
+	find_cloaked_wall_predicate(const vmwallidx_t i) :
+		w(i)
+	{
+	}
 	bool operator()(const cloaking_wall &cw) const
 	{
 		return cw.front_wallnum == w || cw.back_wallnum == w;
@@ -503,7 +507,7 @@ void wall_open_door(const vmsegptridx_t seg, const sidenum_t side)
 	{
 		// NOTE THE LINK TO ABOVE!!!!
 		auto &vcvertptr = Vertices.vcptr;
-		const auto cp{compute_center_point_on_side(vcvertptr, seg, side)};
+		const auto &&cp = compute_center_point_on_side(vcvertptr, seg, side);
 		const auto open_sound = WallAnims[w->clip_num].open_sound;
 		if (open_sound > -1)
 			digi_link_sound_to_pos(open_sound, seg, side, cp, 0, F1_0);
@@ -538,7 +542,7 @@ void start_wall_cloak(const vmsegptridx_t seg, const sidenum_t side)
 	{	//decloaking, so reuse door
 		const auto &&r = ranges::subrange(CloakingWalls.vmptr);
 		const auto &&re = r.end();
-		const auto &&i = ranges::find_if(r.begin(), re, find_cloaked_wall_predicate{w});
+		const auto &&i = ranges::find_if(r.begin(), re, find_cloaked_wall_predicate(w));
 		if (i == re)
 		{
 			d_debugbreak();
@@ -576,7 +580,8 @@ void start_wall_cloak(const vmsegptridx_t seg, const sidenum_t side)
 
 	if ( Newdemo_state != ND_STATE_PLAYBACK ) {
 		auto &vcvertptr = Vertices.vcptr;
-		digi_link_sound_to_pos(sound_effect::SOUND_WALL_CLOAK_ON, seg, side, compute_center_point_on_side(vcvertptr, seg, side), 0, F1_0);
+		const auto &&cp = compute_center_point_on_side(vcvertptr, seg, side);
+		digi_link_sound_to_pos( SOUND_WALL_CLOAK_ON, seg, side, cp, 0, F1_0 );
 	}
 
 	for (auto &&[front_ls, back_ls, s0_uvls, s1_uvls] : zip(
@@ -614,7 +619,7 @@ void start_wall_decloak(const vmsegptridx_t seg, const sidenum_t side)
 	if (w->state == wall_state::cloaking) {	//cloaking, so reuse door
 		const auto &&r = ranges::subrange(CloakingWalls.vmptr);
 		const auto &&re = r.end();
-		const auto &&i = ranges::find_if(r.begin(), re, find_cloaked_wall_predicate{w});
+		const auto &&i = ranges::find_if(r.begin(), re, find_cloaked_wall_predicate(w));
 		if (i == re)
 		{
 			d_debugbreak();
@@ -660,7 +665,8 @@ void start_wall_decloak(const vmsegptridx_t seg, const sidenum_t side)
 
 	if ( Newdemo_state != ND_STATE_PLAYBACK ) {
 		auto &vcvertptr = Vertices.vcptr;
-		digi_link_sound_to_pos(sound_effect::SOUND_WALL_CLOAK_OFF, seg, side, compute_center_point_on_side(vcvertptr, seg, side), 0, F1_0);
+		const auto &&cp = compute_center_point_on_side(vcvertptr, seg, side);
+		digi_link_sound_to_pos( SOUND_WALL_CLOAK_OFF, seg, side, cp, 0, F1_0 );
 	}
 
 	for (auto &&[front_ls, back_ls, s0_uvls, s1_uvls] : zip(
@@ -835,7 +841,7 @@ void wall_close_door(wall_array &Walls, const vmsegptridx_t seg, const sidenum_t
 	{
 		// NOTE THE LINK TO ABOVE!!!!
 		auto &vcvertptr = Vertices.vcptr;
-		const auto cp{compute_center_point_on_side(vcvertptr, seg, side)};
+		const auto &&cp = compute_center_point_on_side(vcvertptr, seg, side);
 		const auto open_sound = WallAnims[w->clip_num].open_sound;
 		if (open_sound > -1)
 			digi_link_sound_to_pos(open_sound, seg, side, cp, 0, F1_0);
@@ -1172,10 +1178,7 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 		if ((w->flags & wall_flag::door_locked) && !special_boss_opening_allowed(seg, side))
 		{
 				if (show_message)
-				{
-					const auto &&m = TXT_CANT_OPEN_DOOR;
-					HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-				}
+					HUD_init_message_literal(HM_DEFAULT, TXT_CANT_OPEN_DOOR);
 			return wall_hit_process_t::WHP_NO_KEY;
 		}
 		else {
@@ -1604,7 +1607,7 @@ void blast_nearby_glass_context::process_segment(const vmsegptridx_t segp, const
 		{
 			if (can_blast(tmap_num2))
 			{
-				const auto pnt{compute_center_point_on_side(vcvertptr, segp, sidenum)};
+				const auto &&pnt = compute_center_point_on_side(vcvertptr, segp, sidenum);
 				dist = vm_vec_dist_quick(pnt, objp.pos);
 				if (dist < damage/2) {
 					dist = find_connected_distance(pnt, segp, objp.pos, segp.absolute_sibling(objp.segnum), MAX_BLAST_GLASS_DEPTH, wall_is_doorway_mask::rendpast);
@@ -1671,7 +1674,7 @@ namespace dsx {
 /*
  * reads a wclip structure from a PHYSFS_File
  */
-void wclip_read(const NamedPHYSFS_File fp, wclip &wc)
+void wclip_read(PHYSFS_File *fp, wclip &wc)
 {
 	PHYSFSX_serialize_read(fp, wc);
 }
@@ -1699,7 +1702,7 @@ ASSERT_SERIAL_UDT_MESSAGE_SIZE(wrap_v16_wall, 9);
 /*
  * reads a v16_wall structure from a PHYSFS_File
  */
-void v16_wall_read(const NamedPHYSFS_File fp, v16_wall &w)
+void v16_wall_read(PHYSFS_File *fp, v16_wall &w)
 {
 	PHYSFSX_serialize_read(fp, w);
 }
@@ -1718,7 +1721,7 @@ ASSERT_SERIAL_UDT_MESSAGE_SIZE(wrap_v19_wall, 21);
 /*
  * reads a v19_wall structure from a PHYSFS_File
  */
-void v19_wall_read(const NamedPHYSFS_File fp, v19_wall &w)
+void v19_wall_read(PHYSFS_File *fp, v19_wall &w)
 {
 	PHYSFSX_serialize_read(fp, w);
 }
@@ -1735,7 +1738,7 @@ namespace dsx {
 /*
  * reads a wall structure from a PHYSFS_File
  */
-void wall_read(const NamedPHYSFS_File fp, wall &w)
+void wall_read(PHYSFS_File *fp, wall &w)
 {
 	PHYSFSX_serialize_read(fp, w);
 	w.flags &= ~wall_flag::exploding;
@@ -1749,7 +1752,7 @@ ASSERT_SERIAL_UDT_MESSAGE_SIZE(active_door, 16);
 /*
  * reads an active_door structure from a PHYSFS_File
  */
-void active_door_read(const NamedPHYSFS_File fp, active_door &ad)
+void active_door_read(PHYSFS_File *fp, active_door &ad)
 {
 	PHYSFSX_serialize_read(fp, ad);
 }
@@ -1778,8 +1781,7 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(dsx::cloaking_wall, cw, (cw.front_wallnum, cw.back_
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(dsx::cloaking_wall, 40);
 
 namespace dsx {
-
-void cloaking_wall_read(cloaking_wall &cw, const NamedPHYSFS_File fp)
+void cloaking_wall_read(cloaking_wall &cw, PHYSFS_File *fp)
 {
 	PHYSFSX_serialize_read(fp, cw);
 }

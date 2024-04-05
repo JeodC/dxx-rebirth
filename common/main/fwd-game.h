@@ -155,7 +155,7 @@ void calc_frame_time(void);
 #ifdef dsx
 namespace dsx {
 
-enum class next_level_request_secret_flag : bool;
+enum class next_level_request_secret_flag : uint8_t;
 
 struct game_window;
 extern game_window *Game_wind;
@@ -211,7 +211,7 @@ void enable_flicker(d_flickering_light_state &fls, vmsegidx_t segnum, sidenum_t 
 /*
  * reads a flickering_light structure from a PHYSFS_File
  */
-void flickering_light_read(flickering_light &fl, NamedPHYSFS_File fp);
+void flickering_light_read(flickering_light &fl, PHYSFS_File *fp);
 void flickering_light_write(const flickering_light &fl, PHYSFS_File *fp);
 #endif
 
@@ -271,7 +271,7 @@ void reset_rear_view(void);
 
 void game_leave_menus(void);
 
-int8_t cheats_enabled();
+int cheats_enabled();
 void game_disable_cheats();
 void toggle_cockpit(void);
 extern fix Show_view_text_timer;

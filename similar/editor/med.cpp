@@ -306,7 +306,8 @@ static void medkey_init()
 
 	if (auto keyfile = PHYSFSX_openReadBuffered("GLOBAL.KEY").first)
 	{
-		for (PHYSFSX_gets_line_t<200> line_buffer; PHYSFSX_fgets(line_buffer, keyfile);)
+		PHYSFSX_gets_line_t<200> line_buffer;
+		while (PHYSFSX_fgets(line_buffer, keyfile))
 		{
 			sscanf(line_buffer, " %s %s ", keypress, LispCommand);
 			//ReadLispMacro( keyfile, LispCommand );
@@ -546,14 +547,18 @@ static void move_player_2_segment_and_rotate(const vmsegptridx_t seg, const side
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vcvertptr = Vertices.vcptr;
-	ConsoleObject->pos = compute_segment_center(vcvertptr, seg);
-	auto vp{compute_center_point_on_side(vcvertptr, seg, side)};
+	compute_segment_center(vcvertptr, ConsoleObject->pos,seg);
+	auto vp = compute_center_point_on_side(vcvertptr, seg, side);
 	vm_vec_sub2(vp,ConsoleObject->pos);
 
 	auto &sv = Side_to_verts[Curside];
 	auto &verts = Cursegp->verts;
 	const auto en = std::exchange(edgenum, next_side_vertex(edgenum));
-	vm_vector_to_matrix_u(ConsoleObject->orient, vp, vm_vec_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]])));
+	const auto upvec = vm_vec_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]]));
+
+	vm_vector_2_matrix(ConsoleObject->orient,vp,&upvec,nullptr);
+//	vm_vector_2_matrix(&ConsoleObject->orient,&vp,NULL,NULL);
+
 	obj_relink(vmobjptr, vmsegptr, vmobjptridx(ConsoleObject), seg);
 }
 
@@ -579,14 +584,16 @@ int SetPlayerFromCursegMinusOne()
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vcvertptr = Vertices.vcptr;
-	const auto side_center{compute_center_point_on_side(vcvertptr, Cursegp, Curside)};
-	const auto view_vec2{vm_vec_copy_scale(view_vec, view_dist)};
+	const auto &&side_center = compute_center_point_on_side(vcvertptr, Cursegp, Curside);
+	const auto view_vec2 = vm_vec_copy_scale(view_vec,view_dist);
 	vm_vec_sub(ConsoleObject->pos,side_center,view_vec2);
 
 	auto &sv = Side_to_verts[Curside];
 	auto &verts = Cursegp->verts;
 	const auto en = std::exchange(edgenum, next_side_vertex(edgenum));
-	vm_vector_to_matrix_u(ConsoleObject->orient, view_vec, vm_vec_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]])));
+	const auto upvec = vm_vec_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]]));
+
+	vm_vector_2_matrix(ConsoleObject->orient,view_vec,&upvec,nullptr);
 
 	gr_set_current_canvas(*Canv_editor_game);
 	g3_start_frame(*grd_curcanv);
@@ -601,7 +608,7 @@ int SetPlayerFromCursegMinusOne()
 	}
 
 	view_dist = fixmul(view_dist,fixdiv(fixdiv(max,SIDE_VIEW_FRAC),corner_p[0].p3_z));
-	const auto view_vec3{vm_vec_copy_scale(view_vec, view_dist)};
+	const auto view_vec3 = vm_vec_copy_scale(view_vec,view_dist);
 	vm_vec_sub(ConsoleObject->pos,side_center,view_vec3);
 
 	//obj_relink(ConsoleObject-Objects, SEG_PTR_2_NUM(Cursegp) );

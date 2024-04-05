@@ -1119,8 +1119,8 @@ void newdemo_record_start_demo()
 	nd_record_v_primary_ammo = -1;
 	nd_record_v_secondary_ammo = -1;
 
-	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+	for (int i = 0; i < MAX_PRIMARY_WEAPONS; i++)
+		nd_write_short(i == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);
@@ -1413,9 +1413,7 @@ void newdemo_record_player_flags(uint flags)
 	nd_write_int((static_cast<short>(std::exchange(nd_record_v_player_flags, flags)) << 16) | static_cast<short>(flags));
 }
 
-namespace dsx {
-
-static void newdemo_record_player_weapon(int weapon_num, int weapon_type)
+void newdemo_record_player_weapon(int weapon_type, int weapon_num)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
@@ -1430,18 +1428,6 @@ static void newdemo_record_player_weapon(int weapon_num, int weapon_type)
 		? static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon))
 		: static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon))
 	);
-}
-
-void newdemo_record_player_weapon(const primary_weapon_index_t weapon_num)
-{
-	newdemo_record_player_weapon(underlying_value(weapon_num), 0);
-}
-
-void newdemo_record_player_weapon(const secondary_weapon_index_t weapon_num)
-{
-	newdemo_record_player_weapon(underlying_value(weapon_num), 1);
-}
-
 }
 
 void newdemo_record_effect_blowup(segnum_t segment, sidenum_t side, const vms_vector &pnt)
@@ -1911,11 +1897,11 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	}
 #endif
 
-	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
+	for (int i = 0; i < MAX_PRIMARY_WEAPONS; i++)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX)
+		if (i == primary_weapon_index_t::VULCAN_INDEX)
 			player_info.vulcan_ammo = s;
 		if (purpose == purpose_type::rewrite)
 			nd_write_short(s);
@@ -2008,8 +1994,8 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	}
 	if (purpose == purpose_type::rewrite)
 	{
-		nd_write_byte(underlying_value(Primary_weapon.get_active()));
-		nd_write_byte(underlying_value(Secondary_weapon.get_active()));
+		nd_write_byte(Primary_weapon);
+		nd_write_byte(Secondary_weapon);
 	}
 
 // Next bit of code to fix problem that I introduced between 1.0 and 1.1
@@ -2024,7 +2010,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 			auto flags = player_info.powerup_flags.get_player_flags();
 			energy = shield;
 			shield = static_cast<uint8_t>(flags);
-			Primary_weapon = static_cast<primary_weapon_index_t>(Secondary_weapon.get_active());
+			Primary_weapon = static_cast<primary_weapon_index_t>(static_cast<uint8_t>(Secondary_weapon));
 			Secondary_weapon = static_cast<secondary_weapon_index_t>(c);
 		} else
 			PHYSFS_seek(infile, PHYSFS_tell(infile) - 1);
@@ -2166,7 +2152,7 @@ static int newdemo_read_frame_information(int rewrite)
 					break;
 				}
 				// offset to compensate inaccuracy between object and viewer
-				obj->pos = vm_vec_scale_add(obj->pos, obj->orient.fvec, F1_0 * 5);
+				vm_vec_scale_add(obj->pos, obj->pos, obj->orient.fvec, F1_0*5 );
 				nd_render_extras (WhichWindow,obj);
 			}
 			else
@@ -3559,11 +3545,11 @@ window_event_result newdemo_goto_end(int to_rewrite)
 		nd_read_byte(&v);
 		player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(v);
 	}
-	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
+	for (int i = 0; i < MAX_PRIMARY_WEAPONS; i++)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX)
+		if (i == primary_weapon_index_t::VULCAN_INDEX)
 			player_info.vulcan_ammo = s;
 	}
 	range_for (auto &i, player_info.secondary_ammo)
@@ -3708,8 +3694,8 @@ static window_event_result interpolate_frame(fix d_play, fix d_recorded)
 							rvec2 = objp->orient.rvec;
 							vm_vec_scale(rvec2, factor);
 							vm_vec_add2(rvec1, rvec2);
-							vm_vec_normalize_quick(rvec1); // Note: Doesn't matter if this is null, if null, vm_vector_to_matrix will just use fvec1
-							vm_vector_to_matrix_r(i.orient, fvec1, rvec1);
+							vm_vec_normalize_quick(rvec1); // Note: Doesn't matter if this is null, if null, vm_vector_2_matrix will just use fvec1
+							vm_vector_2_matrix(i.orient, fvec1, nullptr, &rvec1);
 						}
 					}
 
@@ -4017,8 +4003,8 @@ static void newdemo_write_end()
 	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
 	byte_count += 8;
 
-	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+	for (int i = 0; i < MAX_PRIMARY_WEAPONS; i++)
+		nd_write_short(i == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);

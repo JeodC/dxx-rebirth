@@ -67,6 +67,7 @@ static std::unique_ptr<uint8_t[]> light_array;
 #define LIGHTVAL(_i,_j) (static_cast<fix>(LIGHT(_i, _j)) << 8)
 
 static grs_bitmap *terrain_bm;
+static int terrain_outline=0;
 static int org_i,org_j;
 static void build_light_table();
 
@@ -120,7 +121,24 @@ static void draw_cell(grs_canvas &canvas, const vms_vector &Viewer_eye, const in
 			.g = lightval_i1j0,
 			.b = lightval_i1j0,
 		},
-	}}), *terrain_bm, draw_tmap);
+	}}), *terrain_bm);
+	std::aligned_union<0, g3_draw_line_context>::type outline_context;
+	static_assert(std::is_trivially_destructible<g3_draw_line_context>::value);
+	const auto draw_terrain_outline = terrain_outline;
+	if (draw_terrain_outline)
+	{
+		const uint8_t color = BM_XRGB(31, 0, 0);
+#if !DXX_USE_OGL
+		const int lsave = Lighting_on;
+		Lighting_on=0;
+#endif
+		auto context = new(&outline_context) g3_draw_line_context(canvas, color);
+		g3_draw_line(*context, *pointlist[0], *pointlist[1]);
+		g3_draw_line(*context, *pointlist[2], *pointlist[0]);
+#if !DXX_USE_OGL
+		Lighting_on=lsave;
+#endif
+	}
 
 	pointlist[0] = &p1;
 	pointlist[1] = &p2;
@@ -157,7 +175,21 @@ static void draw_cell(grs_canvas &canvas, const vms_vector &Viewer_eye, const in
 			.g = lightval_i1j0,
 			.b = lightval_i1j0,
 		},
-	}}), *terrain_bm, draw_tmap);
+	}}), *terrain_bm);
+	if (draw_terrain_outline)
+	{
+#if !DXX_USE_OGL
+		const int lsave = Lighting_on;
+		Lighting_on=0;
+#endif
+		auto &context = *reinterpret_cast<g3_draw_line_context *>(&outline_context);
+		g3_draw_line(context, *pointlist[0], *pointlist[1]);
+		g3_draw_line(context, *pointlist[1], *pointlist[2]);
+		g3_draw_line(context, *pointlist[2], *pointlist[0]);
+#if !DXX_USE_OGL
+		Lighting_on=lsave;
+#endif
+	}
 
 	if (i==org_i && j==org_j)
 		mine_tiles_drawn |= 1;
@@ -196,7 +228,8 @@ vms_vector &terrain_y_cache::operator()(uint_fast32_t h)
 	else
 	{
 		ycf = 1;
-		dyp = g3_rotate_delta_vec(vm_vec_copy_scale(surface_orient.uvec, h * HEIGHT_SCALE));
+		const auto tv = vm_vec_copy_scale(surface_orient.uvec,h*HEIGHT_SCALE);
+		g3_rotate_delta_vec(dyp,tv);
 	}
 	return dyp;
 }
@@ -205,6 +238,7 @@ vms_vector &terrain_y_cache::operator()(uint_fast32_t h)
 
 void render_terrain(grs_canvas &canvas, const vms_vector &Viewer_eye, const vms_vector &org_point,int org_2dx,int org_2dy)
 {
+	vms_vector delta_i,delta_j;		//delta_y;
 	g3s_point p,save_p_low,save_p_high;
 	g3s_point last_p2;
 	int i,j;
@@ -225,14 +259,20 @@ void render_terrain(grs_canvas &canvas, const vms_vector &Viewer_eye, const vms_
 	Interpolation_method = 1;
 #endif
 
-	auto delta_i{g3_rotate_delta_vec(vm_vec_copy_scale(surface_orient.rvec, GRID_SCALE))};
-	auto delta_j{g3_rotate_delta_vec(vm_vec_copy_scale(surface_orient.fvec, GRID_SCALE))};
+	{
+	const auto tv = vm_vec_copy_scale(surface_orient.rvec,GRID_SCALE);
+	g3_rotate_delta_vec(delta_i,tv);
+	}
+	{
+	const auto tv = vm_vec_copy_scale(surface_orient.fvec,GRID_SCALE);
+	g3_rotate_delta_vec(delta_j,tv);
+	}
 
-	auto start_point{vm_vec_scale_add(org_point, surface_orient.rvec, -(org_i - low_i) * GRID_SCALE)};
+	auto start_point = vm_vec_scale_add(org_point,surface_orient.rvec,-(org_i - low_i)*GRID_SCALE);
 	vm_vec_scale_add2(start_point,surface_orient.fvec,-(org_j - low_j)*GRID_SCALE);
 
 	{
-		const auto tv{vm_vec_sub(Viewer->pos, start_point)};
+		const auto tv = vm_vec_sub(Viewer->pos,start_point);
 	viewer_i = vm_vec_dot(tv,surface_orient.rvec) / GRID_SCALE;
 	viewer_j = vm_vec_dot(tv,surface_orient.fvec) / GRID_SCALE;
 	}

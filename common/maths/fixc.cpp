@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <stdlib.h>
 #include <math.h>
-#include <type_traits>
 
 #include "dxxerror.h"
 #include "maths.h"
@@ -31,8 +30,8 @@ public:
 	const uint8_t m_idx;
 	const signed m_mul;
 	fix_sincos_input(const fixang a) :
-		m_idx{static_cast<uint8_t>(a >> 8)},
-		m_mul{static_cast<uint8_t>(a)}
+		m_idx(static_cast<uint8_t>(a >> 8)),
+		m_mul(static_cast<uint8_t>(a))
 	{
 	}
 };
@@ -41,21 +40,25 @@ public:
 
 fix64 fixmul64(fix a, fix b)
 {
-	return (fix64{a} * fix64{b}) / 65536;
+	const fix64 a64 = a;
+	const fix64 b64 = b;
+	return (a64 * b64) / 65536;
 }
 
 fix fixdiv(fix a, fix b)
 {
 	if (!b)
 		return 1;
-	return static_cast<fix>((fix64{a} * 65536) / b);
+	const fix64 a64 = a;
+	return static_cast<fix>((a64 * 65536) / b);
 }
 
 fix fixmuldiv(fix a, fix b, fix c)
 {
 	if (!c)
 		return 1;
-	return static_cast<fix>((fix64{a} * b) / c);
+	const fix64 a64 = a;
+	return static_cast<fix>((a64 * b) / c);
 }
 
 //given cos & sin of an angle, return that angle.
@@ -66,35 +69,44 @@ fix fixmuldiv(fix a, fix b, fix c)
 
 fixang fix_atan2(fix cos,fix sin)
 {
+	fixang t;
+
+	//Assert(!(cos==0 && sin==0));
+
 	//find smaller of two
 
-	const auto dsin{static_cast<double>(sin)};
-	const auto dcos{static_cast<double>(cos)};
-	const double d{sqrt((dsin * dsin) + (dcos * dcos))};
+	const auto dsin = static_cast<double>(sin);
+	const auto dcos = static_cast<double>(cos);
+	double d;
+	d = sqrt((dsin * dsin) + (dcos * dcos));
 
 	if (d==0.0)
 		return 0;
 
 	if (labs(sin) < labs(cos)) {				//sin is smaller, use arcsin
-		const auto t{fix_asin(static_cast<fix>((dsin / d) * 65536.0))};
-		return cos < 0 ? static_cast<fixang>(0x8000 - t) : t;
+		t = fix_asin(static_cast<fix>((dsin / d) * 65536.0));
+		if (cos<0)
+			t = 0x8000 - t;
+		return t;
 	}
 	else {
-		const auto t{fix_acos(static_cast<fix>((dcos / d) * 65536.0))};
-		return sin < 0 ? static_cast<fixang>(-t) : t;
+		t = fix_acos(static_cast<fix>((dcos / d) * 65536.0));
+		if (sin<0)
+			t = -t;
+		return t;
 	}
 }
 
 [[nodiscard]]
 static unsigned fixdivquadlongu(quadint n, uint64_t d)
 {
-	return static_cast<std::underlying_type_t<quadint>>(n) / d;
+	return n.q / d;
 }
 
 uint32_t quad_sqrt(const quadint iq)
 {
-	const uint32_t low{static_cast<uint32_t>(iq)};
-	const int32_t high{static_cast<int32_t>(static_cast<std::underlying_type_t<quadint>>(iq) >> 32)};
+	const uint32_t low = static_cast<uint32_t>(iq.q);
+	const int32_t high = static_cast<int32_t>(iq.q >> 32);
 	int i, cnt;
 	uint32_t r,old_r,t;
 
@@ -139,8 +151,12 @@ uint32_t quad_sqrt(const quadint iq)
 	} while (!(r==t || r==old_r));
 
 	t = fixdivquadlongu(iq,r);
-	const auto tq{fixmulaccum({}, r, t)};
-	if (tq != iq)
+	quadint tq;
+	//edited 05/17/99 Matt Mueller - tq.high is undefined here.. so set them to = 0
+	tq.q = 0;
+	//end edit -MM
+	fixmulaccum(&tq,r,t);
+	if (tq.q != iq.q)
 		r++;
 
 	return r;
@@ -205,12 +221,12 @@ fix fix_sqrt(fix a)
 [[nodiscard]]
 static fix fix_sincos(const uint8_t idx0, const signed mul)
 {
-	const fix t0{sincos_table[idx0]};
+	const fix t0 = sincos_table[idx0];
 	/* `idx1` is `uint8_t` to truncate the value, since sincos_table is
 	 * only 256 elements long.
 	 */
 	const uint8_t idx1 = idx0 + 1;
-	const fix t1{sincos_table[idx1]};
+	const fix t1 = sincos_table[idx1];
 	return (t0 + (((t1 - t0) * mul) >> 8)) << 2;
 }
 
@@ -231,18 +247,18 @@ static fix fix_cos(const fix_sincos_input sci)
 //with interpolation
 fix_sincos_result fix_sincos(const fixang a)
 {
-	const fix_sincos_input i{a};
+	fix_sincos_input i(a);
 	return {fix_sin(i), fix_cos(i)};
 }
 
 fix fix_sin(const fixang a)
 {
-	return {fix_sin(fix_sincos_input{a})};
+	return fix_sin(fix_sincos_input{a});
 }
 
 fix fix_cos(const fixang a)
 {
-	return {fix_cos(fix_sincos_input{a})};
+	return fix_cos(fix_sincos_input{a});
 }
 
 //compute sine and cosine of an angle, filling in the variables

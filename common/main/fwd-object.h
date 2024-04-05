@@ -42,8 +42,8 @@ DXX_VALPTRIDX_DECLARE_SUBTYPE(dsx::, object, objnum_t, MAX_OBJECTS);
 namespace dsx {
 DXX_VALPTRIDX_DEFINE_SUBTYPE_TYPEDEFS(object, obj);
 
-static constexpr valptridx<object>::magic_constant<objnum_t{0xffff}> object_none{};
-static constexpr valptridx<object>::magic_constant<objnum_t{0}> object_first{};
+static constexpr valptridx<object>::magic_constant<0xffff> object_none{};
+static constexpr valptridx<object>::magic_constant<0> object_first{};
 
 #if defined(DXX_BUILD_DESCENT_I)
 constexpr std::integral_constant<unsigned, 15> MAX_OBJECT_TYPES{};
@@ -119,7 +119,7 @@ struct polyobj_info_rw;
 
 struct obj_position;
 
-enum class collision_result : bool
+enum class collision_result : uint8_t
 {
 	ignore = 0,	// Ignore this collision
 	check = 1,	// Check for this collision
@@ -235,6 +235,11 @@ imsegptridx_t find_object_seg(const d_level_shared_segment_state &, d_level_uniq
 // numbers used when debugging is on
 void fix_object_segs();
 
+// Interface to object_create_egg, puts count objects of type type, id
+// = id in objp and then drops them.
+void call_object_create_egg(const object_base &objp, unsigned count, int id);
+imobjptridx_t call_object_create_egg(const object_base &objp, int id);
+
 void dead_player_end();
 
 // Extract information from an object (objp->orient, objp->pos,
@@ -282,7 +287,7 @@ void fuelcen_check_for_goal(object &plrobj, const shared_segment &segp);
 #endif
 imobjptridx_t obj_find_first_of_type(fvmobjptridx &, object_type_t type);
 
-void object_rw_swap(struct object_rw *obj_rw, physfsx_endian swap);
+void object_rw_swap(struct object_rw *obj_rw, int swap);
 void reset_player_object(object_base &);
 
 }

@@ -26,10 +26,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "fwd-object.h"
 #include "fwd-vclip.h"
 
-#if DXX_USE_EDITOR
-#include "fwd-d_array.h"
-#endif
-
 namespace dcx {
 
 constexpr std::integral_constant<unsigned, 196> VULCAN_WEAPON_AMMO_AMOUNT{};
@@ -38,17 +34,17 @@ constexpr uint16_t VULCAN_AMMO_AMOUNT = 49*2;
 constexpr std::integral_constant<unsigned, 16> POWERUP_NAME_LENGTH{};
 struct powerup_type_info;
 
-void powerup_type_info_read(NamedPHYSFS_File fp, powerup_type_info &pti);
+void powerup_type_info_read(PHYSFS_File *fp, powerup_type_info &pti);
 void powerup_type_info_write(PHYSFS_File *fp, const powerup_type_info &pti);
 
-extern uint8_t N_powerup_types;
+extern unsigned N_powerup_types;
 
 }
 
 #ifdef dsx
 namespace dsx {
 
-enum class powerup_type_t : uint8_t;
+enum powerup_type_t : uint8_t;
 
 #if defined(DXX_BUILD_DESCENT_I)
 constexpr std::integral_constant<unsigned, 392*2> VULCAN_AMMO_MAX{};
@@ -60,7 +56,7 @@ constexpr std::integral_constant<unsigned, 50> MAX_POWERUP_TYPES{};
 #endif
 
 #if DXX_USE_EDITOR
-using powerup_names_array = enumerated_array<std::array<char, POWERUP_NAME_LENGTH>, MAX_POWERUP_TYPES, powerup_type_t>;
+using powerup_names_array = std::array<std::array<char, POWERUP_NAME_LENGTH>, MAX_POWERUP_TYPES>;
 extern powerup_names_array Powerup_names;
 #endif
 
@@ -73,10 +69,5 @@ void do_powerup_frame(const d_vclip_array &Vclip, vmobjptridx_t obj);
 void do_megawow_powerup(object &plrobj, int quantity);
 
 void powerup_basic_str(int redadd, int greenadd, int blueadd, int score, std::span<const char> str);
-
-// Interface to object_create_egg, puts count objects of type type, id
-// = id in objp and then drops them.
-imobjptridx_t call_object_create_egg(const object_base &objp, powerup_type_t id);
-void call_object_create_egg(const object_base &objp, unsigned count, powerup_type_t id);
 }
 #endif

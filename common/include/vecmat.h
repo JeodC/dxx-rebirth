@@ -130,23 +130,65 @@ public:
 	}
 };
 
-enum class vm_distance_squared : fix64
+class vm_distance_squared
 {
-	minimum_value = 0,
-	maximum_value = INT64_MAX,
+public:
+	fix64 d2;
+	vm_distance_squared(const fix &) = delete;
+	constexpr explicit vm_distance_squared(const fix64 &f2) :
+		d2(f2)
+	{
+	}
+	constexpr vm_distance_squared(vm_magnitude_squared m) :
+		d2{static_cast<int64_t>(static_cast<uint64_t>(m))}
+	{
+	}
+	[[nodiscard]]
+	constexpr bool operator<(const vm_distance_squared &rhs) const
+	{
+		return d2 < rhs.d2;
+	}
+	[[nodiscard]]
+	constexpr bool operator>(const vm_distance_squared &rhs) const
+	{
+		return d2 > rhs.d2;
+	}
+	[[nodiscard]]
+	constexpr bool operator>=(const vm_distance_squared &rhs) const
+	{
+		return !(*this < rhs);
+	}
+	template <typename T>
+		vm_distance_squared &operator-=(T &&rhs)
+		{
+			return *this = (*this - std::forward<T>(rhs));
+		}
+	constexpr vm_distance_squared operator-(const fix &) const = delete;
+	[[nodiscard]]
+	constexpr vm_distance_squared operator-(const fix64 &f2) const
+	{
+		return vm_distance_squared{d2 - f2};
+	}
+	[[nodiscard]]
+	constexpr explicit operator bool() const { return d2; }
+	template <typename T>
+		constexpr operator T() const = delete;
+	[[nodiscard]]
+	constexpr operator fix64() const
+	{
+		return d2;
+	}
+	[[nodiscard]]
+	static constexpr vm_distance_squared maximum_value()
+	{
+		return vm_distance_squared{INT64_MAX};
+	}
+	[[nodiscard]]
+	static constexpr vm_distance_squared minimum_value()
+	{
+		return vm_distance_squared{static_cast<fix64>(0)};
+	}
 };
-
-[[nodiscard]]
-static constexpr vm_distance_squared build_vm_distance_squared(const vm_magnitude_squared m)
-{
-	return vm_distance_squared{static_cast<int64_t>(static_cast<uint64_t>(m))};
-}
-
-[[nodiscard]]
-static constexpr auto operator<=>(const vm_distance_squared a, const vm_distance_squared b)
-{
-	return static_cast<fix64>(a) <=> static_cast<fix64>(b);
-}
 
 constexpr vm_distance_squared vm_distance::operator*(const vm_distance &rhs) const
 {
@@ -157,6 +199,12 @@ constexpr vm_distance_squared vm_distance::operator*(const vm_distance &rhs) con
 constexpr bool operator<(const vm_magnitude_squared a, const fix &b)
 {
 	return static_cast<uint64_t>(a) < b;
+}
+
+[[nodiscard]]
+constexpr bool operator<(const vm_magnitude_squared a, const vm_distance_squared b)
+{
+	return static_cast<uint64_t>(a) < static_cast<uint64_t>(b.operator fix64());
 }
 
 #define DEFINE_SERIAL_VMS_VECTOR_TO_MESSAGE()	\
@@ -185,6 +233,25 @@ struct vms_quaternion
 
 
 //Macros/functions to fill in fields of structures
+
+//macro to set a vector to zero.  we could do this with an in-line assembly
+//macro, but it's probably better to let the compiler optimize it.
+//Note: NO RETURN VALUE
+static inline void vm_vec_zero(vms_vector &v)
+{
+	v = {};
+}
+
+//macro set set a matrix to the identity. Note: NO RETURN VALUE
+
+// DPH (18/9/98): Begin mod to fix linefeed problem under linux. Uses an
+// inline function instead of a multi-line macro to fix CR/LF problems.
+
+// DPH (19/8/98): End changes.
+
+//Global constants
+
+//Here's a handy constant
 
 //negate a vector
 static inline void vm_vec_negate(vms_vector &v)
@@ -219,7 +286,7 @@ static inline vms_vector &vm_vec_sub(vms_vector &dest, const vms_vector &src0, c
 #ifdef DXX_CONSTANT_TRUE
 	if (DXX_CONSTANT_TRUE(&src0 == &src1))
 		DXX_ALWAYS_ERROR_FUNCTION("vm_vec_sub with &src0 == &src1");
-	else if (DXX_CONSTANT_TRUE(src0 == src1))
+	else if (DXX_CONSTANT_TRUE(src0.x == src1.x && src0.y == src1.y && src0.z == src1.z))
 		DXX_ALWAYS_ERROR_FUNCTION("vm_vec_sub with equal value inputs");
 #endif
 	return _vm_vec_sub(dest, src0, src1);
@@ -236,14 +303,22 @@ static inline vms_vector vm_vec_sub (const vms_vector &src0, const vms_vector &s
 [[nodiscard]]
 vms_vector vm_vec_avg(const vms_vector &src0, const vms_vector &src1);
 
-//scales a vector.  returns scaled result
+//scales and copies a vector.  returns ptr to dest
+#define vm_vec_copy_scale(A,B,...)	vm_vec_copy_scale(A, ## __VA_ARGS__, B)
 [[nodiscard]]
-vms_vector vm_vec_copy_scale(vms_vector src, fix s);
+static inline vms_vector vm_vec_copy_scale(vms_vector src, fix s)
+{
+	return vm_vec_scale(src, s), src;
+}
 
 //scales a vector, adds it to another, and stores in a 3rd vector
 //dest = src1 + k * src2
 [[nodiscard]]
-vms_vector vm_vec_scale_add(const vms_vector &src1, const vms_vector &src2, fix k);
+static inline vms_vector vm_vec_scale_add(const vms_vector &src1, const vms_vector &src2, fix k)
+{
+	vms_vector dest;
+	return vm_vec_scale_add(dest, src1, src2, k), dest;
+}
 
 [[nodiscard]]
 static inline vms_vector vm_vec_normalized(vms_vector v)
@@ -281,24 +356,10 @@ static inline vms_matrix vm_angles_2_matrix (const vms_angvec &a)
 }
 
 [[nodiscard]]
-static inline vms_matrix vm_vector_to_matrix(const vms_vector &fvec)
+static inline vms_matrix vm_vector_2_matrix (const vms_vector &fvec, const vms_vector *uvec, const vms_vector *rvec)
 {
 	vms_matrix m;
-	return vm_vector_to_matrix(m, fvec), m;
-}
-
-[[nodiscard]]
-static inline vms_matrix vm_vector_to_matrix_r(const vms_vector &fvec, const vms_vector &rvec)
-{
-	vms_matrix m;
-	return vm_vector_to_matrix_r(m, fvec, rvec), m;
-}
-
-[[nodiscard]]
-static inline vms_matrix vm_vector_to_matrix_u(const vms_vector &fvec, const vms_vector &uvec)
-{
-	vms_matrix m;
-	return vm_vector_to_matrix_u(m, fvec, uvec), m;
+	return vm_vector_2_matrix(m, fvec, uvec, rvec), m;
 }
 
 [[nodiscard]]

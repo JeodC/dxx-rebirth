@@ -291,7 +291,7 @@ static sidenum_t find_exit_side(const d_level_shared_segment_state &LevelSharedS
 
 	const shared_segment &pseg = LevelSharedSegmentState.get_segments().vcptr(obj.segnum);
 	auto &vcvertptr = Vertices.vcptr;
-	const auto segcenter{compute_segment_center(vcvertptr, pseg)};
+	const auto segcenter = compute_segment_center(vcvertptr, pseg);
 
 	sidenum_t best_side = side_none;
 	for (const auto &&[i, child] : enumerate(pseg.children))
@@ -300,7 +300,7 @@ static sidenum_t find_exit_side(const d_level_shared_segment_state &LevelSharedS
 
 		if (child != segment_none)
 		{
-			auto sidevec{compute_center_point_on_side(vcvertptr, pseg, i)};
+			auto sidevec = compute_center_point_on_side(vcvertptr, pseg, i);
 			vm_vec_normalized_dir_quick(sidevec,sidevec,segcenter);
 			d = vm_vec_dot(sidevec,prefvec);
 
@@ -321,23 +321,28 @@ static void draw_mine_exit_cover(grs_canvas &canvas)
 	const int of = 10;
 	const fix u = i2f(6), d = i2f(9), ur = i2f(14), dr = i2f(17);
 	const uint8_t color = BM_XRGB(0, 0, 0);
+	vms_vector v;
 	g3s_point p0, p1, p2, p3;
 
-	const auto v{vm_vec_scale_add(mine_exit_point, mine_exit_orient.fvec, i2f(of))};
+	vm_vec_scale_add(v,mine_exit_point,mine_exit_orient.fvec,i2f(of));
 
 	auto mrd = mine_exit_orient.rvec;
 	{
-		const auto vu{vm_vec_scale_add(v, mine_exit_orient.uvec, u)};
-		auto mru{mrd};
+		vms_vector vu;
+		vm_vec_scale_add(vu, v, mine_exit_orient.uvec, u);
+		auto mru = mrd;
 		vm_vec_scale(mru, ur);
-		g3_rotate_point(p0, vm_vec_add(vu, mru));
-		g3_rotate_point(p1, vm_vec_sub(vu, mru));
+		vms_vector p;
+		g3_rotate_point(p0, (vm_vec_add(p, vu, mru), p));
+		g3_rotate_point(p1, (vm_vec_sub(p, vu, mru), p));
 	}
 	{
-		const auto vd{vm_vec_scale_add(v, mine_exit_orient.uvec, -d)};
+		vms_vector vd;
+		vm_vec_scale_add(vd, v, mine_exit_orient.uvec, -d);
 		vm_vec_scale(mrd, dr);
-		g3_rotate_point(p2, vm_vec_sub(vd, mrd));
-		g3_rotate_point(p3, vm_vec_add(vd, mrd));
+		vms_vector p;
+		g3_rotate_point(p2, (vm_vec_sub(p, vd, mrd), p));
+		g3_rotate_point(p3, (vm_vec_add(p, vd, mrd), p));
 	}
 	const std::array<cg3s_point *, 4> pointlist{{
 		&p0,
@@ -372,7 +377,7 @@ void draw_stars(grs_canvas &canvas, const d_unique_endlevel_state::starfield_typ
 			intensity-=3;
 		}
 
-		p.p3_vec = g3_rotate_delta_vec(si);
+		g3_rotate_delta_vec(p.p3_vec, si);
 		g3_code_point(p);
 
 		if (p.p3_codes == clipping_code::None)
@@ -556,10 +561,10 @@ void draw_exit_model(grs_canvas &canvas)
 		draw_mine_exit_cover(canvas);
 	}
 
-	auto model_pos{vm_vec_scale_add(mine_exit_point, mine_exit_orient.fvec, i2f(f))};
+	auto model_pos = vm_vec_scale_add(mine_exit_point,mine_exit_orient.fvec,i2f(f));
 	vm_vec_scale_add2(model_pos,mine_exit_orient.uvec,i2f(u));
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-	draw_polygon_model(Polygon_models, canvas, draw_tmap, model_pos, mine_exit_orient, nullptr, mine_destroyed ? destroyed_exit_modelnum : exit_modelnum, 0, lrgb, nullptr, alternate_textures{});
+	draw_polygon_model(Polygon_models, canvas, model_pos, mine_exit_orient, nullptr, mine_destroyed ? destroyed_exit_modelnum : exit_modelnum, 0, lrgb, nullptr, nullptr);
 }
 
 #define SATELLITE_DIST		i2f(1024)
@@ -592,10 +597,12 @@ static void render_external_scene(fvcobjptridx &vcobjptridx, grs_canvas &canvas,
 	}
 
 	{	//draw satellite
+
+		vms_vector delta;
 		g3s_point top_pnt;
 
 		const auto p = g3_rotate_point(satellite_pos);
-		const auto delta{g3_rotate_delta_vec(satellite_upvec)};
+		g3_rotate_delta_vec(delta,satellite_upvec);
 
 		g3_add_delta_vec(top_pnt,p,delta);
 
@@ -606,7 +613,7 @@ static void render_external_scene(fvcobjptridx &vcobjptridx, grs_canvas &canvas,
 			if (! (p.p3_flags & projection_flag::overflow)) {
 				push_interpolation_method save_im(0);
 				//gr_bitmapm(f2i(p.p3_sx)-32,f2i(p.p3_sy)-32,satellite_bitmap);
-				g3_draw_rod_tmap(canvas, *satellite_bitmap, p, SATELLITE_WIDTH, top_pnt, SATELLITE_WIDTH, lrgb, draw_tmap);
+				g3_draw_rod_tmap(canvas, *satellite_bitmap, p, SATELLITE_WIDTH, top_pnt, SATELLITE_WIDTH, lrgb);
 			}
 		}
 	}
@@ -761,10 +768,7 @@ window_event_result start_endlevel_sequence()
 
 	start_endlevel_flythrough(fly_objects[0], vmobjptr(ConsoleObject), cur_fly_speed);		//initialize
 
-	{
-		const auto &&m = TXT_EXIT_SEQUENCE;
-		HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
-	}
+	HUD_init_message_literal(HM_DEFAULT, TXT_EXIT_SEQUENCE );
 
 	outside_mine = ext_expl_playing = 0;
 
@@ -829,7 +833,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 	if (!outside_mine) {
 
 		if (Endlevel_sequence==EL_OUTSIDE) {
-			const auto tvec{vm_vec_sub(ConsoleObject->pos, mine_side_exit_point)};
+			const auto tvec = vm_vec_sub(ConsoleObject->pos,mine_side_exit_point);
 			if (vm_vec_dot(tvec,mine_exit_orient.fvec) > 0) {
 				vms_vector mov_vec;
 
@@ -859,7 +863,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 		if ((explosion_wait1-=FrameTime) < 0) {
 			static int sound_count;
 
-			auto tpnt{vm_vec_scale_add(ConsoleObject->pos, ConsoleObject->orient.fvec, -ConsoleObject->size * 5)};
+			auto tpnt = vm_vec_scale_add(ConsoleObject->pos,ConsoleObject->orient.fvec,-ConsoleObject->size*5);
 			vm_vec_scale_add2(tpnt,ConsoleObject->orient.rvec,(d_rand()-D_RAND_MAX/2)*15);
 			vm_vec_scale_add2(tpnt,ConsoleObject->orient.uvec,(d_rand()-D_RAND_MAX/2)*15);
 
@@ -885,7 +889,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 			//create little explosion on wall
 
-			auto tpnt{vm_vec_copy_scale(ConsoleObject->orient.rvec, (d_rand() - D_RAND_MAX / 2) * 100)};
+			auto tpnt = vm_vec_copy_scale(ConsoleObject->orient.rvec,(d_rand()-D_RAND_MAX/2)*100);
 			vm_vec_scale_add2(tpnt,ConsoleObject->orient.uvec,(d_rand()-D_RAND_MAX/2)*100);
 			vm_vec_add2(tpnt,ConsoleObject->pos);
 
@@ -1075,7 +1079,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 				Endlevel_sequence = EL_CHASING;
 
 				vm_vec_normalized_dir_quick(tvec,station_pos,ConsoleObject->pos);
-				vm_vector_to_matrix_u(ConsoleObject->orient, tvec, surface_orient.uvec);
+				vm_vector_2_matrix(ConsoleObject->orient,tvec,&surface_orient.uvec,nullptr);
 
 				desired_fly_speed *= 2;
 			}
@@ -1228,11 +1232,10 @@ void do_endlevel_flythrough(d_level_unique_object_state &LevelUniqueObjectState,
 
 		//where we are heading (center of exit_side)
 		auto &vcvertptr = Vertices.vcptr;
-		auto dest_point{compute_center_point_on_side(vcvertptr, pseg, exit_side)};
-		const vms_vector nextcenter{(pseg.children[exit_side] == segment_exit)
+		auto dest_point = compute_center_point_on_side(vcvertptr, pseg, exit_side);
+		const vms_vector nextcenter = (pseg.children[exit_side] == segment_exit)
 			? dest_point
-			: compute_segment_center(vcvertptr, vcsegptr(pseg.children[exit_side]))
-		};
+			: compute_segment_center(vcvertptr, vcsegptr(pseg.children[exit_side]));
 
 		//update target point and movement points
 
@@ -1243,7 +1246,7 @@ void do_endlevel_flythrough(d_level_unique_object_state &LevelUniqueObjectState,
 			for (const auto i : MAX_SIDES_PER_SEGMENT)
 				if (i!=entry_side && i!=exit_side && i!=up_side && i!=Side_opposite[up_side])
 				 {
-					 *isp = compute_center_point_on_side(vcvertptr, pseg, i);
+					 compute_center_point_on_side(vcvertptr, *isp, pseg, i);
 					 ++ isp;
 					 if (isp == sp.end())
 						 break;
@@ -1259,10 +1262,10 @@ void do_endlevel_flythrough(d_level_unique_object_state &LevelUniqueObjectState,
 		auto step_size = vm_vec_normalize_quick(flydata->step);
 		vm_vec_scale(flydata->step,flydata->speed);
 
-		const auto curcenter{compute_segment_center(vcvertptr, pseg)};
+		const auto curcenter = compute_segment_center(vcvertptr, pseg);
 		vm_vec_sub(flydata->headvec,nextcenter,curcenter);
 
-		const auto dest_orient{vm_vector_to_matrix_u(flydata->headvec, pseg.sides[up_side].normals[0])};
+		const auto dest_orient = vm_vector_2_matrix(flydata->headvec,&pseg.sides[up_side].normals[0],nullptr);
 		//where we want to be pointing
 		const auto dest_angles{vm_extract_angles_matrix(dest_orient)};
 
@@ -1355,8 +1358,9 @@ try_again:
 
 	var = 0;
 
-	for (PHYSFSX_gets_line_t<LINE_LEN> line; PHYSFSX_fgets(line, ifile);)
-	{
+	PHYSFSX_gets_line_t<LINE_LEN> line;
+	while (PHYSFSX_fgets(line,ifile)) {
+
 		if (have_binary)
 			decode_text_line (line);
 
@@ -1440,6 +1444,7 @@ try_again:
 
 				if (var==5)
 					satellite_pos = tm.fvec;
+					//vm_vec_copy_scale(&satellite_pos,&tm.fvec,SATELLITE_DIST);
 				else
 					station_pos = tm.fvec;
 
@@ -1473,11 +1478,11 @@ try_again:
 
 	const auto &&exit_seg = vmsegptr(exit_segnum);
 	auto &vcvertptr = Vertices.vcptr;
-	mine_exit_point = compute_segment_center(vcvertptr, exit_seg);
+	compute_segment_center(vcvertptr, mine_exit_point, exit_seg);
 	extract_orient_from_segment(vcvertptr, mine_exit_orient, exit_seg);
-	mine_side_exit_point = compute_center_point_on_side(vcvertptr, exit_seg, exit_side);
+	compute_center_point_on_side(vcvertptr, mine_side_exit_point, exit_seg, exit_side);
 
-	mine_ground_exit_point = vm_vec_scale_add(mine_exit_point, mine_exit_orient.uvec, -i2f(20));
+	vm_vec_scale_add(mine_ground_exit_point,mine_exit_point,mine_exit_orient.uvec,-i2f(20));
 
 	//compute orientation of surface
 	{
@@ -1487,13 +1492,15 @@ try_again:
 
 		vms_matrix tm = vm_transposed_matrix(surface_orient);
 		const auto tv0 = vm_vec_rotate(station_pos,tm);
-		station_pos = vm_vec_scale_add(mine_exit_point, tv0, STATION_DIST);
+		vm_vec_scale_add(station_pos,mine_exit_point,tv0,STATION_DIST);
 
 		const auto tv = vm_vec_rotate(satellite_pos,tm);
-		satellite_pos = vm_vec_scale_add(mine_exit_point, tv, SATELLITE_DIST);
+		vm_vec_scale_add(satellite_pos,mine_exit_point,tv,SATELLITE_DIST);
 
-		const auto tm2{vm_vector_to_matrix_u(tv, surface_orient.uvec)};
-		satellite_upvec = vm_vec_copy_scale(tm2.uvec, SATELLITE_HEIGHT);
+		const auto tm2 = vm_vector_2_matrix(tv,&surface_orient.uvec,nullptr);
+		vm_vec_copy_scale(satellite_upvec,tm2.uvec,SATELLITE_HEIGHT);
+
+
 	}
 	endlevel_data_loaded = 1;
 }
