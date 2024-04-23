@@ -26,6 +26,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <algorithm>
 #include <numeric>
 #include <random>
+#include <ranges>
 #include <optional>
 #include <stdlib.h>
 #include <stdio.h>
@@ -787,7 +788,7 @@ static vmsegptridx_t choose_drop_segment(fvmsegptridx &vmsegptridx, fvcvertptr &
 	std::optional<vmsegptridx_t> fallback_drop;
 	for (const unsigned candidate_depth : xrange(std::uniform_int_distribution(net_drop_max_depth_lower + 0u, net_drop_max_depth_upper + 0u)(mrd), net_drop_min_depth, xrange_descending()))
 	{
-		for (const auto pnum : ranges::subrange(candidate_drop_players.begin(), end_drop_players))
+		for (const auto pnum : std::ranges::subrange(candidate_drop_players.begin(), end_drop_players))
 		{
 			auto &plr = *vcplayerptr(pnum);
 			auto &plrobj = *vcobjptr(plr.objnum);
@@ -894,11 +895,10 @@ namespace {
 
 //	------------------------------------------------------------------------------------------------------
 //	Return true if current segment contains some object.
-static const object *segment_contains_powerup(fvcobjptridx &vcobjptridx, fvcsegptr &vcsegptr, const unique_segment &segnum, const powerup_type_t obj_id)
+static const object_base *segment_contains_powerup(fvcobjptridx &vcobjptridx, fvcsegptr &vcsegptr, const unique_segment &segnum, const powerup_type_t obj_id)
 {
-	range_for (const object &objp, objects_in(segnum, vcobjptridx, vcsegptr))
+	for (auto &o : objects_in<const object_base>(segnum, vcobjptridx, vcsegptr))
 	{
-		auto &o = objp;
 		if (o.type == OBJ_POWERUP && get_powerup_id(o) == obj_id)
 			return &o;
 	}
@@ -906,7 +906,7 @@ static const object *segment_contains_powerup(fvcobjptridx &vcobjptridx, fvcsegp
 }
 
 //	------------------------------------------------------------------------------------------------------
-static const object *powerup_nearby_aux(fvcobjptridx &vcobjptridx, fvcsegptr &vcsegptr, const vcsegidx_t segnum, const powerup_type_t object_id, uint_fast32_t depth)
+static const object_base *powerup_nearby_aux(fvcobjptridx &vcobjptridx, fvcsegptr &vcsegptr, const vcsegidx_t segnum, const powerup_type_t object_id, uint_fast32_t depth)
 {
 	const cscusegment &&segp = vcsegptr(segnum);
 	if (auto r = segment_contains_powerup(vcobjptridx, vcsegptr, segp, object_id))
@@ -924,7 +924,7 @@ static const object *powerup_nearby_aux(fvcobjptridx &vcobjptridx, fvcsegptr &vc
 
 //	------------------------------------------------------------------------------------------------------
 //	Return true if some powerup is nearby (within 3 segments).
-static const object *weapon_nearby(fvcobjptridx &vcobjptridx, fvcsegptr &vcsegptr, const object_base &objp, const powerup_type_t weapon_id)
+static const object_base *weapon_nearby(fvcobjptridx &vcobjptridx, fvcsegptr &vcsegptr, const object_base &objp, const powerup_type_t weapon_id)
 {
 	return powerup_nearby_aux(vcobjptridx, vcsegptr, objp.segnum, weapon_id, 2);
 }
@@ -1745,9 +1745,8 @@ void expl_wall_read_n_swap(fvmwallptr &vmwallptr, PHYSFS_File *const fp, const p
 			d.time = SWAPINT(d.time);
 		}
 		if (const auto s{vcsegidx_t::check_nothrow_index(d.segnum)})
-			for (const vcsegidx_t dseg{*s}; auto &&wp : vmwallptr)
+			for (const vcsegidx_t dseg{*s}; auto &w : vmwallptr)
 		{
-			auto &w = *wp;
 			if (w.segnum != dseg)
 				continue;
 			if (underlying_value(w.sidenum) != d.sidenum)
@@ -1765,9 +1764,8 @@ void expl_wall_write(fvcwallptr &vcwallptr, PHYSFS_File *const fp)
 {
 	const unsigned num_exploding_walls = Num_exploding_walls;
 	PHYSFS_write(fp, &num_exploding_walls, sizeof(unsigned), 1);
-	range_for (auto &&wp, vcwallptr)
+	for (auto &e : vcwallptr)
 	{
-		auto &e = *wp;
 		if (!(e.flags & wall_flag::exploding))
 			continue;
 		disk_expl_wall d;

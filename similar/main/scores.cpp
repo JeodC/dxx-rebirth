@@ -28,6 +28,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdlib.h>
 #include <string.h>
 #include <sstream>
+#include <ranges>
 #include <ctype.h>
 
 #include "scores.h"
@@ -59,11 +60,14 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "d_range.h"
 #include "d_zip.h"
 
-#define VERSION_NUMBER 		1
 #define SCORES_FILENAME 	"descent.hi"
 #define COOL_MESSAGE_LEN 	50
 namespace dcx {
+
+namespace {
+
 constexpr std::integral_constant<unsigned, 10> MAX_HIGH_SCORES{};
+constexpr std::uint8_t high_score_version{1};
 
 struct score_items_context
 {
@@ -73,6 +77,8 @@ struct score_items_context
 	{
 	}
 };
+
+}
 
 }
 
@@ -153,7 +159,8 @@ static void scores_read(all_scores *scores)
 	}
 	// Read 'em in...
 	PHYSFS_read(fp, scores, sizeof(all_scores), 1);
-	if ( (scores->version!=VERSION_NUMBER)||(scores->signature[0]!='D')||(scores->signature[1]!='H')||(scores->signature[2]!='S') )	{
+	if (scores->version != high_score_version || scores->signature[0] != 'D' || scores->signature[1] != 'H' || scores->signature[2] != 'S')
+	{
 		*scores = {};
 		return;
 	}
@@ -171,7 +178,7 @@ static void scores_write(all_scores *scores)
 	scores->signature[0]='D';
 	scores->signature[1]='H';
 	scores->signature[2]='S';
-	scores->version = VERSION_NUMBER;
+	scores->version = high_score_version;
 	PHYSFS_write(fp, scores,sizeof(all_scores), 1);
 }
 
@@ -291,7 +298,7 @@ void scores_maybe_add_player()
 	const auto end_score_stats = std::end(scores.stats);
 	/* Find the position at which the player's score should be placed.
 	 */
-	const auto &&iter_position = ranges::find_if(begin_score_stats, end_score_stats, predicate);
+	const auto &&iter_position{std::ranges::find_if(begin_score_stats, end_score_stats, predicate)};
 	const auto position = std::distance(begin_score_stats, iter_position);
 	/* If iter_position == end_score_stats, then the player's score does
 	 * not beat any of the existing high scores.  Include a special case

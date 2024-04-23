@@ -17,6 +17,7 @@ AND AGREES TO THE TERMS HEREIN AND ACCEPTS THE SAME BY USE OF THIS FILE.
 COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 */
 
+#include <ranges>
 #include "wall.h"
 #include "text.h"
 #include "fireball.h"
@@ -423,9 +424,9 @@ void wall_open_door(const vmsegptridx_t seg, const sidenum_t side)
 	auto &ActiveDoors = LevelUniqueWallSubsystemState.ActiveDoors;
 	auto &vmactdoorptr = ActiveDoors.vmptr;
 	if (w->state == wall_state::closing) {		//closing, so reuse door
-		const auto &&r = ranges::subrange(vmactdoorptr);
+		const auto &&r{std::ranges::subrange(vmactdoorptr)};
 		const auto &&re = r.end();
-		const auto &&i = ranges::find_if(r.begin(), re, find_active_door_predicate(wall_num));
+		const auto &&i{std::ranges::find_if(r.begin(), re, find_active_door_predicate(wall_num))};
 		if (i == re)	// likely in demo playback or multiplayer
 		{
 			const auto c = ActiveDoors.get_count();
@@ -435,7 +436,7 @@ void wall_open_door(const vmsegptridx_t seg, const sidenum_t side)
 		}
 		else
 		{
-			d = *i;
+			d = &*i;
 			d->time = WallAnims[w->clip_num].play_time - d->time;
 			if (d->time < 0)
 				d->time = 0;
@@ -536,15 +537,15 @@ void start_wall_cloak(const vmsegptridx_t seg, const sidenum_t side)
 	auto &CloakingWalls = LevelUniqueWallSubsystemState.CloakingWalls;
 	if (w->state == wall_state::decloaking)
 	{	//decloaking, so reuse door
-		const auto &&r = ranges::subrange(CloakingWalls.vmptr);
+		const auto &&r{std::ranges::subrange(CloakingWalls.vmptr)};
 		const auto &&re = r.end();
-		const auto &&i = ranges::find_if(r.begin(), re, find_cloaked_wall_predicate{w});
+		const auto &&i{std::ranges::find_if(r.begin(), re, find_cloaked_wall_predicate{w})};
 		if (i == re)
 		{
 			d_debugbreak();
 			return;
 		}
-		d = *i;
+		d = i.base();
 		d->time = CLOAKING_WALL_TIME - d->time;
 	}
 	else if (w->state == wall_state::closed) {	//create new door
@@ -612,15 +613,15 @@ void start_wall_decloak(const vmsegptridx_t seg, const sidenum_t side)
 
 	auto &CloakingWalls = LevelUniqueWallSubsystemState.CloakingWalls;
 	if (w->state == wall_state::cloaking) {	//cloaking, so reuse door
-		const auto &&r = ranges::subrange(CloakingWalls.vmptr);
+		const auto &&r{std::ranges::subrange(CloakingWalls.vmptr)};
 		const auto &&re = r.end();
-		const auto &&i = ranges::find_if(r.begin(), re, find_cloaked_wall_predicate{w});
+		const auto &&i{std::ranges::find_if(r.begin(), re, find_cloaked_wall_predicate{w})};
 		if (i == re)
 		{
 			d_debugbreak();
 			return;
 		}
-		d = *i;
+		d = i.base();
 		d->time = CLOAKING_WALL_TIME - d->time;
 	}
 	else if (w->state == wall_state::closed) {	//create new door
@@ -729,7 +730,7 @@ static unsigned is_door_side_obstructed(fvcobjptridx &vcobjptridx, fvcsegptr &vc
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vcvertptr = Vertices.vcptr;
-	range_for (const object_base &obj, objects_in(seg, vcobjptridx, vcsegptr))
+	for (auto &obj : objects_in<const object_base>(seg, vcobjptridx, vcsegptr))
 	{
 #if defined(DXX_BUILD_DESCENT_II)
 		if (obj.type == OBJ_WEAPON)
@@ -784,15 +785,15 @@ void wall_close_door(wall_array &Walls, const vmsegptridx_t seg, const sidenum_t
 	auto &vmactdoorptr = ActiveDoors.vmptr;
 	if (w->state == wall_state::opening)
 	{	//reuse door
-		const auto &&r = ranges::subrange(vmactdoorptr);
+		const auto &&r{std::ranges::subrange(vmactdoorptr)};
 		const auto &&re = r.end();
-		const auto &&i = ranges::find_if(r.begin(), re, find_active_door_predicate(wall_num));
+		const auto &&i{std::ranges::find_if(r.begin(), re, find_active_door_predicate(wall_num))};
 		if (i == re)
 		{
 			d_debugbreak();
 			return;
 		}
-		d = *i;
+		d = i.base();
 		d->time = WallAnims[w->clip_num].play_time - d->time;
 
 		if (d->time < 0)
@@ -1401,9 +1402,8 @@ static void process_exploding_walls(const d_robot_info_array &Robot_info)
 	if (unsigned num_exploding_walls = Num_exploding_walls)
 	{
 		auto &Walls = LevelUniqueWallSubsystemState.Walls;
-		range_for (auto &&wp, Walls.vmptr)
+		for (auto &w1 : Walls.vmptr)
 		{
-			auto &w1 = *wp;
 			if (w1.flags & wall_flag::exploding)
 			{
 				assert(num_exploding_walls);
@@ -1472,7 +1472,7 @@ void d_level_unique_stuck_object_state::remove_stuck_object(const vcobjidx_t obj
 	auto &&pr = partial_range(Stuck_objects, Num_stuck_objects);
 	auto &&pre = pr.end();
 	const auto predicate = [obj](const stuckobj &so) { return so.objnum == obj; };
-	const auto &&i = ranges::find_if(pr.begin(), pre, predicate);
+	const auto &&i{std::ranges::find_if(pr.begin(), pre, predicate)};
 	if (i == pre)
 		/* Objects enter this function if they are able to become stuck,
 		 * without regard to whether they actually are stuck.  If the

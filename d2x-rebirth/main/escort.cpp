@@ -23,6 +23,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  *
  */
 
+#include <ranges>
 #include "dxxsconf.h"
 #include <stdio.h>		// for printf()
 #include <stdlib.h>		// for rand() and qsort()
@@ -68,7 +69,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "escort.h"
 #include "vclip.h"
 #include "segiter.h"
-#include "backports-ranges.h"
 #include "compiler-range_for.h"
 #include "d_enumerate.h"
 #include "d_levelstate.h"
@@ -526,10 +526,10 @@ static int marker_exists_in_mine(const game_marker_index id)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptr = Objects.vcptr;
-	range_for (const auto &&objp, vcobjptr)
+	for (auto &obj : vcobjptr)
 	{
-		if (objp->type == OBJ_MARKER)
-			if (get_marker_id(objp) == id)
+		if (obj.type == OBJ_MARKER)
+			if (get_marker_id(obj) == id)
 				return 1;
 	}
 	return 0;
@@ -621,11 +621,11 @@ static robot_id get_boss_id(void)
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptr = Objects.vcptr;
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
-	range_for (const auto &&objp, vcobjptr)
+	for (auto &obj : vcobjptr)
 	{
-		if (objp->type == OBJ_ROBOT)
+		if (obj.type == OBJ_ROBOT)
 		{
-			const auto objp_id = get_robot_id(objp);
+			const auto objp_id{get_robot_id(obj)};
 			if (Robot_info[objp_id].boss_flag != boss_robot_id::None)
 				return objp_id;
 		}
@@ -696,13 +696,13 @@ static std::pair<icsegidx_t, d_unique_buddy_state::Escort_goal_reachability> exi
 			return vcsegptr(s)->special == segment_special::fuelcen;
 		};
 		const auto &&rb = partial_const_range(bfs_list, length);
-		const auto &&i = ranges::find_if(rb, predicate);
+		const auto &&i{std::ranges::find_if(rb, predicate)};
 		if (i != rb.end())
 			return {*i, d_unique_buddy_state::Escort_goal_reachability::reachable};
 	}
 	{
-		const ranges::subrange rh{vcsegptridx};
-		const auto &&i = ranges::find(rh, segment_special::fuelcen, &shared_segment::special);
+		const std::ranges::subrange rh{vcsegptridx};
+		const auto &&i{std::ranges::find(rh, segment_special::fuelcen, &shared_segment::special)};
 		if (i != rh.end())
 			return {*i, d_unique_buddy_state::Escort_goal_reachability::unreachable};
 	}
@@ -730,9 +730,9 @@ static std::pair<icobjidx_t, d_unique_buddy_state::Escort_goal_reachability> exi
 	//	Couldn't find what we're looking for by looking at connectivity.
 	//	See if it's in the mine.  It could be hidden behind a trigger or switch
 	//	which the buddybot doesn't understand.
-	range_for (const auto &&segnum, vcsegptr)
+	for (auto &seg : vcsegptr)
 		{
-		const auto &&objnum = exists_in_mine_2(segnum, objtype, objid, special);
+		const auto &&objnum{exists_in_mine_2(seg, objtype, objid, special)};
 			if (objnum != object_none)
 				return {objnum, d_unique_buddy_state::Escort_goal_reachability::unreachable};
 		}
@@ -1180,7 +1180,7 @@ static void do_buddy_dude_stuff(const vmobjptridx_t buddy_objp)
 	if (BuddyState.Buddy_last_missile_time + F1_0*2 < GameTime64) {
 		//	See if a robot potentially in view cone
 		auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
-		const ranges::subrange rh{vmobjptridx};
+		const std::ranges::subrange rh{vmobjptridx};
 		range_for (const auto &&objp, rh)
 		{
 			if ((objp->type == OBJ_ROBOT) && !Robot_info[get_robot_id(objp)].companion)

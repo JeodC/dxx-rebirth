@@ -692,7 +692,7 @@ icsegptridx_t find_point_seg(const d_level_shared_segment_state &LevelSharedSegm
 		auto &Segments = LevelSharedSegmentState.get_segments();
 		auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 		auto &Vertices = LevelSharedVertexState.get_vertices();
-		range_for (const auto &&segp, Segments.vmptridx)
+		for (const auto &&segp : Segments.vmptridx)
 		{
 			if (get_seg_masks(Vertices.vcptr, p, segp, 0).centermask == sidemask_t{})
 				return segp;
@@ -1147,9 +1147,7 @@ void extract_orient_from_segment(fvcvertptr &vcvertptr, vms_matrix &m, const sha
 	vm_vector_to_matrix_u(m, fvec, uvec);
 }
 
-#if !DXX_USE_EDITOR
-namespace {
-#endif
+#if DXX_USE_EDITOR
 
 // ------------------------------------------------------------------------------------------
 //	Extract the forward vector from segment *sp, return in *vp.
@@ -1178,12 +1176,11 @@ vms_vector extract_up_vector_from_segment(fvcvertptr &vcvertptr, const shared_se
 	return extract_vector_from_segment(vcvertptr, sp, sidenum_t::WBOTTOM, sidenum_t::WTOP);
 }
 
-#if !DXX_USE_EDITOR
-}
 #endif
 
 namespace {
 
+#if DXX_USE_EDITOR
 //	----
 //	A side is determined to be degenerate if the cross products of 3 consecutive points does not point outward.
 [[nodiscard]]
@@ -1191,8 +1188,6 @@ static unsigned check_for_degenerate_side(fvcvertptr &vcvertptr, const shared_se
 {
 	auto &vp = Side_to_verts[sidenum];
 	vms_vector	vec1, vec2;
-	fix			dot;
-	int			degeneracy_flag = 0;
 
 	const auto segc{compute_segment_center(vcvertptr, sp)};
 	const auto sidec{compute_center_point_on_side(vcvertptr, sp, sidenum)};
@@ -1202,17 +1197,15 @@ static unsigned check_for_degenerate_side(fvcvertptr &vcvertptr, const shared_se
 	//vm_vec_sub(&vec2, &Vertices[sp->verts[vp[2]]], &Vertices[sp->verts[vp[1]]]);
 	//vm_vec_normalize(&vec1);
 	//vm_vec_normalize(&vec2);
-	const auto vp1 = vp[side_relative_vertnum::_1];
-	const auto vp2 = vp[side_relative_vertnum::_2];
-	auto &vert1 = *vcvertptr(sp.verts[vp1]);
-	auto &vert2 = *vcvertptr(sp.verts[vp2]);
+	const auto vp1{vp[side_relative_vertnum::_1]};
+	const auto vp2{vp[side_relative_vertnum::_2]};
+	auto &vert1{*vcvertptr(sp.verts[vp1])};
+	auto &vert2{*vcvertptr(sp.verts[vp2])};
 	vm_vec_normalized_dir(vec1, vert1, vcvertptr(sp.verts[vp[side_relative_vertnum::_0]]));
 	vm_vec_normalized_dir(vec2, vert2, vert1);
-	const auto cross0{vm_vec_cross(vec1, vec2)};
 
-	dot = vm_vec_dot(vec_to_center, cross0);
-	if (dot <= 0)
-		degeneracy_flag |= 1;
+	if (vm_vec_dot(vec_to_center, vm_vec_cross(vec1, vec2)) <= 0)
+		return 1;
 
 	//vm_vec_sub(&vec1, &Vertices[sp->verts[vp[2]]], &Vertices[sp->verts[vp[1]]]);
 	//vm_vec_sub(&vec2, &Vertices[sp->verts[vp[3]]], &Vertices[sp->verts[vp[2]]]);
@@ -1220,51 +1213,34 @@ static unsigned check_for_degenerate_side(fvcvertptr &vcvertptr, const shared_se
 	//vm_vec_normalize(&vec2);
 	vm_vec_normalized_dir(vec1, vert2, vert1);
 	vm_vec_normalized_dir(vec2, vcvertptr(sp.verts[vp[side_relative_vertnum::_3]]), vert2);
-	const auto cross1{vm_vec_cross(vec1, vec2)};
 
-	dot = vm_vec_dot(vec_to_center, cross1);
-	if (dot <= 0)
-		degeneracy_flag |= 1;
-
-	return degeneracy_flag;
+	if (vm_vec_dot(vec_to_center, vm_vec_cross(vec1, vec2)) <= 0)
+		return 1;
+	return 0;
 }
 
 //	----
 //	See if a segment has gotten turned inside out, or something.
 //	If so, set global Degenerate_segment_found and return 1, else return 0.
+[[nodiscard]]
 static unsigned check_for_degenerate_segment(fvcvertptr &vcvertptr, const shared_segment &sp)
 {
-	fix			dot;
-	int			degeneracy_flag = 0;				// degeneracy flag for current segment
-
-	auto fvec{extract_forward_vector_from_segment(vcvertptr, sp)};
-	auto rvec{extract_right_vector_from_segment(vcvertptr, sp)};
-	auto uvec{extract_up_vector_from_segment(vcvertptr, sp)};
-
-	vm_vec_normalize(fvec);
-	vm_vec_normalize(rvec);
-	vm_vec_normalize(uvec);
-
-	const auto cross{vm_vec_cross(fvec, rvec)};
-	dot = vm_vec_dot(cross, uvec);
-
-	if (dot > 0)
-		degeneracy_flag = 0;
-	else {
-		degeneracy_flag = 1;
-	}
+	if (vm_vec_dot(
+			vm_vec_cross(
+				vm_vec_normalized(extract_forward_vector_from_segment(vcvertptr, sp)),
+				vm_vec_normalized(extract_right_vector_from_segment(vcvertptr, sp))),
+			vm_vec_normalized(extract_up_vector_from_segment(vcvertptr, sp))
+	) <= 0)
+		return 1;
 
 	//	Now, see if degenerate because of any side.
 	for (const auto i : MAX_SIDES_PER_SEGMENT)
-		degeneracy_flag |= check_for_degenerate_side(vcvertptr, sp, i);
-
-#if DXX_USE_EDITOR
-	Degenerate_segment_found |= degeneracy_flag;
-#endif
-
-	return degeneracy_flag;
+		if (const auto r{check_for_degenerate_side(vcvertptr, sp, i)})
+			return r;
+	return 0;
 
 }
+#endif
 
 static void add_side_as_quad(shared_side &sidep, const vms_vector &normal)
 {
@@ -1547,7 +1523,9 @@ Levels 9-end: unchecked
 //		create new vector normals
 void validate_segment(fvcvertptr &vcvertptr, const vmsegptridx_t sp)
 {
-	check_for_degenerate_segment(vcvertptr, sp);
+#if DXX_USE_EDITOR
+	Degenerate_segment_found |= check_for_degenerate_segment(vcvertptr, sp);
+#endif
 
 	for (const auto side : MAX_SIDES_PER_SEGMENT)
 		validate_segment_side(vcvertptr, sp, side);
@@ -1566,7 +1544,7 @@ void validate_segment_all(d_level_shared_segment_state &LevelSharedSegmentState)
 	auto &Segments = LevelSharedSegmentState.get_segments();
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
-	range_for (const auto &&segp, Segments.vmptridx)
+	for (const auto &&segp : Segments.vmptridx)
 	{
 #if DXX_USE_EDITOR
 		if (segp->shared_segment::segnum != segment_none)
@@ -1733,16 +1711,8 @@ static void change_light(const d_level_shared_destructible_light_state &LevelSha
 {
 	const fix ds = dir * DL_SCALE;
 	auto &Dl_indices = LevelSharedDestructibleLightState.Dl_indices;
-	struct projector
-	{
-		const dl_index &operator()(const valptridx<dl_index>::vcptr v) const
-		{
-			return v;
-		}
-	};
-	const auto &&er = std::ranges::equal_range(Dl_indices.vcptr, dl_index{segnum.get_unchecked_index(), sidenum, {}, {}}, {}, projector{});
 	auto &Delta_lights = LevelSharedDestructibleLightState.Delta_lights;
-	for (const dl_index &i : er)
+	for (const dl_index &i : std::ranges::equal_range(Dl_indices.vcptr, dl_index{segnum.get_unchecked_index(), sidenum, {}, {}}))
 	{
 		const std::size_t idx = underlying_value(i.index);
 		for (auto &j : partial_const_range(Delta_lights, idx, idx + i.count))
@@ -1896,8 +1866,8 @@ static void ambient_mark_bfs(const vmsegptridx_t segp, segment_lava_depth_array 
 void set_ambient_sound_flags()
 {
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
-	range_for (const auto &&segp, vmsegptr)
-		segp->s2_flags = {};
+	for (auto &seg : vmsegptr)
+		seg.s2_flags = {};
 	//	Now, all segments containing ambient lava or water sound makers are flagged.
 	//	Additionally flag all segments which are within range of them.
 	//	Mark all segments which are sources of the sound.

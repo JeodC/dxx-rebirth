@@ -25,6 +25,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <fcntl.h>
 #include <string.h>
 #include <ctype.h>
+#include <ranges>
 
 #include "maths.h"
 #include "object.h"
@@ -116,7 +117,7 @@ static void digi_kill_sound(sound_object &s)
 static std::pair<sound_objects_t::iterator, sound_objects_t::iterator> find_sound_object_flags0(sound_objects_t &SoundObjects)
 {
 	const auto eso = SoundObjects.end();
-	const auto &&i = ranges::find(SoundObjects.begin(), eso, 0, &sound_object::flags);
+	const auto &&i{std::ranges::find(SoundObjects.begin(), eso, 0, &sound_object::flags)};
 	return {i, eso};
 }
 
@@ -623,14 +624,14 @@ void digi_sync_sounds()
 			if ( s.flags & SOF_LINK_TO_POS )	{
 				digi_update_sound_loc(viewer->orient, viewer->pos, vcsegptridx(viewer->segnum), s.link_type.pos.position, vcsegptridx(s.link_type.pos.segnum), s);
 			} else if ( s.flags & SOF_LINK_TO_OBJ )	{
-				const object &objp = [&vcobjptr, &s]() {
+				auto &objp{[&vcobjptr, &s]() -> const object & {
 					if (Newdemo_state != ND_STATE_PLAYBACK)
 						return vcobjptr(s.link_type.obj.objnum);
 					auto objnum = newdemo_find_object(s.link_type.obj.objsignature);
 					if (objnum != object_none)
 						return vcobjptr_t{objnum};
 					return vcobjptr(object_first);
-				}();
+				}()};
 
 				if ((objp.type==OBJ_NONE) || (objp.signature!=s.link_type.obj.objsignature))	{
 					// The object that this is linked to is dead, so just end this sound if it is looping.

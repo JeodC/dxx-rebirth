@@ -28,6 +28,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <cstdlib>
 #include <string.h>
 #include <stdarg.h>
+#include <ranges>
 
 #include "window.h"
 #include "console.h"
@@ -1183,15 +1184,15 @@ static void kill_all_robots(void)
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 
 	// Kill all bots except for Buddy bot and boss.  However, if only boss and buddy left, kill buddy.
-	range_for (const auto &&objp, vmobjptr)
+	for (auto &obj : vmobjptr)
 	{
-		if (objp->type == OBJ_ROBOT)
+		if (obj.type == OBJ_ROBOT)
 		{
-			auto &ri = Robot_info[get_robot_id(objp)];
+			auto &ri = Robot_info[get_robot_id(obj)];
 			if (!ri.companion && ri.boss_flag == boss_robot_id::None)
 			{
 				dead_count++;
-				objp->flags |= OF_EXPLODING|OF_SHOULD_BE_DEAD;
+				obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
 			}
 		}
 	}
@@ -1205,11 +1206,11 @@ static void kill_all_robots(void)
 
 	// Toast the buddy if nothing else toasted!
 	if (dead_count == 0)
-		range_for (const auto &&objp, vmobjptr)
+		for (auto &obj : vmobjptr)
 		{
-			if (objp->type == OBJ_ROBOT)
-				if (Robot_info[get_robot_id(objp)].companion) {
-					objp->flags |= OF_EXPLODING|OF_SHOULD_BE_DEAD;
+			if (obj.type == OBJ_ROBOT)
+				if (Robot_info[get_robot_id(obj)].companion) {
+					obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
 					HUD_init_message_literal(HM_DEFAULT, "Toasted the Buddy! *sniff*");
 					dead_count++;
 				}
@@ -1256,9 +1257,8 @@ static void kill_and_so_forth(const d_robot_info_array &Robot_info, fvmobjptridx
 	{
 		if (trigger_is_exit(t))
 		{
-			range_for (const auto &&wp, vcwallptr)
+			for (auto &w : vcwallptr)
 			{
-				auto &w = *wp;
 				if (w.trigger == t)
 				{
 					const auto &&segp = vmsegptridx(w.segnum);
@@ -1282,17 +1282,17 @@ static void kill_all_snipers(void)
 	int     dead_count=0;
 
 	//	Kill all snipers.
-	range_for (const auto &&objp, vmobjptr)
+	for (auto &obj : vmobjptr)
 	{
-		if (objp->type == OBJ_ROBOT)
-			if (objp->ctype.ai_info.behavior == ai_behavior::AIB_SNIPE)
+		if (obj.type == OBJ_ROBOT)
+			if (obj.ctype.ai_info.behavior == ai_behavior::AIB_SNIPE)
 			{
 				dead_count++;
-				objp->flags |= OF_EXPLODING|OF_SHOULD_BE_DEAD;
+				obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
 			}
 	}
 
-	HUD_init_message(HM_DEFAULT, "%i robots toasted!", dead_count);
+	HUD_init_message(HM_DEFAULT, "%i sniper robots toasted!", dead_count);
 }
 
 static void kill_thief(void) __attribute_used;
@@ -1302,13 +1302,14 @@ static void kill_thief(void)
 	auto &vmobjptr = Objects.vmptr;
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	//	Kill thief.
-	range_for (const auto &&objp, vmobjptr)
+	for (auto &obj : vmobjptr)
 	{
-		if (objp->type == OBJ_ROBOT)
-			if (Robot_info[get_robot_id(objp)].thief)
+		if (obj.type == OBJ_ROBOT)
+			if (Robot_info[get_robot_id(obj)].thief)
 			{
-				objp->flags |= OF_EXPLODING|OF_SHOULD_BE_DEAD;
+				obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
 				HUD_init_message_literal(HM_DEFAULT, "Thief toasted!");
+				break;
 			}
 	}
 }
@@ -1320,13 +1321,14 @@ static void kill_buddy(void)
 	auto &vmobjptr = Objects.vmptr;
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	//	Kill buddy.
-	range_for (const auto &&objp, vmobjptr)
+	for (auto &obj : vmobjptr)
 	{
-		if (objp->type == OBJ_ROBOT)
-			if (Robot_info[get_robot_id(objp)].companion)
+		if (obj.type == OBJ_ROBOT)
+			if (Robot_info[get_robot_id(obj)].companion)
 			{
-				objp->flags |= OF_EXPLODING|OF_SHOULD_BE_DEAD;
+				obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
 				HUD_init_message_literal(HM_DEFAULT, "Buddy toasted!");
+				break;
 			}
 	}
 }
@@ -1556,7 +1558,7 @@ static window_event_result HandleTestKey(const d_level_shared_robot_info_state &
 			}};
 			struct briefing_menu : passive_newmenu
 			{
-				briefing_menu(grs_canvas &canvas, const ranges::subrange<newmenu_item *> items) :
+				briefing_menu(grs_canvas &canvas, const std::ranges::subrange<newmenu_item *> items) :
 					passive_newmenu(menu_title{nullptr}, menu_subtitle{"Briefing to play?"}, menu_filename{nullptr}, tiny_mode_flag::normal, tab_processing_flag::ignore, adjusted_citem::create(items, 0), canvas)
 				{
 				}

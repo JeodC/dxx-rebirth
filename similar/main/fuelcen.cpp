@@ -28,6 +28,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <ranges>
 
 #include "fuelcen.h"
 #include "gameseg.h"
@@ -435,9 +436,8 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 			const auto biased_matcen_creator = underlying_value(numrobotcen) ^ 0x80;
 
 			//	Make sure this robotmaker hasn't put out its max without having any of them killed.
-			range_for (const auto &&objp, vcobjptr)
+			for (auto &obj : vcobjptr)
 			{
-				auto &obj = *objp;
 				if (obj.type == OBJ_ROBOT)
 					if (obj.matcen_creator == biased_matcen_creator)
 						count++;
@@ -664,7 +664,7 @@ void init_all_matcens(void)
 			station.Enabled = 0;
 			station.Disable_time = 0;
 			//	Make sure this fuelcen is pointed at by a matcen.
-			if (ranges::find(robot_range, i, &matcen_info::fuelcen_num) == robot_range.end())
+			if (std::ranges::find(robot_range, i, &matcen_info::fuelcen_num) == robot_range.end())
 			{
 				station.Lives = 0;
 				LevelError("Station %i has type robotmaker, but no robotmaker uses it; ignoring.", underlying_value(i));

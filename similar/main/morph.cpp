@@ -28,6 +28,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ranges>
 
 #include "dxxerror.h"
 #include "inferno.h"
@@ -262,34 +263,33 @@ static void assign_min(fix &a, const fix &b)
 	a = std::min(a, b);
 }
 
-static void update_bounds(vms_vector &minv, vms_vector &maxv, const vms_vector &v, fix vms_vector::*const p)
+static void update_bounds(std::ranges::min_max_result<vms_vector> &minmaxv, const vms_vector &v, fix vms_vector::*const p)
 {
-	auto &mx = maxv.*p;
-	assign_max(mx, v.*p);
-	auto &mn = minv.*p;
-	assign_min(mn, v.*p);
+	assign_max(minmaxv.max.*p, v.*p);
+	assign_min(minmaxv.min.*p, v.*p);
 }
 
 //takes pm, fills in min & max
-static void find_min_max(const polymodel &pm, const unsigned submodel_num, vms_vector &minv, vms_vector &maxv)
+static std::ranges::min_max_result<vms_vector> find_min_max(const polymodel &pm, const unsigned submodel_num)
 {
 	const auto &&sd{parse_model_data_header(pm, submodel_num)};
 	const auto nverts{sd.nverts};
 	if (!nverts)
-	{
-		minv = maxv = {};
-		return;
-	}
+		return {};
 	const auto vp{reinterpret_cast<const vms_vector *>(sd.body)};
 
-	minv = maxv = *vp;
+	std::ranges::min_max_result<vms_vector> result{
+		.min = *vp,
+		.max = *vp
+	};
 
 	for (auto &v : std::span(vp, nverts).template subspan<1>())
 	{
-		update_bounds(minv, maxv, v, &vms_vector::x);
-		update_bounds(minv, maxv, v, &vms_vector::y);
-		update_bounds(minv, maxv, v, &vms_vector::z);
+		update_bounds(result, v, &vms_vector::x);
+		update_bounds(result, v, &vms_vector::y);
+		update_bounds(result, v, &vms_vector::z);
 	}
+	return result;
 }
 
 constexpr fix morph_rate{F1_0 * 3};
@@ -331,28 +331,19 @@ static void init_points(const polymodel &pm, const vms_vector *const box_size, c
 	md->n_morphing_points[submodel_num] = 0;
 	md->submodel_startpoints[submodel_num] = startpoint;
 
-	const auto morph_times{md->get_morph_times()};
-	const auto morph_vecs{md->get_morph_vecs()};
-	const auto morph_deltas{md->get_morph_deltas()};
-	auto &&zr = zip(
-		unchecked_partial_range(reinterpret_cast<const vms_vector *>(sd.body), sd.nverts),
-		partial_range(morph_vecs, startpoint, endpoint),
-		partial_range(morph_deltas, startpoint, endpoint),
-		partial_range(morph_times, startpoint, endpoint)
-	);
-	range_for (auto &&z, zr)
+	for (auto &&[vp, morph_vec, morph_delta, morph_time] : zip(
+			unchecked_partial_range(reinterpret_cast<const vms_vector *>(sd.body), sd.nverts),
+			partial_range(md->get_morph_vecs(), startpoint, endpoint),
+			partial_range(md->get_morph_deltas(), startpoint, endpoint),
+			partial_range(md->get_morph_times(), startpoint, endpoint)
+	))
 	{
-		const auto vp{&std::get<0>(z)};
-		auto &morph_vec{std::get<1>(z)};
-		auto &morph_delta{std::get<2>(z)};
-		auto &morph_time{std::get<3>(z)};
-
-		if (const fix k{compute_bounding_box_extents(*vp, box_size)}; k != indeterminate_box_extent)
-			morph_vec = vm_vec_copy_scale(*vp, k);
+		if (const fix k{compute_bounding_box_extents(vp, box_size)}; k != indeterminate_box_extent)
+			morph_vec = vm_vec_copy_scale(vp, k);
 		else
 			morph_vec = {};
 
-		const auto dist{vm_vec_normalized_dir_quick(morph_delta, *vp, morph_vec)};
+		const auto dist{vm_vec_normalized_dir_quick(morph_delta, vp, morph_vec)};
 		morph_time = fixdiv(dist, morph_rate);
 
 		if (morph_time != 0)
@@ -368,25 +359,17 @@ static void update_points(const polymodel &pm, const unsigned submodel_num, morp
 	const unsigned startpoint{sd.startpoint};
 	const unsigned endpoint{startpoint + sd.nverts};
 
-	const auto morph_times{md->get_morph_times()};
-	const auto morph_vecs{md->get_morph_vecs()};
-	const auto morph_deltas{md->get_morph_deltas()};
-	auto &&zr = zip(
-		unchecked_partial_range(reinterpret_cast<const vms_vector *>(sd.body), sd.nverts),
-		partial_range(morph_vecs, startpoint, endpoint),
-		partial_range(morph_deltas, startpoint, endpoint),
-		partial_range(morph_times, startpoint, endpoint)
-	);
-	range_for (auto &&z, zr)
+	for (auto &&[vp, morph_vec, morph_delta, morph_time] : zip(
+			unchecked_partial_range(reinterpret_cast<const vms_vector *>(sd.body), sd.nverts),
+			partial_range(md->get_morph_vecs(), startpoint, endpoint),
+			partial_range(md->get_morph_deltas(), startpoint, endpoint),
+			partial_range(md->get_morph_times(), startpoint, endpoint)
+	))
 	{
-		const auto vp{&std::get<0>(z)};
-		auto &morph_vec{std::get<1>(z)};
-		auto &morph_delta{std::get<2>(z)};
-		auto &morph_time{std::get<3>(z)};
 		if (morph_time)		//not done yet
 		{
 			if ((morph_time -= FrameTime) <= 0) {
-				morph_vec = *vp;
+				morph_vec = vp;
 				morph_time = 0;
 				md->n_morphing_points[submodel_num]--;
 			}
@@ -459,9 +442,6 @@ void init_morphs(d_level_unique_morph_object_state &LevelUniqueMorphObjectState)
 //make the object morph
 void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState, d_level_shared_polygon_model_state &LevelSharedPolygonModelState, object_base &obj)
 {
-	vms_vector pmmin,pmmax;
-	vms_vector box_size;
-
 	auto &morph_objects{LevelUniqueMorphObjectState.morph_objects};
 	const auto mob{morph_objects.begin()};
 	const auto moe{morph_objects.end()};
@@ -471,7 +451,7 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 		auto &mo{*pmo.get()};
 		return mo.obj->type == OBJ_NONE || mo.obj->signature != mo.Morph_sig;
 	}};
-	const auto moi{ranges::find_if(mob, moe, mop)};
+	const auto moi{std::ranges::find_if(mob, moe, mop)};
 
 	if (moi == moe)		//no free slots
 		return;
@@ -497,11 +477,13 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 
 	obj.mtype.phys_info.rotvel = morph_rotvel;
 
-	find_min_max(pm,0,pmmin,pmmax);
+	const auto &&[pmmin, pmmax] = find_min_max(pm, 0);
 
-	box_size.x = max(-pmmin.x,pmmax.x) / 2;
-	box_size.y = max(-pmmin.y,pmmax.y) / 2;
-	box_size.z = max(-pmmin.z,pmmax.z) / 2;
+	const vms_vector box_size{
+		.x = max(-pmmin.x, pmmax.x) / 2,
+		.y = max(-pmmin.y, pmmax.y) / 2,
+		.z = max(-pmmin.z, pmmax.z) / 2
+	};
 
 	//clear all points
 	const auto morph_times{md->get_morph_times()};

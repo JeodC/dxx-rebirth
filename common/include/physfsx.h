@@ -43,7 +43,6 @@
 #include "fwd-partial_range.h"
 #include <array>
 #include <memory>
-#include "backports-ranges.h"
 
 #ifdef DXX_CONSTANT_TRUE
 #define _DXX_PHYSFS_CHECK_SIZE(S,C,v)	DXX_CONSTANT_TRUE((std::size_t{S} * std::size_t{C}) > (v))
@@ -214,7 +213,7 @@ struct PHYSFSX_gets_line_t :
 	line_t &line() { return *this->base_type::get(); }
 	std::span<char, N> next()
 	{
-		static_cast<base_type &>(*this) = std::make_unique<line_t>();
+		static_cast<base_type &>(*this) = std::make_unique_for_overwrite<line_t>();
 		return line();
 	}
 	typename line_t::reference operator[](const typename line_t::size_type i) { return line()[i]; }
@@ -235,7 +234,7 @@ struct PHYSFSX_gets_line_t :
 template <>
 struct PHYSFSX_gets_line_t<0>
 {
-#define DXX_ALLOCATE_PHYSFS_LINE(n)	std::make_unique<char[]>(n)
+#define DXX_ALLOCATE_PHYSFS_LINE(n)	std::make_unique_for_overwrite<char[]>(n)
 #if !DXX_HAVE_POISON
 	const
 #endif
@@ -477,7 +476,7 @@ typedef char file_extension_t[5];
 
 [[nodiscard]]
 __attribute_nonnull()
-int PHYSFSX_checkMatchingExtension(const char *filename, const ranges::subrange<const file_extension_t *> range);
+int PHYSFSX_checkMatchingExtension(const char *filename, const std::ranges::subrange<const file_extension_t *> range);
 
 enum class physfs_search_path : bool
 {

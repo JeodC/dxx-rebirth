@@ -27,6 +27,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <ranges>
 #include "gr.h"
 #include "inferno.h"
 #include "segment.h"
@@ -561,7 +562,7 @@ static void compress_segments(void)
 		}	// end for s
 
 				//Update object segment pointers
-		for (object_base &objp : objects_in(suhole.u, vmobjptridx, vmsegptr))
+		for (auto &objp : objects_in<object_base>(suhole.u, vmobjptridx, vmsegptr))
 		{
 			assert(objp.segnum == seg);
 			objp.segnum = hole;
@@ -595,7 +596,7 @@ void med_combine_duplicate_vertices(enumerated_array<uint8_t, MAX_VERTICES, vert
 			return;
 		if (vlp[v]) {
 			auto &vvp = *v;
-			for (auto &&w : ranges::subrange(i, range.end()))
+			for (auto &&w : std::ranges::subrange(i, range.end()))
 				if (vlp[w]) {	//	used to be Vertex_active[w]
 					if (vnear(vvp, *w)) {
 						change_vertex_occurrences(vmsegptr, v, w);
@@ -832,10 +833,10 @@ void set_vertex_counts(void)
 	Vertex_active = {};
 
 	// Count number of occurrences of each vertex.
-	range_for (const auto &&segp, vmsegptr)
+	for (auto &seg : vmsegptr)
 	{
-		if (segp->segnum != segment_none)
-			range_for (auto &v, segp->verts)
+		if (seg.segnum != segment_none)
+			for (auto &v : seg.verts)
 			{
 				if (!Vertex_active[v])
 					Num_vertices++;

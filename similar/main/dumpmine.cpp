@@ -30,6 +30,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <cinttypes>
 #include <string.h>
 #include <stdarg.h>
+#include <ranges>
 #include <errno.h>
 
 #include "pstypes.h"
@@ -399,7 +400,7 @@ static void write_control_center_text(fvcsegptridx &vcsegptridx, PHYSFS_File *my
 			count++;
 			PHYSFSX_printf(my_file, "Segment %3hu is a control center.\n", static_cast<uint16_t>(segp));
 			count2 = 0;
-			range_for (const object &objp, objects_in(segp, vcobjptridx, vcsegptr))
+			for (auto &objp : objects_in<const object_base>(segp, vcobjptridx, vcsegptr))
 			{
 				if (objp.type == OBJ_CNTRLCEN)
 					count2++;
@@ -601,7 +602,7 @@ static void write_trigger_text(PHYSFS_File *my_file)
 	auto &vctrgptridx = Triggers.vcptridx;
 	auto &Walls = LevelUniqueWallSubsystemState.Walls;
 	auto &vcwallptr = Walls.vcptr;
-	range_for (auto &&t, vctrgptridx)
+	for (auto &&t : vctrgptridx)
 	{
 		const auto i = static_cast<trgnum_t>(t);
 #if defined(DXX_BUILD_DESCENT_I)
@@ -616,13 +617,15 @@ static void write_trigger_text(PHYSFS_File *my_file)
 
 		//	Find which wall this trigger is connected to.
 		const auto &&we = vcwallptr.end();
-		const auto &&wi = ranges::find(vcwallptr.begin(), we, i, &wall::trigger);
+		const auto &&wi{std::ranges::find(vcwallptr.begin(), we, i, &wall::trigger)};
 		if (wi == we)
 			err_printf(my_file, "Error: Trigger %i is not connected to any wall, so it can never be triggered.", underlying_value(i));
 		else
 		{
-			const auto &&w = *wi;
-			PHYSFSX_printf(my_file, "Attached to seg:side = %i:%i, wall %hi\n", w->segnum, underlying_value(w->sidenum), underlying_value(vcsegptr(w->segnum)->shared_segment::sides[w->sidenum].wall_num));
+			auto &w{*wi};
+			const auto wseg{w.segnum};
+			const auto wside{w.sidenum};
+			PHYSFSX_printf(my_file, "Attached to seg:side = %i:%i, wall %hi\n", wseg, underlying_value(wside), underlying_value(vcsegptr(wseg)->shared_segment::sides[wside].wall_num));
 		}
 	}
 }
@@ -812,11 +815,11 @@ static void determine_used_textures_level(int load_level_flag, int shareware_fla
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	//	Process robots.
-	range_for (const auto &&objp, vcobjptr)
+	for (auto &obj : vcobjptr)
 	{
-		if (objp->render_type == render_type::RT_POLYOBJ)
+		if (obj.render_type == render_type::RT_POLYOBJ)
 		{
-			polymodel *po = &Polygon_models[objp->rtype.pobj_info.model_num];
+			const polymodel *const po{&Polygon_models[obj.rtype.pobj_info.model_num]};
 
 			for (unsigned i = 0; i < po->n_textures; ++i)
 			{

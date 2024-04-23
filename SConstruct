@@ -506,6 +506,12 @@ struct A_%(N)s
 	static_assert(a1 == a2);
 	static_assert(!(a1 != a2));
 '''),
+		Cxx20RequiredFeature('std::make_unique_for_overwrite', '''
+#include <memory>
+''', '''
+	std::make_unique_for_overwrite<int>();
+	std::make_unique_for_overwrite<int[]>(1);
+'''),
 		Cxx20RequiredFeature('requires clause', '''
 template <typename T>
 requires(sizeof(T) >= 1)
@@ -515,6 +521,45 @@ void f_%(N)s(T)
 ''',
 '''
 	f_%(N)s('a');
+'''),
+		Cxx20RequiredFeature('std::ranges', '''
+#include <algorithm>
+#include <ranges>
+
+struct test_borrowed_range {};
+
+template <>
+constexpr bool std::ranges::enable_borrowed_range<test_borrowed_range> = true;
+
+template <std::ranges::range R>
+static void requires_range(R &) {}
+
+template <std::ranges::input_range R>
+static void requires_input_range(R &) {}
+
+template <std::ranges::borrowed_range R>
+static void requires_borrowed_range(R &&) {}
+''',
+'''
+	int a[3]{1, 2, 3};
+	int b[2]{4, 5};
+	const std::ranges::subrange c(b);
+	const std::ranges::subrange<int *> c2(b);
+	(void)c2;
+	const auto m{[](int i) { return i * 2; }};
+	(void)(std::ranges::find(a, argc) == a);
+	(void)(std::ranges::find(a, argc, m) == a);
+	(void)(std::ranges::find(std::ranges::begin(b), std::ranges::end(b), argc) == a);
+	(void)(std::ranges::find(std::ranges::begin(b), std::ranges::end(b), argc, m) == a);
+	const auto predicate{[](int i) { return i == 3; }};
+	(void)(std::ranges::find_if(b, predicate) == b);
+	(void)(std::ranges::find_if(std::ranges::begin(b), std::ranges::end(b), predicate) == b);
+	(void)(std::ranges::remove_if(b, predicate).begin() == b);
+	(void)(std::ranges::equal_range(b, int{4}, {}).begin() == b);
+	requires_range(a);
+	requires_input_range(a);
+	requires_borrowed_range(a);
+	return 0;
 '''),
 		Cxx20RequiredFeature('std::span', '''
 #include <span>
@@ -2557,90 +2602,6 @@ where the cast is useless.
 		self.Compile(context, text='', main=main, msg='whether compiler accepts -Wimplicit-fallthrough=5', successflags=_successflags)
 
 	@_custom_test
-	def check_compiler_overzealous_dangling_reference(self, context):
-		'''
-<gcc-13: -Wdangling-reference does not exist, so there is no problem
-=gcc-13.1.x: -Wextra implies -Wdangling-reference, and -Wdangling-reference is overzealous, triggering a warning in cases which are safe
-
-The warning is:
-
-```
-conftest_888dcb61611da0c235ca66f61ef1f3f9_0.cpp:92:21: error: possibly dangling reference to a temporary [-Werror=dangling-reference]
-   91 |     for (const int &x : range{a})
-      |                     ^
-conftest_888dcb61611da0c235ca66f61ef1f3f9_0.cpp:92:32: note: the temporary was destroyed at the end of the full expression '__for_begin .{anonymous}::iterator::operator*().{anonymous}::result_type::operator const int&()'
-   91 |     for (const int &x : range{a})
-```
-
-The example program is safe, because `range` only refers to `a`, and does not
-own it, so neither the destruction of `range`, nor the destruction of
-`iterator`, nor the destruction of `result_type` can invalidate the returned
-reference.  Unfortunately, as shipped in gcc-13, `-Wdangling-reference`
-triggers without regard to the underlying ownership.  See gcc bug reports for
-where this warning was created[1], some of the early reports of false positives[2],
-and the advice to disable it on safe classes.[3]
-
-Test whether the compiler warns for this case and, if it does, tell it
-not to warn, since even the original author acknowledges that this warning is
-susceptible to false-positives that require it to be disabled.
-
-Once all supported gcc versions recognize the test case as safe, this test can
-be removed.
-
-[1]: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106393
-[2]: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108165
-|: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109538
-|: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109642
-|: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109671
-[3]: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108165#c15
-		'''
-		if not self.Compile(context, text='''
-namespace {
-
-struct result_type
-{
-	/* Using `const int &` for `p` can silence the gcc -Wdangling-reference warning. */
-	const int *p;
-	operator const int &() const { return *p; }
-};
-
-struct iterator
-{
-	const int *p;
-	result_type operator*()
-	{
-		return {p};
-	}
-	iterator &operator++()
-	{
-		++p;
-		return *this;
-	}
-	bool operator==(const iterator &) const = default;
-};
-
-struct range
-{
-	int (&a)[2];
-	iterator begin() const
-	{
-		return {a};
-	}
-	iterator end() const
-	{
-		return {&a[2]};
-	}
-};
-
-}
-''', main='''
-	int a[2]{};
-	for (const int &x : range{a})
-		(void)x;
-''', msg='whether compiler accepts safe use of references'):
-			self.successful_flags['CXXFLAGS'].append('-Wno-dangling-reference')
-
-	@_custom_test
 	def check_compiler_overzealous_unused_lambda_capture(self,context):
 		'''
 <clang-5: untested
@@ -2741,63 +2702,6 @@ unsigned g(unsigned i)
 		if self.Compile(context, text=_text, main=_main, msg='whether compiler accepts -Wno-braced-scalar-init', successflags=successflags):
 			return
 		raise SCons.Errors.StopError("C++ compiler rejects braced scalar initialization, even with `-Wno-braced-scalar-init`.")
-
-	@_custom_test
-	def check_have_std_ranges(self,context,_testflags={'CPPDEFINES' : ['_LIBCPP_ENABLE_EXPERIMENTAL']}):
-		text = '''
-#include "backports-ranges.h"
-
-struct test_borrowed_range {};
-
-template <>
-constexpr bool std::ranges::enable_borrowed_range<test_borrowed_range> = true;
-
-template <typename R>
-requires(ranges::range<R>)
-static void requires_range(R &) {}
-
-template <typename R>
-requires(ranges::borrowed_range<R>)
-static void requires_borrowed_range(R &&) {}
-'''
-		main = '''
-	int a[3]{1, 2, 3};
-	int b[2]{4, 5};
-	const ranges::subrange c(b);
-	const ranges::subrange<int *> c2(b);
-	(void)c2;
-	const auto m = [](int i) { return i * 2; };
-	(void)(ranges::find(a, argc) == a);
-	(void)(ranges::find(a, argc, m) == a);
-	(void)(ranges::find(std::ranges::begin(b), std::ranges::end(b), argc) == a);
-	(void)(ranges::find(std::ranges::begin(b), std::ranges::end(b), argc, m) == a);
-	const auto predicate = [](int i) { return i == 3; };
-	(void)(ranges::find_if(b, predicate) == a);
-	(void)(ranges::find_if(std::ranges::begin(b), std::ranges::end(b), predicate) == a);
-	requires_range(a);
-	requires_borrowed_range(a);
-	return 0;
-'''
-		if self.Compile(context, text=text, main=main, msg='whether C++ compiler provides std::ranges by default'):
-			return
-		# std::ranges is a C++20 feature.
-		# gcc first shipped std::ranges in gcc-10.1 [1], which was released on
-		# 2020-05-07 [2].
-		# clang shipped incomplete std::ranges behind a preprocessor guard in
-		# clang-14 [3], which was released on 2022-03-25 [4].
-		#
-		# As of this writing, Apple clang is still clang-14, and so does not
-		# support all needed std::ranges features, even with the preprocessor
-		# guard defined.  Try to work around this by bundling an implementation
-		# sufficient to cover Rebirth's needs.
-		#
-		# [1]: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#table.cxx20_features
-		# [2]: https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=6e6e3f144a33ae504149dc992453b4f6dea12fdb
-		# [3]: https://libcxx.llvm.org/Status/Ranges.html
-		# [4]: https://discourse.llvm.org/t/llvm-14-0-0-release/61224
-		if self.Compile(context, text=text, main=main, msg='whether C++ compiler can use bundled ranges support with -D_LIBCPP_ENABLE_EXPERIMENTAL', testflags=_testflags):
-			return
-		raise SCons.Errors.StopError("C++ compiler does not support std::ranges.")
 
 	__preferred_compiler_options = (
 		# Support for option '-fstrict-flex-arrays':
@@ -5247,6 +5151,19 @@ class DXXProgram(DXXCommon):
 		print(f'===== {self.PROGRAM_NAME} {extra_version} {compute_extra_version.revparse_HEAD} =====')
 		user_settings.register_variables(prefix, variables, filtered_help)
 
+	# Run `init()`, but decorate any exception that occurs with a description
+	# of the profile for this instance.  This allows the user to see which
+	# profile triggered the exception.
+	def init_with_decoration(self, substenv):
+		try:
+			self.init(substenv)
+		except Exception as e:
+			# Patch the exception's arguments instead of using Python exception
+			# chaining.  Using `raise Exception('') from e` causes SCons not to
+			# show the traceback for `e`.
+			e.args = (f'Failed to initialize profile {self._argument_prefix_list!r}: {e.args[0]}',) + e.args[1:]
+			raise
+
 	def init(self,substenv):
 		user_settings = self.user_settings
 		user_settings.read_variables(self, self.variables, substenv)
@@ -5674,7 +5591,7 @@ def main(register_program,_d1xp=D1XProgram,_d2xp=D2XProgram):
 	d2x=prefix-list  Enable D2X-Rebirth with prefix-list modifiers
 	dxx=VALUE        Equivalent to d1x=VALUE d2x=VALUE
 """ +	\
-		''.join([f'{d.program_message_prefix}:\n{d.init(substenv)}' for d in dxx])
+		''.join([f'{d.program_message_prefix}:\n{d.init_with_decoration(substenv)}' for d in dxx])
 	)
 	if not dxx:
 		return

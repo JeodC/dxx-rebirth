@@ -34,6 +34,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <time.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <ranges>
 
 #include "u_mem.h"
 #include "strutil.h"
@@ -722,6 +723,9 @@ namespace dsx {
 
 void multi_sort_kill_list()
 {
+	const auto n_players{N_players};
+	if (n_players > std::size(sorted_kills))
+		return;
 	auto &Objects = LevelUniqueObjectState.Objects;
 	// Sort the kills list each time a new kill is added
 	const auto build_kill_list_sort_key{[](fvcobjptr &vcobjptr, const game_mode_flags game_mode,
@@ -772,7 +776,7 @@ void multi_sort_kill_list()
 		vcplayerptr)](const unsigned sk) {
 		return keys[sk];
 	}};
-	std::ranges::sort(partial_range(sorted_kills, N_players), std::ranges::greater{}, std::ref(projection));
+	std::ranges::sort(std::span(sorted_kills).first(n_players), std::ranges::greater{}, std::ref(projection));
 }
 
 namespace {
@@ -2004,8 +2008,6 @@ static void multi_do_remobj(fvmobjptr &vmobjptr, const multiplayer_rspan<multipl
 	// which remote list is it entered in
 	auto obj_owner = buf[3];
 
-	Assert(objnum >= 0);
-
 	if (objnum < 1)
 		return;
 
@@ -2138,7 +2140,7 @@ namespace dcx {
 
 namespace {
 
-static const char *deny_multi_save_game_duplicate_callsign(const ranges::subrange<const player *> range)
+static const char *deny_multi_save_game_duplicate_callsign(const std::ranges::subrange<const player *> range)
 {
 	const auto e = range.end();
 	for (auto i = range.begin(); i != e; ++i)
@@ -3574,8 +3576,7 @@ texture_index find_goal_texture(const d_level_unique_tmap_info_state &LevelUniqu
 		return (i.flags & tmi_flag);
 	};
 	const auto begin = r.begin();
-	const auto idx = std::distance(begin, ranges::find_if(begin, r.end(), predicate));
-	return idx;
+	return std::distance(begin, std::ranges::find_if(begin, r.end(), predicate));
 }
 
 const tmap_info &find_required_goal_texture(const d_level_unique_tmap_info_state &LevelUniqueTmapInfoState, const tmapinfo_flag tmi_flag)
@@ -3603,14 +3604,14 @@ void multi_apply_goal_textures()
 		tex_blue = build_texture1_value(find_goal_texture(LevelUniqueTmapInfoState, tmapinfo_flag::goal_blue));
 		tex_red = build_texture1_value(find_goal_texture(LevelUniqueTmapInfoState, tmapinfo_flag::goal_red));
 	}
-	range_for (const auto &&seg, vmsegptr)
+	for (auto &seg : vmsegptr)
 	{
 		texture1_value tex;
-		if (seg->special == segment_special::goal_blue)
+		if (seg.special == segment_special::goal_blue)
 		{
 			tex = tex_blue;
 		}
-		else if (seg->special == segment_special::goal_red)
+		else if (seg.special == segment_special::goal_red)
 		{
 			// Make both textures the same if Hoard mode
 			tex = tex_red;
@@ -3809,7 +3810,7 @@ namespace dsx {
 #if defined(DXX_BUILD_DESCENT_I)
 static
 #endif
-int multi_all_players_alive(const fvcobjptr &vcobjptr, const ranges::subrange<const player *> player_range)
+int multi_all_players_alive(const fvcobjptr &vcobjptr, const std::ranges::subrange<const player *> player_range)
 {
 	range_for (auto &plr, player_range)
 	{
@@ -3825,7 +3826,7 @@ int multi_all_players_alive(const fvcobjptr &vcobjptr, const ranges::subrange<co
 	return (1);
 }
 
-const char *multi_common_deny_save_game(const fvcobjptr &vcobjptr, const ranges::subrange<const player *> player_range)
+const char *multi_common_deny_save_game(const fvcobjptr &vcobjptr, const std::ranges::subrange<const player *> player_range)
 {
 	if (Network_status == network_state::endlevel)
 		return "Level is ending";
@@ -3834,7 +3835,7 @@ const char *multi_common_deny_save_game(const fvcobjptr &vcobjptr, const ranges:
 	return deny_multi_save_game_duplicate_callsign(player_range);
 }
 
-const char *multi_interactive_deny_save_game(const fvcobjptr &vcobjptr, const ranges::subrange<const player *> player_range, const d_level_unique_control_center_state &LevelUniqueControlCenterState)
+const char *multi_interactive_deny_save_game(const fvcobjptr &vcobjptr, const std::ranges::subrange<const player *> player_range, const d_level_unique_control_center_state &LevelUniqueControlCenterState)
 {
 	if (LevelUniqueControlCenterState.Control_center_destroyed)
 		return "Countdown in progress";
@@ -5027,7 +5028,7 @@ void multi_initiate_save_game()
 	multi_execute_save_game(slot, desc, player_range);
 }
 
-void multi_execute_save_game(const d_game_unique_state::save_slot slot, const d_game_unique_state::savegame_description &desc, const ranges::subrange<const player *> player_range)
+void multi_execute_save_game(const d_game_unique_state::save_slot slot, const d_game_unique_state::savegame_description &desc, const std::ranges::subrange<const player *> player_range)
 {
 	// Make a unique game id
 	fix game_id;
