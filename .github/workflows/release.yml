@@ -31,18 +31,24 @@ jobs:
       - name: Display Artifacts
         run: ls -R
 
-      - name: Get Latest Commit SHA
+      - name: Set up Git
+        uses: actions/checkout@v2  # This ensures the git repository is available
+        with:
+          fetch-depth: 0  # Fetch all history to ensure the latest commit is available
+
+      - name: Set Commit SHA
         id: commit
-        run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+        run: |
+          echo "COMMIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Create Release
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
         with:
-          tag_name: "continuous"  # Change the tag name to 'prerelease'
+          tag_name: "prerelease"  # Set the release tag to 'prerelease'
           name: "Continuous Build"  # Set the release name
-          prerelease: true
+          prerelease: true  # Set as a prerelease
           files: '*/*.zip'
           body: |
             This is a continuous build.
       
-            [Build Log](https://github.com/JeodC/dxx-rebirth/commit/${{ steps.commit.outputs.sha }})
+            [Build Log](https://github.com/USERNAME/REPOSITORY/commit/${{ env.COMMIT_SHA }})
