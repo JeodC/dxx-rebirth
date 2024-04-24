@@ -33,27 +33,3 @@ jobs:
       - name: Check Job Status
         id: job-status
         run: echo "All previous jobs succeeded"
-
-  trigger_release:
-    name: Trigger Release
-    needs: check_all_jobs
-    runs-on: ubuntu-latest
-    if: ${{ needs.check_all_jobs.result == 'success' }}
-    steps:
-      - name: Trigger release.yml workflow
-        uses: actions/github-script@v5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { Octokit } = require("@octokit/rest");
-            const octokit = new Octokit({
-              auth: process.env.GITHUB_TOKEN
-            });
-
-            const response = await octokit.actions.createWorkflowDispatch({
-              owner: 'OWNER_USERNAME',  // Replace with your repository owner's username
-              repo: 'REPOSITORY_NAME',  // Replace with your repository's name
-              workflow_file: 'release.yml'
-            });
-      
-            console.log(response);
