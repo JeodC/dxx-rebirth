@@ -51,4 +51,4 @@ jobs:
           body: |
             This is a continuous build.
       
-            [Build Log](https://github.com/USERNAME/REPOSITORY/commit/${{ env.COMMIT_SHA }})
+            [Build Log](https://github.com/JeodC/dxx-rebirth/commit/${{ env.COMMIT_SHA }})
