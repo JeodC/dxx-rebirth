@@ -68,7 +68,7 @@ However, building from source is recommended to ensure a consistent
 environment.
 
 #### MSYS2/mingw-w64 (Windows alternate method)
-* `pacman -S git ${MINGW_PACKAGE_PREFIX}-{gcc,pkgconf,scons,SDL,SDL_image,SDL_mixer,libpng,physfs}`
+* * `pacman -S git ${MINGW_PACKAGE_PREFIX}-{gcc,pkgconf,scons,SDL,SDL_image,SDL_mixer,libpng,physfs}` or `pacman -S git ${MINGW_PACKAGE_PREFIX}-{gcc,pkgconf,scons,SDL2,SDL2_image,SDL2_mixer,libpng,physfs}`
 
 #### Linux
 Install the listed prerequisites through your system package manager.
