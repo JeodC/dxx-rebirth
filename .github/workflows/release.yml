@@ -36,6 +36,10 @@ jobs:
         with:
           tag_name: "continuous"  # Set the tag name
           name: "Continuous Build"  # Set the release name
-          prerelease: ${{ inputs.prerelease || contains(github.ref_name, '-') }}
+          prerelease: true
           generate_release_notes: true
           files: '*/*.zip'
+          body: |
+            This is a continuous build.
+      
+            [Build Log](URL_TO_BUILD_LOG)
