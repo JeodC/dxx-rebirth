@@ -1,0 +1,82 @@
+name: Package - Debian Bookworm
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  package:
+    name: Debian ${{ matrix.arch.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: 
+          - name: arm64
+            cross: aarch64-linux-gnu
+            executable: aarch64
+
+    steps:
+      - name: Install Cross-Compilation Dependencies
+        run: |
+            dpkg --add-architecture ${{ matrix.arch.name }}
+            apt update
+            # Essential development tools
+            apt-get install -y --no-install-recommends \
+              ca-certificates \
+              git \
+              dpkg-dev \
+              make \
+              build-essential \
+            # Cross-compilation tools
+            apt-get install -y --no-install-recommends \
+              binutils-${{ matrix.arch.cross }} \
+              gcc-${{ matrix.arch.cross }} \
+              g++-${{ matrix.arch.cross }} \
+              libstdc++-12-dev-${{ matrix.arch.name }}-cross \
+              linux-libc-dev-${{ matrix.arch.name }}-cross \
+              gcc-aarch64-linux-gnu \
+              g++-aarch64-linux-gnu
+            # Python and build tools
+            apt-get install -y --no-install-recommends \
+              python3 \
+              python3-pip \
+              python3-setuptools \
+              python3-wheel \
+              scons
+            # Libraries and dependencies
+            apt-get install -y --no-install-recommends \
+              libglu1-mesa-dev:${{ matrix.arch.name }} \
+              pkg-config \
+              libpng-dev:${{ matrix.arch.name }} \
+              libsdl2-dev:${{ matrix.arch.name }} \
+              libsdl2-image-dev:${{ matrix.arch.name }} \
+              libsdl2-mixer-dev:${{ matrix.arch.name }} \
+              libphysfs-dev:${{ matrix.arch.name }} \
+              libgles1:${{ matrix.arch.name }}
+
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Configure and Build for ARM64
+        run: |
+          # Set the cross-compilation environment variables
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export LD=aarch64-linux-gnu-ld
+          export AR=aarch64-linux-gnu-ar
+          export AS=aarch64-linux-gnu-as
+          export RANLIB=aarch64-linux-gnu-ranlib
+          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu
+          # Cross-compile with scons
+          scons -j$(nproc) sdl2=1 sdlmixer=1 opengles=1 screenshot=legacy
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "DXX-Rebirth-Debian-Bookworm"
+          path: |
+            build/d1x-rebirth/d1x-rebirth
+            build/d2x-rebirth/d2x-rebirth
