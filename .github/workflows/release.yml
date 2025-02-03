@@ -32,6 +32,13 @@ jobs:
 
       - name: Display Artifacts
         run: ls -R
+        
+      - name: Create ZIP files
+        run: |
+          cd ./DXX-Rebirth-Debian-Bookworm && zip -r ../dxx-rebirth-linux-arm64.zip ./*
+          cd ../DXX-Rebirth-Linux-AppImage-x86_64 && zip -r ../dxx-rebirth-linux-x86_64.zip ./*
+          cd ../DXX-Rebirth-MacOS14-arm64 && zip -r ../dxx-rebirth-macos-arm64.zip ./*
+          cd ../DXX-Rebirth-Windows-x86_64 && zip -r ../dxx-rebirth-windows-x64.zip ./*
 
       - name: Create Release
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
@@ -39,4 +46,4 @@ jobs:
           tag_name: ${{ inputs.tag_name || github.ref_name }}
           prerelease: ${{ inputs.prerelease || contains(github.ref_name, '-') }}
           generate_release_notes: true
-          files: '*/*.zip'
+          files: '*.zip'
