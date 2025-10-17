@@ -94,8 +94,8 @@ static constexpr clipping_code operator~(const clipping_code a)
 //Stucture to store clipping codes in a word
 struct g3s_codes {
 	//or is low byte, and is high byte
-	clipping_code uor = clipping_code{0};
-	clipping_code uand = clipping_code{0xff};
+	clipping_code uor{0};
+	clipping_code uand{0xff};
 };
 
 enum class projection_flag : uint8_t
@@ -143,20 +143,30 @@ struct g3_instance_context
 	const vms_vector position;
 };
 
+/*
+ * This stores a point that has been rotated about the Viewer's orientation
+ * matrix.
+ */
 struct g3_rotated_point
 {
-	vms_vector p3_vec;
+	struct from_relative_position {};
+	vms_vector p3_vec;	/* viewer relative position */
+	g3_rotated_point(const g3_instance_context &viewer, const vms_vector &absolute_position);
+	/* For use by rod.cpp */
+	g3_rotated_point(const vms_vector &relative_position, from_relative_position) :
+		p3_vec{relative_position}
+	{
+	}
 protected:
 	g3_rotated_point() = default;
 };
 
 /*
- * This stores a point that has been rotated about the Viewer's orientation
- * matrix.  p3_flags tracks whether the point has been projected into screen
+ * p3_flags tracks whether the point has been projected into screen
  * coordinates (`projected`) and, if so, whether the resulting coordinates are
  * outside the screen's viewable area (`overflow`).
  */
-struct g3s_point : g3_rotated_point
+struct g3_projected_point
 {
 #if !DXX_USE_OGL
 	fix p3_u, p3_v, p3_l; //u,v,l coords
@@ -164,7 +174,24 @@ struct g3s_point : g3_rotated_point
 	fix p3_sx, p3_sy;    //screen x&y
 	clipping_code p3_codes;     //clipping codes
 	projection_flag p3_flags;     //projected?
+	g3_projected_point(const g3_instance_context &viewer, const vms_vector &absolute_position);
+	explicit g3_projected_point(const g3_rotated_point &p);
+protected:
+	static g3_projected_point build(const g3_rotated_point &p);
+	g3_projected_point() = default;
+#if !DXX_USE_OGL
+	g3_projected_point(const vms_vector &relative_position, g3_rotated_point::from_relative_position rel);
+#endif
+};
+
+struct g3s_point : g3_rotated_point, g3_projected_point
+{
+	g3s_point(const g3_instance_context &viewer, const vms_vector &absolute_position);
+	explicit g3s_point(const g3_rotated_point &);
 	g3s_point() = default;
+#if !DXX_USE_OGL
+	g3s_point(const vms_vector &relative_position, from_relative_position rel);
+#endif
 };
 
 /* Store the frame count at which this point was last updated.  If the stored
@@ -185,9 +212,13 @@ struct g3s_reusable_point : g3s_point
 };
 
 #if DXX_USE_OGL
-typedef const g3s_point cg3s_point;
+using g3_draw_line_point = const g3_rotated_point;
+using g3_draw_sphere_point = const g3_rotated_point;
+using g3_draw_tmap_point = const g3_rotated_point;	// also applies to g3_draw_poly
 #else
-typedef g3s_point cg3s_point;
+using g3_draw_line_point = g3s_point;
+using g3_draw_sphere_point = g3s_point;
+using g3_draw_tmap_point = g3s_point;	// also applies to g3_draw_poly
 #endif
 
 //start the frame
@@ -253,6 +284,8 @@ fix g3_calc_point_depth(const vms_vector &pnt);
 vms_vector g3_point_2_vec(short sx, short sy);
 #endif
 
+clipping_code build_g3_clipping_code_from_viewer_relative_position(const vms_vector &viewer_relative_position);
+
 //code a point.  fills in the p3_codes field of the point, and returns the codes
 clipping_code g3_code_point(g3s_point &point);
 
@@ -260,14 +293,14 @@ clipping_code g3_code_point(g3s_point &point);
 [[nodiscard]]
 vms_vector g3_rotate_delta_vec(const vms_vector &src);
 
-void g3_add_delta_vec(g3s_point &dest,const g3s_point &src,const vms_vector &deltav);
+void g3_add_delta_vec(g3s_point &dest, const g3_rotated_point &src, const vms_vector &deltav);
 
 //Drawing functions:
 
 //draw a flat-shaded face.
-void _g3_draw_poly(grs_canvas &, std::span<cg3s_point *const> pointlist, uint8_t color);
+void _g3_draw_poly(grs_canvas &, std::span<g3_draw_tmap_point *const> pointlist, uint8_t color);
 template <std::size_t N>
-static inline void g3_draw_poly(grs_canvas &canvas, const uint_fast32_t nv, const std::array<cg3s_point *, N> &pointlist, const uint8_t color)
+static inline void g3_draw_poly(grs_canvas &canvas, const uint_fast32_t nv, const std::array<g3_draw_tmap_point *, N> &pointlist, const uint8_t color)
 {
 	_g3_draw_poly(canvas, std::span(pointlist).first(nv), color);
 }
@@ -276,10 +309,10 @@ constexpr std::integral_constant<std::size_t, 64> MAX_POINTS_PER_POLY{};
 
 //draw a sortof sphere - i.e., the 2d radius is proportional to the 3d
 //radius, but not to the distance from the eye
-void g3_draw_sphere(grs_canvas &, cg3s_point &pnt, fix rad, uint8_t color);
+void g3_draw_sphere(grs_canvas &, g3_draw_sphere_point &pnt, fix rad, uint8_t color);
 
 #if !DXX_USE_OGL
-static inline void g3_draw_sphere(grs_canvas &canvas, g3s_point &&pnt, fix rad, uint8_t color)
+static inline void g3_draw_sphere(grs_canvas &canvas, g3_draw_sphere_point &&pnt, fix rad, uint8_t color)
 {
 	g3_draw_sphere(canvas, pnt, rad, color);
 }
@@ -294,7 +327,7 @@ static inline void g3_draw_sphere(grs_canvas &canvas, g3s_point &&pnt, fix rad, 
 //is passed, this function works like g3_check_normal_facing() plus
 //g3_draw_poly().
 //returns -1 if not facing, 1 if off screen, 0 if drew
-bool do_facing_check(const std::array<cg3s_point *, 3> &vertlist);
+bool do_facing_check(const std::array<g3_draw_tmap_point *, 3> &vertlist);
 
 //like g3_draw_poly(), but checks to see if facing.  If surface normal is
 //NULL, this routine must compute it, which will be slow.  It is better to 
@@ -302,16 +335,11 @@ bool do_facing_check(const std::array<cg3s_point *, 3> &vertlist);
 //is passed, this function works like g3_check_normal_facing() plus
 //g3_draw_poly().
 //returns -1 if not facing, 1 if off screen, 0 if drew
-static inline void g3_check_and_draw_poly(grs_canvas &canvas, const std::array<cg3s_point *, 3> &pointlist, const uint8_t color)
+static inline void g3_check_and_draw_poly(grs_canvas &canvas, const std::array<g3_draw_tmap_point *, 3> &pointlist, const uint8_t color)
 {
 	if (do_facing_check(pointlist))
 		g3_draw_poly(canvas, pointlist.size(), pointlist, color);
 }
-
-//draws a line. takes two points.
-#if !DXX_USE_OGL
-struct temporary_points_t;
-#endif
 
 //draws a bitmap with the specified 3d width & height
 //returns 1 if off screen, 0 if drew
@@ -357,25 +385,32 @@ enum class tmap_drawer_type : bool
 
 using tmap_drawer_type::draw_tmap_flat;
 using tmap_drawer_type::draw_tmap;
+
 #else
-void g3_draw_line(const g3_draw_line_context &, cg3s_point &p0, cg3s_point &p1, temporary_points_t &);
+struct temporary_points_t;
+
+//draws a line. takes two points.
+void g3_draw_line(const g3_draw_line_context &, g3_draw_line_point &p0, g3_draw_line_point &p1, temporary_points_t &);
+
 constexpr std::integral_constant<std::size_t, 100> MAX_POINTS_IN_POLY{};
 
-using tmap_drawer_type = void (*)(grs_canvas &, const grs_bitmap &bm, std::span<const g3s_point *const> vertlist);
+using tmap_drawer_type = void (*)(grs_canvas &, const grs_bitmap &bm, std::span<const g3_draw_tmap_point *const> vertlist);
 
 //	This is the gr_upoly-like interface to the texture mapper which uses texture-mapper compatible
 //	(ie, avoids cracking) edge/delta computation.
 void gr_upoly_tmap(grs_canvas &, uint_fast32_t nverts, const std::array<fix, MAX_POINTS_IN_POLY * 2> &vert, uint8_t color);
 #endif
 
+void g3_draw_line(const g3_draw_line_context &context, g3_draw_line_point &p0, g3_draw_line_point &p1);
+
 //draw a bitmap object that is always facing you
-void g3_draw_rod_tmap(grs_canvas &, grs_bitmap &bitmap, const g3s_point &bot_point, fix bot_width, const g3s_point &top_point, fix top_width, g3s_lrgb light, tmap_drawer_type tmap_drawer_ptr);
+void g3_draw_rod_tmap(grs_canvas &, grs_bitmap &bitmap, const g3_rotated_point &bot_point, fix bot_width, const g3_rotated_point &top_point, fix top_width, g3s_lrgb light, tmap_drawer_type tmap_drawer_ptr);
 
 //draw a texture-mapped face.
-void _g3_draw_tmap(grs_canvas &canvas, std::span<cg3s_point *const> pointlist, const g3s_uvl *uvl_list, const g3s_lrgb *light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr);
+void _g3_draw_tmap(grs_canvas &canvas, std::span<g3_draw_tmap_point *const> pointlist, const g3s_uvl *uvl_list, const g3s_lrgb *light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr);
 
 template <std::size_t N>
-static inline void g3_draw_tmap(grs_canvas &canvas, unsigned nv, const std::array<cg3s_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+static inline void g3_draw_tmap(grs_canvas &canvas, unsigned nv, const std::array<g3_draw_tmap_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
 {
 	static_assert(N <= MAX_POINTS_PER_POLY, "too many points in tmap");
 #ifdef DXX_CONSTANT_TRUE
@@ -389,24 +424,22 @@ static inline void g3_draw_tmap(grs_canvas &canvas, unsigned nv, const std::arra
 
 template <std::size_t N>
 requires(N <= MAX_POINTS_PER_POLY)
-static inline void g3_draw_tmap(grs_canvas &canvas, const std::array<cg3s_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+static inline void g3_draw_tmap(grs_canvas &canvas, const std::array<g3_draw_tmap_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
 {
 	_g3_draw_tmap(canvas, pointlist, uvl_list.data(), light_rgb.data(), bm, tmap_drawer_ptr);
 }
 
 template <std::size_t N>
-static inline void g3_check_and_draw_tmap(grs_canvas &canvas, unsigned nv, const std::array<cg3s_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+static inline void g3_check_and_draw_tmap(grs_canvas &canvas, unsigned nv, const std::array<g3_draw_tmap_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
 {
 	if (do_facing_check(pointlist))
 		g3_draw_tmap(canvas, nv, pointlist, uvl_list, light_rgb, bm, tmap_drawer_ptr);
 }
 
 template <std::size_t N>
-static inline void g3_check_and_draw_tmap(grs_canvas &canvas, const std::array<cg3s_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+static inline void g3_check_and_draw_tmap(grs_canvas &canvas, const std::array<g3_draw_tmap_point *, N> &pointlist, const std::array<g3s_uvl, N> &uvl_list, const std::array<g3s_lrgb, N> &light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
 {
 	g3_check_and_draw_tmap(canvas, N, pointlist, uvl_list, light_rgb, bm, tmap_drawer_ptr);
 }
-
-void g3_draw_line(const g3_draw_line_context &context, cg3s_point &p0, cg3s_point &p1);
 
 }

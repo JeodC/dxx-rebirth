@@ -5345,26 +5345,38 @@ namespace udp {
 
 void dispatch_table::send_data(const std::span<const uint8_t> buf, const multiplayer_data_priority priority) const
 {
-	const auto ptr = buf.data();
+	assert(Game_mode & GM_MULTI);
 	const auto len = buf.size();
 #if DXX_HAVE_POISON_VALGRIND
-	VALGRIND_CHECK_MEM_IS_DEFINED(ptr, len);
+	DXX_CHECK_MEM_IS_DEFINED(buf);
 #endif
-	char check;
 
-	if ((UDP_MData.mbuf_size+len) > UPID_MDATA_BUF_SIZE )
+	/* Build a span describing the region of UDP_MData.mbuf that is available
+	 * to be written, by skipping over any bytes already queued.
+	 */
+	auto outspan{std::span{UDP_MData.mbuf}.subspan(UDP_MData.mbuf_size)};
+	if (outspan.size() < len)
 	{
-		check = ptr[0];
+		/* The remaining space is too small to write the new message.  Force an
+		 * early send, which should clear the buffer.
+		 */
+#ifndef NDEBUG
+		const auto check{buf[0]};
+#endif
 		net_udp_send_mdata(0, timer_query());
 		if (UDP_MData.mbuf_size != 0)
 			Int3();
-		Assert(check == ptr[0]);
-		(void)check;
+#ifndef NDEBUG
+		assert(check == buf[0]);
+#endif
+		outspan = {UDP_MData.mbuf /* mbuf_size == 0, so no need to call subspan() to adjust the pointer */};
 	}
-
-	Assert(UDP_MData.mbuf_size+len <= UPID_MDATA_BUF_SIZE);
-
-	memcpy( &UDP_MData.mbuf[UDP_MData.mbuf_size], ptr, len );
+	/* Build a subspan of `outspan` for the side effect of causing the standard
+	 * library to check that `len <= outspan.size()` is satisfied.  Debugging
+	 * implementations may report an assertion failure if the check is
+	 * unsatisfied, which is better than allowing memory corruption.
+	 */
+	std::ranges::copy(buf, outspan.subspan(0, len).data());
 	UDP_MData.mbuf_size += len;
 
 	if (priority != multiplayer_data_priority::_0)
@@ -5817,7 +5829,7 @@ void net_udp_send_mdata(int needack, fix64 time)
 														len++;
 	buf[len] = Player_num;											len++;
 	if (needack)												len += 4; // we place the pkt_num later since it changes per player
-	memcpy(std::span(buf).subspan(len, UDP_MData.mbuf_size).data(), UDP_MData.mbuf.data(), UDP_MData.mbuf_size);
+	std::ranges::copy(std::span(std::as_const(UDP_MData.mbuf)).subspan(0, UDP_MData.mbuf_size), std::span(buf).subspan(len, UDP_MData.mbuf_size).data());
 	len += UDP_MData.mbuf_size;
 
 	player_acknowledgement_mask player_ack;
@@ -6079,7 +6091,7 @@ void net_udp_read_pdata_packet(UDP_frame_info *pd)
 	if (vcplayerptr(Player_num)->connected == player_connection_status::disconnected || vcplayerptr(Player_num)->connected == player_connection_status::waiting)
                 return;
 	//------------ Read the player's ship's object info ----------------------
-	extract_quaternionpos(TheirObj, pd->qpp);
+	extract_quaternionpos(Objects.vmptr, vmsegptr, TheirObj, pd->qpp);
 	if (TheirObj->movement_source == object::movement_type::physics)
 		set_thrust_from_velocity(TheirObj);
 }

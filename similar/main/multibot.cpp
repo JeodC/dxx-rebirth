@@ -55,6 +55,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "escort.h"
 
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_levelstate.h"
 #include "partial_range.h"
 
@@ -355,6 +356,7 @@ void multi_delete_controlled_robot(const vmobjptridx_t objnum)
 }
 }
 
+namespace {
 struct multi_claim_robot
 {
 	uint8_t pnum;
@@ -362,6 +364,7 @@ struct multi_claim_robot
 	uint16_t robjnum;
 };
 DEFINE_MULTIPLAYER_SERIAL_MESSAGE(multiplayer_command_t::MULTI_ROBOT_CLAIM, multi_claim_robot, b, (b.pnum, b.owner, b.robjnum));
+}
 
 void multi_send_claim_robot(const vmobjptridx_t objnum)
 {
@@ -555,12 +558,14 @@ void multi_send_robot_fire(const vmobjptridx_t obj, const robot_gun_number gun_n
                 multi_send_data(multibuf, multiplayer_data_priority::_1); // Not our robot, send ASAP
 }
 
+namespace {
 struct multi_explode_robot
 {
 	int16_t robj_killer, robj_killed;
 	int8_t owner_killer, owner_killed;
 };
 DEFINE_MULTIPLAYER_SERIAL_MESSAGE(multiplayer_command_t::MULTI_ROBOT_EXPLODE, multi_explode_robot, b, (b.robj_killer, b.robj_killed, b.owner_killer, b.owner_killed));
+}
 
 void multi_send_robot_explode(const imobjptridx_t objnum, objnum_t killer)
 {
@@ -859,7 +864,7 @@ void multi_do_robot_position(const playernum_t pnum, const multiplayer_rspan<mul
 	qpp.vel = multi_get_vector(buf.subspan<5 + 8 + 12 + 2, 12>());
 	loc += 12;
 	qpp.rotvel = multi_get_vector(buf.subspan<5 + 8 + 12 + 2 + 12, 12>());
-	extract_quaternionpos(robot, qpp);
+	extract_quaternionpos(Objects.vmptr, vmsegptr, robot, qpp);
 }
 
 }
@@ -912,7 +917,7 @@ void multi_do_robot_fire(const multiplayer_rspan<multiplayer_command_t::MULTI_RO
 		|| gun_num == underlying_value(robot_gun_number::smart_mine)
 #endif
 		)
-		? pt_weapon(vm_vec_add(botp->pos, fire), 
+		? pt_weapon(vm_vec_build_add(botp->pos, fire), 
 #if DXX_BUILD_DESCENT == 2
 			gun_num != underlying_value(robot_gun_number::proximity) ? weapon_id_type::SUPERPROX_ID :
 #endif
@@ -1055,7 +1060,7 @@ void multi_do_create_robot(const d_robot_info_array &Robot_info, const d_vclip_a
 	auto &vcvertptr = Vertices.vcptr;
 	const auto cur_object_loc{compute_segment_center(vcvertptr, robotcen_segp)};
 	if (const auto &&obj = object_create_explosion_without_damage(Vclip, robotcen_segp, cur_object_loc, i2f(10), vclip_index::morphing_robot))
-		extract_orient_from_segment(vcvertptr, obj->orient, robotcen_segp);
+		reconstruct_at(obj->orient, extract_orient_from_segment, vcvertptr, robotcen_segp);
 	digi_link_sound_to_pos(Vclip[vclip_index::morphing_robot].sound_num, robotcen_segp, sidenum_t::WLEFT, cur_object_loc, 0, F1_0);
 
 	const auto &&obj = create_morph_robot(Robot_info, robotcen_segp, cur_object_loc, trusted_robot_type);
@@ -1063,9 +1068,15 @@ void multi_do_create_robot(const d_robot_info_array &Robot_info, const d_vclip_a
 		return; // Cannot create object!
 	
 	obj->matcen_creator = untrusted_fuelcen_num | 0x80;
-//	extract_orient_from_segment(&obj->orient, &Segments[robotcen->segnum]);
-	const auto direction{vm_vec_sub(ConsoleObject->pos, obj->pos)};
-	vm_vector_to_matrix_u(obj->orient, direction, obj->orient.uvec);
+	const auto direction{vm_vec_build_sub(ConsoleObject->pos, obj->pos)};
+	{
+		/* Copy `objp.orient.uvec` into a temporary and pass the temporary,
+		 * since it is undefined behavior to access `objp.orient` after the old
+		 * object is destroyed until the new value is constructed.
+		 */
+		auto old_uvec{obj->orient.uvec};
+		reconstruct_at(obj->orient, vm_vector_to_matrix_u, direction, std::move(old_uvec));
+	}
 	morph_start(LevelUniqueMorphObjectState, LevelSharedPolygonModelState, obj);
 
 	map_objnum_local_to_remote(obj, objnum, pnum);
@@ -1128,8 +1139,8 @@ void multi_do_boss_teleport(const d_robot_info_array &Robot_info, const d_vclip_
 	obj_relink(vmobjptr, vmsegptr, boss_obj, teleport_segnum);
 	BossUniqueState.Last_teleport_time = {GameTime64};
 
-	const auto boss_dir{vm_vec_sub(vcobjptr(vcplayerptr(pnum)->objnum)->pos, boss_obj->pos)};
-	vm_vector_to_matrix(boss_obj->orient, boss_dir);
+	const auto boss_dir{vm_vec_build_sub(vcobjptr(vcplayerptr(pnum)->objnum)->pos, boss_obj->pos)};
+	reconstruct_at(boss_obj->orient, vm_vector_to_matrix, boss_dir);
 
 	digi_link_sound_to_pos(Vclip[vclip_index::morphing_robot].sound_num, teleport_segnum, sidenum_t::WLEFT, boss_obj->pos, 0, F1_0);
 	digi_kill_sound_linked_to_object( boss_obj);

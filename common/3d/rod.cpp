@@ -18,25 +18,75 @@
 #include "gr.h"
 #endif
 
-#include "compiler-range_for.h"
-
 namespace dcx {
+
+#if !DXX_USE_OGL
+g3_projected_point::g3_projected_point(const vms_vector &relative_position, g3_rotated_point::from_relative_position) :
+	p3_codes{build_g3_clipping_code_from_viewer_relative_position(relative_position)},
+	p3_flags{}
+{
+}
+
+g3s_point::g3s_point(const vms_vector &relative_position, from_relative_position rel) :
+	g3_rotated_point{relative_position, rel},
+	g3_projected_point{relative_position, rel}
+{
+}
+#endif
 
 namespace {
 
-struct rod_4point
+struct rod_corners_result
 {
-	std::array<cg3s_point *, 4> point_list;
-	std::array<g3s_point, 4> points;
+#if DXX_USE_OGL
+	using g3_rod_corner_point = g3_rotated_point;
+#else
+	using g3_rod_corner_point = g3s_point;
+#endif
+	std::array<g3_rod_corner_point, 4> points;
+	clipping_code cc;
+	static clipping_code build_clipping_code(const std::array<g3_rod_corner_point, 4> &points);
+	rod_corners_result(const g3_rotated_point &top_point, const vms_vector &scaled_rod_top_width, const g3_rotated_point &bot_point, const vms_vector &scaled_rod_bot_width) :
+		points{{
+			g3_rod_corner_point{vm_vec_build_add(top_point.p3_vec, scaled_rod_top_width), g3_rotated_point::from_relative_position{}},
+			g3_rod_corner_point{vm_vec_build_sub(top_point.p3_vec, scaled_rod_top_width), g3_rotated_point::from_relative_position{}},
+			g3_rod_corner_point{vm_vec_build_sub(bot_point.p3_vec, scaled_rod_bot_width), g3_rotated_point::from_relative_position{}},
+			g3_rod_corner_point{vm_vec_build_add(bot_point.p3_vec, scaled_rod_bot_width), g3_rotated_point::from_relative_position{}}
+		}},
+		cc{build_clipping_code(points)}
+	{
+	}
 };
 
+clipping_code rod_corners_result::build_clipping_code(const std::array<g3_rod_corner_point, 4> &points)
+{
+	clipping_code codes_and{0xff};
+	for (auto &i : points)
+		codes_and &= (
+#if DXX_USE_OGL
+			/* In the OpenGL build, the per-point code is not computed above
+			 * because `g3_rotated_point` does not need it and has nowhere to
+			 * store it.  Compute it now, and use it immediately.
+			 */
+			build_g3_clipping_code_from_viewer_relative_position(i.p3_vec)
+#else
+			/* In the SDL-only build, the per-point clipping_code is computed
+			 * as part of initializing the individual `g3s_point` instances.
+			 * Read it here and use it to update the composite clipping code.
+			 */
+			i.p3_codes
+#endif
+		);
+	return codes_and;
+}
+
 //compute the corners of a rod.  fills in vertbuf.
-static clipping_code calc_rod_corners(rod_4point &rod_point_group, const g3s_point &bot_point,fix bot_width,const g3s_point &top_point,fix top_width)
+static rod_corners_result calc_rod_corners(const g3_rotated_point &bot_point, const fix bot_width, const g3_rotated_point &top_point, const fix top_width)
 {
 	//compute vector from one point to other, do cross product with vector
 	//from eye to get perpendiclar
 
-	auto delta_vec{vm_vec_sub(bot_point.p3_vec, top_point.p3_vec)};
+	auto delta_vec{vm_vec_build_sub(bot_point.p3_vec, top_point.p3_vec)};
 
 	//unscale for aspect
 
@@ -60,52 +110,17 @@ static clipping_code calc_rod_corners(rod_4point &rod_point_group, const g3s_poi
 
 	rod_norm.x = fixmul(rod_norm.x,Matrix_scale.x);
 	rod_norm.y = fixmul(rod_norm.y,Matrix_scale.y);
-
-	//now we have the usable edge.  generate four points
-
-	//top points
-
-	auto &rod_points = rod_point_group.points;
-	{
-	auto tempv{vm_vec_copy_scale(rod_norm, top_width)};
-	tempv.z = 0;
-
-	rod_point_group.point_list[0] = &rod_point_group.points[0];
-	rod_point_group.point_list[1] = &rod_point_group.points[1];
-	rod_point_group.point_list[2] = &rod_point_group.points[2];
-	rod_point_group.point_list[3] = &rod_point_group.points[3];
-	vm_vec_add(rod_points[0].p3_vec,top_point.p3_vec,tempv);
-	vm_vec_sub(rod_points[1].p3_vec,top_point.p3_vec,tempv);
-	}
-
-	{
-	auto tempv{vm_vec_copy_scale(rod_norm, bot_width)};
-	tempv.z = 0;
-
-	vm_vec_sub(rod_points[2].p3_vec,bot_point.p3_vec,tempv);
-	vm_vec_add(rod_points[3].p3_vec,bot_point.p3_vec,tempv);
-	}
-
-	//now code the four points
-
-	clipping_code codes_and{0xff};
-	range_for (auto &i, rod_points)
-	{
-		codes_and &= g3_code_point(i);
-	//clear flags for new points (not projected)
-		i.p3_flags = {};
-	}
-	return codes_and;
+	rod_norm.z = {};
+	return rod_corners_result{top_point, vm_vec_copy_scale(rod_norm, top_width), bot_point, vm_vec_copy_scale(rod_norm, bot_width)};
 }
 
 }
 
 //draw a bitmap object that is always facing you
-//returns 1 if off screen, 0 if drew
-void g3_draw_rod_tmap(grs_canvas &canvas, grs_bitmap &bitmap, const g3s_point &bot_point, fix bot_width, const g3s_point &top_point, fix top_width, g3s_lrgb light, const tmap_drawer_type tmap_drawer_ptr)
+void g3_draw_rod_tmap(grs_canvas &canvas, grs_bitmap &bitmap, const g3_rotated_point &bot_point, fix bot_width, const g3_rotated_point &top_point, fix top_width, g3s_lrgb light, const tmap_drawer_type tmap_drawer_ptr)
 {
-	rod_4point rod;
-	if (calc_rod_corners(rod, bot_point, bot_width, top_point, top_width) != clipping_code::None)
+	rod_corners_result rod{calc_rod_corners(bot_point, bot_width, top_point, top_width)};
+	if (rod.cc != clipping_code::None)
 		return;
 
 	const fix average_light = static_cast<unsigned>(light.r+light.g+light.b)/3;
@@ -122,7 +137,12 @@ void g3_draw_rod_tmap(grs_canvas &canvas, grs_bitmap &bitmap, const g3s_point &b
 		light,
 	}};
 
-	g3_draw_tmap(canvas, rod.point_list, uvl_list, lrgb_list, bitmap, tmap_drawer_ptr);
+	g3_draw_tmap(canvas, std::array<g3_draw_tmap_point *, 4>{{
+		&rod.points[0],
+		&rod.points[1],
+		&rod.points[2],
+		&rod.points[3],
+	}}, uvl_list, lrgb_list, bitmap, tmap_drawer_ptr);
 }
 
 #if !DXX_USE_OGL

@@ -78,6 +78,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "compiler-range_for.h"
 #include "partial_range.h"
 #include "segiter.h"
+#include "d_construct.h"
 #include "d_enumerate.h"
 #include "d_levelstate.h"
 #include <utility>
@@ -737,7 +738,7 @@ void ai_turn_towards_vector(const vms_vector &goal_vector, object_base &objp, fi
 
 	auto new_fvec = goal_vector;
 
-	const fix dot = vm_vec_dot(goal_vector, objp.orient.fvec);
+	const fix dot = vm_vec_build_dot(goal_vector, objp.orient.fvec);
 
 	if (dot < (F1_0 - FrameTime/2)) {
 		fix	new_scale = fixdiv(FrameTime, rate);
@@ -759,7 +760,14 @@ void ai_turn_towards_vector(const vms_vector &goal_vector, object_base &objp, fi
 	}
 #endif
 
-	vm_vector_to_matrix_r(objp.orient, new_fvec, objp.orient.rvec);
+	{
+		/* Copy `objp.orient.rvec` into a temporary and pass the temporary,
+		 * since it is undefined behavior to access `objp.orient` after the old
+		 * object is destroyed until the new value is constructed.
+		 */
+		const auto old_rvec{objp.orient.rvec};
+		reconstruct_at(objp.orient, vm_vector_to_matrix_r, new_fvec, old_rvec);
+	}
 }
 
 #if DXX_BUILD_DESCENT == 1
@@ -856,7 +864,7 @@ player_visibility_state player_is_visible_from_object(const d_robot_info_array &
 
 	if (Hit_type == fvi_hit_type::None)
 	{
-		dot = vm_vec_dot(vec_to_player, obj.orient.fvec);
+		dot = vm_vec_build_dot(vec_to_player, obj.orient.fvec);
 		if (dot > field_of_view - (Overall_agitation << 9)) {
 			return player_visibility_state::visible_and_in_field_of_view;
 		} else {
@@ -1088,11 +1096,11 @@ static int lead_player(const object_base &objp, const vms_vector &fire_point, co
 	if (player_speed < MIN_LEAD_SPEED)
 		return 0;
 
-	const auto &&[dist_to_player, vec_to_player] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(believed_player_pos, fire_point));
+	const auto &&[dist_to_player, vec_to_player] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(believed_player_pos, fire_point));
 	if (dist_to_player > MAX_LEAD_DISTANCE)
 		return 0;
 
-	const fix dot = vm_vec_dot(vec_to_player, player_movement_dir);
+	const fix dot = vm_vec_build_dot(vec_to_player, player_movement_dir);
 
 	if ((dot < -LEAD_RANGE) || (dot > LEAD_RANGE))
 		return 0;
@@ -1134,13 +1142,13 @@ static int lead_player(const object_base &objp, const vms_vector &fire_point, co
 
 	vm_vec_normalize_quick(fire_vec);
 
-	Assert(vm_vec_dot(fire_vec, objp.orient.fvec) < 3*F1_0/2);
+	Assert(vm_vec_build_dot(fire_vec, objp.orient.fvec) < 3*F1_0/2);
 
 	//	Make sure not firing at especially strange angle.  If so, try to correct.  If still bad, give up after one try.
-	if (vm_vec_dot(fire_vec, objp.orient.fvec) < F1_0/2) {
+	if (vm_vec_build_dot(fire_vec, objp.orient.fvec) < F1_0/2) {
 		vm_vec_add2(fire_vec, vec_to_player);
 		vm_vec_scale(fire_vec, F1_0/2);
-		if (vm_vec_dot(fire_vec, objp.orient.fvec) < F1_0/2) {
+		if (vm_vec_build_dot(fire_vec, objp.orient.fvec) < F1_0/2) {
 			return 0;
 		}
 	}
@@ -1305,7 +1313,7 @@ static void ai_fire_laser_at_player(const d_robot_info_array &Robot_info, const 
 		bpp_diff.z += fixmul((d_rand() - 16384) * m, aim);
 
 		vm_vec_normalized_dir_quick(fire_vec, bpp_diff, fire_point);
-		dot = vm_vec_dot(obj->orient.fvec, fire_vec);
+		dot = vm_vec_build_dot(obj->orient.fvec, fire_vec);
 		count++;
 	}
 	}
@@ -1344,7 +1352,7 @@ static void move_towards_vector(const robot_info &robptr, object_base &objp, con
 	//	bash velocity vector twice as much towards player as usual.
 
 	const auto vel = vm_vec_normalized_quick(velocity);
-	fix dot = vm_vec_dot(vel, objp.orient.fvec);
+	fix dot = vm_vec_build_dot(vel, objp.orient.fvec);
 
 #if DXX_BUILD_DESCENT == 1
 	dot_based = 1;
@@ -1451,7 +1459,7 @@ static void move_around_player(const d_robot_info_array &Robot_info, const vmobj
 		//	Only take evasive action if looking at player.
 		//	Evasion speed is scaled by percentage of shields left so wounded robots evade less effectively.
 
-		dot = vm_vec_dot(vec_to_player, objp->orient.fvec);
+		dot = vm_vec_build_dot(vec_to_player, objp->orient.fvec);
 		if (dot > robptr.field_of_view[Difficulty_level] && !(powerup_flags & PLAYER_FLAGS_CLOAKED)) {
 			fix	damage_scale;
 
@@ -1531,8 +1539,8 @@ static void ai_move_relative_to_player(const d_robot_info_array &Robot_info, con
 
 			const fix field_of_view = robptr.field_of_view[Difficulty_level];
 
-			const auto &&[dist_to_laser, vec_to_laser] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(dobjp->pos, objp->pos));
-			const fix dot = vm_vec_dot(vec_to_laser, objp->orient.fvec);
+			const auto &&[dist_to_laser, vec_to_laser] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(dobjp->pos, objp->pos));
+			const fix dot = vm_vec_build_dot(vec_to_laser, objp->orient.fvec);
 
 			if (dot > field_of_view || robot_is_companion(robptr))
 			{
@@ -1545,8 +1553,8 @@ static void ai_move_relative_to_player(const d_robot_info_array &Robot_info, con
 				else {		//	Not a polyobj, get velocity and normalize.
 					laser_fvec = vm_vec_normalized_quick(dobjp->mtype.phys_info.velocity);	//dobjp->orient.fvec;
 				}
-				const auto laser_vec_to_robot = vm_vec_normalized_quick(vm_vec_sub(objp->pos, dobjp->pos));
-				laser_robot_dot = vm_vec_dot(laser_fvec, laser_vec_to_robot);
+				const auto laser_vec_to_robot = vm_vec_normalized_quick(vm_vec_build_sub(objp->pos, dobjp->pos));
+				laser_robot_dot = vm_vec_build_dot(laser_fvec, laser_vec_to_robot);
 
 				if ((laser_robot_dot > F1_0*7/8) && (dist_to_laser < F1_0*80)) {
 					int	evade_speed;
@@ -1629,12 +1637,14 @@ namespace dcx {
 
 // --------------------------------------------------------------------------------------------------------------------
 //	Compute a somewhat random, normalized vector.
-void make_random_vector(vms_vector &vec)
+vms_vector make_random_vector()
 {
+	vms_vector vec;
 	vec.x = (d_rand() - 16384) | 1;	// make sure we don't create null vector
 	vec.y = d_rand() - 16384;
 	vec.z = d_rand() - 16384;
 	vm_vec_normalize_quick(vec);
+	return vec;
 }
 
 }
@@ -1652,7 +1662,7 @@ static void do_firing_stuff(object &obj, const player_flags powerup_flags, const
 #endif
 	{
 		//	Now, if in robot's field of view, lock onto player
-		const fix dot = vm_vec_dot(obj.orient.fvec, player_visibility.vec_to_player);
+		const fix dot = vm_vec_build_dot(obj.orient.fvec, player_visibility.vec_to_player);
 		if ((dot >= 7*F1_0/8) || (powerup_flags & PLAYER_FLAGS_CLOAKED)) {
 			ai_static *const aip = &obj.ctype.ai_info;
 			ai_local *const ailp = &obj.ctype.ai_info.ail;
@@ -1876,7 +1886,7 @@ static void compute_buddy_vis_vec(const vmobjptridx_t buddy_obj, const vms_vecto
 
 	auto &ailp = buddy_obj->ctype.ai_info.ail;
 	player_visibility.visibility = (hit_type == fvi_hit_type::None)
-		? ((ailp.time_player_seen = GameTime64, vm_vec_dot(player_visibility.vec_to_player, buddy_obj->orient.fvec) > robptr.field_of_view[GameUniqueState.Difficulty_level])
+		? ((ailp.time_player_seen = GameTime64, vm_vec_build_dot(player_visibility.vec_to_player, buddy_obj->orient.fvec) > robptr.field_of_view[GameUniqueState.Difficulty_level])
 		   ? player_visibility_state::visible_and_in_field_of_view
 		   : player_visibility_state::visible_not_in_field_of_view
 		)
@@ -2232,7 +2242,7 @@ static const shared_segment *boss_intersects_wall(fvcvertptr &vcvertptr, const o
 		if (ri == re)
 			return seg;
 		auto &vertex_pos = *vcvertptr(*ri);
-		pos = vm_vec_avg(vertex_pos, segcenter);
+		pos = vm_vec_build_avg(vertex_pos, segcenter);
 	}
 }
 
@@ -2413,7 +2423,7 @@ static void teleport_boss(const d_robot_info_array &Robot_info, const d_vclip_ar
 	BossUniqueState.Last_teleport_time = {GameTime64};
 
 	//	make boss point right at player
-	vm_vector_to_matrix(objp->orient, vm_vec_sub(target_pos, objp->pos));
+	reconstruct_at(objp->orient, vm_vector_to_matrix, vm_vec_build_sub(target_pos, objp->pos));
 
 	digi_link_sound_to_pos(Vclip[vclip_index::morphing_robot].sound_num, rand_segp, sidenum_t::WLEFT, objp->pos, 0, F1_0);
 	digi_kill_sound_linked_to_object( objp);
@@ -2733,14 +2743,20 @@ static void do_super_boss_stuff(const d_robot_info_array &Robot_info, fvmsegptri
 		if (GameTime64 - BossUniqueState.Last_gate_time > Gate_interval/2) {
 			restart_effect(ECLIP_NUM_BOSS);
 			if (eclip_state == 0) {
-				multi_send_boss_start_gate(objp);
+#if DXX_USE_MULTIPLAYER
+				if (multiplayer)
+					multi_send_boss_start_gate(objp);
+#endif
 				eclip_state = 1;
 			}
 		}
 		else {
 			stop_effect(ECLIP_NUM_BOSS);
 			if (eclip_state == 1) {
-				multi_send_boss_stop_gate(objp);
+#if DXX_USE_MULTIPLAYER
+				if (multiplayer)
+					multi_send_boss_stop_gate(objp);
+#endif
 				eclip_state = 0;
 			}
 		}
@@ -2752,7 +2768,7 @@ static void do_super_boss_stuff(const d_robot_info_array &Robot_info, fvmsegptri
 				Assert(randtype < MAX_GATE_INDEX);
 				const auto &&rtval = gate_in_robot(Robot_info, vmsegptridx, Super_boss_gate_list[randtype]);
 #if DXX_USE_MULTIPLAYER
-				if (rtval != object_none && (Game_mode & GM_MULTI))
+				if (rtval != object_none && multiplayer)
 				{
 					multi_send_boss_create_robot(objp, rtval);
 				}
@@ -2862,7 +2878,7 @@ static void ai_do_actual_firing_stuff(const d_robot_info_array &Robot_info, fvmo
 		//	Changed by mk, 01/04/94, onearm would take about 9 seconds until he can fire at you.
 		// if (((!object_animates) || (ailp->achieved_state[aip->CURRENT_GUN] == AIS_FIRE)) && (ailp->next_fire <= 0))
 		if (!object_animates || ready_to_fire_any_weapon(robptr, ailp, 0)) {
-			dot = vm_vec_dot(obj->orient.fvec, vec_to_player);
+			dot = vm_vec_build_dot(obj->orient.fvec, vec_to_player);
 			if (dot >= 7*F1_0/8) {
 				if (robot_gun_number_valid(robptr, aip->CURRENT_GUN))
 				{
@@ -2937,7 +2953,7 @@ static void ai_do_actual_firing_stuff(const d_robot_info_array &Robot_info, fvmo
 		//	Changed by mk, 01/04/95, onearm would take about 9 seconds until he can fire at you.
 		//	Above comment corrected.  Date changed from 1994, to 1995.  Should fix some very subtle bugs, as well as not cause me to wonder, in the future, why I was writing AI code for onearm ten months before he existed.
 		if (!object_animates || ready_to_fire_any_weapon(robptr, ailp, 0)) {
-			dot = vm_vec_dot(obj->orient.fvec, vec_to_player);
+			dot = vm_vec_build_dot(obj->orient.fvec, vec_to_player);
 			if ((dot >= 7*F1_0/8) || ((dot > F1_0/4) && robptr.boss_flag != boss_robot_id::None))
 			{
 				if (robot_gun_number_valid(robptr, gun_num))
@@ -3015,7 +3031,7 @@ static void ai_do_actual_firing_stuff(const d_robot_info_array &Robot_info, fvmo
 		if (d_rand()/2 < fixmul(FrameTime, (underlying_value(GameUniqueState.Difficulty_level) << 12) + 0x4000)) {
 		if ((!object_animates || ready_to_fire_any_weapon(robptr, ailp, 0)) && (Dist_to_last_fired_upon_player_pos < FIRE_AT_NEARBY_PLAYER_THRESHOLD)) {
 			vm_vec_normalized_dir_quick(vec_to_last_pos, Believed_player_pos, obj->pos);
-			dot = vm_vec_dot(obj->orient.fvec, vec_to_last_pos);
+			dot = vm_vec_build_dot(obj->orient.fvec, vec_to_last_pos);
 			if (dot >= 7*F1_0/8) {
 				if (robot_gun_number_valid(robptr, aip->CURRENT_GUN))
 				{
@@ -3176,7 +3192,7 @@ static unsigned guidebot_should_fire_flare(fvcobjptr &vcobjptr, fvcsegptr &vcseg
 	const auto dist_to_controller = vm_vec_normalized_dir_quick(vec_to_controller, plrobj.pos, buddy_obj.pos);
 	if (dist_to_controller >= 3 * MIN_ESCORT_DISTANCE / 2)
 		return 0;
-	if (vm_vec_dot(plrobj.orient.fvec, vec_to_controller) <= -F1_0 / 4)
+	if (vm_vec_build_dot(plrobj.orient.fvec, vec_to_controller) <= -F1_0 / 4)
 		return 0;
 	return 1;
 }
@@ -3188,7 +3204,7 @@ static bool is_break_object(vcobjidx_t)
 	return false;
 }
 #else
-__attribute_used
+dxx_compiler_attribute_used
 static objnum_t Break_on_object = object_none;
 
 static bool is_break_object(const vcobjidx_t robot)
@@ -3965,8 +3981,8 @@ _exit_cheat:
 				if (!ai_multiplayer_awareness(obj, 75))
 					return;
 
-				const auto fire_vec = vm_vec_negated(obj->orient.fvec);
-				const auto fire_pos = vm_vec_add(obj->pos, fire_vec);
+				const auto fire_vec{vm_vec_build_negated(obj->orient.fvec)};
+				const auto fire_pos = vm_vec_build_add(obj->pos, fire_vec);
 
 #if DXX_BUILD_DESCENT == 1
 				ailp.next_fire = F1_0*5;		//	Drop a proximity bomb every 5 seconds.
@@ -4110,9 +4126,9 @@ _exit_cheat:
 				vms_vector  goal_vector;
 				fix         dot;
 
-				dot = vm_vec_dot(ConsoleObject->orient.fvec, vec_to_player);
+				dot = vm_vec_build_dot(ConsoleObject->orient.fvec, vec_to_player);
 				if (dot > 0) {          // Remember, we're interested in the rear vector dot being < 0.
-					goal_vector = vm_vec_negated(ConsoleObject->orient.fvec);
+					goal_vector = vm_vec_build_negated(ConsoleObject->orient.fvec);
 				} else {
 					auto &orient = ConsoleObject->orient;
 					constexpr unsigned choice_count = 15;
@@ -4127,14 +4143,14 @@ _exit_cheat:
 						goal_vector = vm_vec_copy_scale(orient.uvec, selector * F1_0);
 						vm_vec_normalize_quick(goal_vector);
 					}
-					if (vm_vec_dot(goal_vector, vec_to_player) > 0)
+					if (vm_vec_build_dot(goal_vector, vec_to_player) > 0)
 						vm_vec_negate(goal_vector);
 				}
 
 				vm_vec_scale(goal_vector, 2*(ConsoleObject->size + obj->size + (((objnum*4 + d_tick_count) & 63) << 12)));
-				auto goal_point = vm_vec_add(ConsoleObject->pos, goal_vector);
+				auto goal_point = vm_vec_build_add(ConsoleObject->pos, goal_vector);
 				vm_vec_scale_add2(goal_point, make_random_vector(), F1_0*8);
-				const auto vec_to_goal = vm_vec_normalized_quick(vm_vec_sub(goal_point, obj->pos));
+				const auto vec_to_goal = vm_vec_normalized_quick(vm_vec_build_sub(goal_point, obj->pos));
 				move_towards_vector(robptr, obj, vec_to_goal, 0);
 				ai_turn_towards_vector(vec_to_player, obj, robptr.turn_time[Difficulty_level]);
 				ai_do_actual_firing_stuff(Robot_info, vmobjptridx, obj, aip, ailp, robptr, dist_to_player, gun_point, player_visibility, object_animates, player_info, aip->CURRENT_GUN);
@@ -4223,7 +4239,7 @@ _exit_cheat:
 				return;
 			auto &vcvertptr = Vertices.vcptr;
 			const auto center_point{compute_center_point_on_side(vcvertptr, vcsegptr(obj->segnum), aip->GOALSIDE)};
-			const auto goal_vector = vm_vec_normalized_quick(vm_vec_sub(center_point, obj->pos));
+			const auto goal_vector = vm_vec_normalized_quick(vm_vec_build_sub(center_point, obj->pos));
 			ai_turn_towards_vector(goal_vector, obj, robptr.turn_time[Difficulty_level]);
 			move_towards_vector(robptr, obj, goal_vector, 0);
 			ai_multi_send_robot_position(obj, -1);
@@ -4334,7 +4350,7 @@ _exit_cheat:
 				compute_vis_and_vec(Robot_info, obj, player_info, vis_vec_pos, ailp, player_visibility, robptr);
 
 				{
-				const fix dot = vm_vec_dot(obj->orient.fvec, vec_to_player);
+				const fix dot = vm_vec_build_dot(obj->orient.fvec, vec_to_player);
 				if (dot >= F1_0/2)
 					if (aip->GOAL_STATE == AIS_REST)
 						aip->GOAL_STATE = AIS_SRCH;
@@ -4835,12 +4851,60 @@ void ai_save_state(PHYSFS_File *fp)
 	PHYSFSX_writeBytes(fp, &Num_boss_teleport_segs, sizeof(Num_boss_teleport_segs));
 	unsigned Num_boss_gate_segs = Boss_gate_segs.size();
 	PHYSFSX_writeBytes(fp, &Num_boss_gate_segs, sizeof(Num_boss_gate_segs));
+	/* Boss special segment arrays are an array of
+	 * `valptridx<segment>::idx<vc>`, which is not POD because it is not
+	 * default-constructible.  Starting in gcc-15, this causes such arrays to
+	 * fail the `std::is_trivial` test in `PHYSFSX_check_writeBytes`.  To avoid
+	 * this failure, copy the elements individually into a POD std::array, then
+	 * write that std::array to the file.  This extra copy is small, and
+	 * happens only when a save file is written, so the overhead is not worth
+	 * finding a clever way to perform the write directly from the special
+	 * segment array.  Further, gcc will normally optimize the call of
+	 * `std::ranges::copy_n` into a call to `memcpy`.
+	 */
+	const auto build_pod_segs{[](const d_level_shared_boss_state::special_segment_array_t &src, const std::size_t count) {
+		std::array<uint16_t, 100> pod_gate_segs;
+#ifndef __clang__
+		/* clang-17 cannot perform constant evaluation on `src.max_size()`,
+		 * even though `max_size()` does not depend on what instance `src`
+		 * references.
+		 *
+		 * <clang-17: untested
+		 * clang-17: fails
+		 * >clang-17: untested
+		 * <gcc-12: untested
+		 * gcc-12, gcc-13, gcc-14, gcc-15: works
+		 * >gcc-15: untested
+```
+similar/main/ai.cpp:4867:17: error: static assertion expression is not an integral constant expression
+ 4867 |         static_assert(pod_gate_segs.max_size() == src.max_size());
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+similar/main/ai.cpp:4867:45: note: function parameter 'src' with unknown value cannot be used in a constant expression
+ 4867 |         static_assert(pod_gate_segs.max_size() == src.max_size());
+      |                                                   ^
+```
+		 */
+		static_assert(pod_gate_segs.max_size() == src.max_size());
+#endif
+		/* Construct a temporary `std::span` from the output for the side
+		 * effect of provoking a debug version of the standard library to check
+		 * that the output array is at least `count` elements long.
+		 */
+		std::ranges::copy_n(src.begin(), count, std::span(pod_gate_segs).first(count).begin());
+		return pod_gate_segs;
+	}};
 
 	if (Num_boss_gate_segs)
-		PHYSFSX_writeBytes(fp, Boss_gate_segs.data(), sizeof(Boss_gate_segs[0]) * Num_boss_gate_segs);
+	{
+		const auto pod_segs{build_pod_segs(Boss_gate_segs, Num_boss_gate_segs)};
+		PHYSFSX_writeBytes(fp, pod_segs.data(), sizeof(uint16_t) * Num_boss_gate_segs);
+	}
 
 	if (Num_boss_teleport_segs)
-		PHYSFSX_writeBytes(fp, Boss_teleport_segs.data(), sizeof(Boss_teleport_segs[0]) * Num_boss_teleport_segs);
+	{
+		const auto pod_segs{build_pod_segs(Boss_teleport_segs, Num_boss_teleport_segs)};
+		PHYSFSX_writeBytes(fp, pod_segs.data(), sizeof(uint16_t) * Num_boss_teleport_segs);
+	}
 #endif
 }
 

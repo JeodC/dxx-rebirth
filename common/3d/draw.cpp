@@ -51,7 +51,7 @@ g3_draw_line_colors::g3_draw_line_colors(const color_palette_index color) :
 namespace {
 
 //deal with a clipped line
-static void must_clip_line(const g3_draw_line_context &context, g3s_point *p0, g3s_point *p1, const clipping_code codes_or, temporary_points_t &tp)
+static void must_clip_line(const g3_draw_line_context &context, g3_draw_line_point *p0, g3_draw_line_point *p1, const clipping_code codes_or, temporary_points_t &tp)
 {
 	if ((p0->p3_flags&projection_flag::temp_point) || (p1->p3_flags&projection_flag::temp_point))
 		;		//line has already been clipped, so give up
@@ -72,13 +72,13 @@ static void must_clip_line(const g3_draw_line_context &context, g3s_point *p0, g
 }
 
 //draws a line. takes two points.  returns true if drew
-void g3_draw_line(const g3_draw_line_context &context, g3s_point &p0, g3s_point &p1)
+void g3_draw_line(const g3_draw_line_context &context, g3_draw_line_point &p0, g3_draw_line_point &p1)
 {
 	temporary_points_t tp;
 	g3_draw_line(context, p0, p1, tp);
 }
 
-void g3_draw_line(const g3_draw_line_context &context, g3s_point &p0, g3s_point &p1, temporary_points_t &tp)
+void g3_draw_line(const g3_draw_line_context &context, g3_draw_line_point &p0, g3_draw_line_point &p1, temporary_points_t &tp)
 {
 	if ((p0.p3_codes & p1.p3_codes) != clipping_code::None)
 		return;
@@ -98,15 +98,15 @@ void g3_draw_line(const g3_draw_line_context &context, g3s_point &p0, g3s_point 
 //normal of the plane, and a point on it.  The normal need not be normalized
 bool g3_check_normal_facing(const vms_vector &v,const vms_vector &norm)
 {
-	return (vm_vec_dot(vm_vec_sub(View_position,v),norm) > 0);
+	return (vm_vec_build_dot(vm_vec_build_sub(View_position, v), norm) > 0);
 }
 
-bool do_facing_check(const std::array<cg3s_point *, 3> &vertlist)
+bool do_facing_check(const std::array<g3_draw_tmap_point *, 3> &vertlist)
 {
 	//normal not specified, so must compute
 		//get three points (rotated) and compute normal
 	const auto tempv{vm_vec_perp(vertlist[0]->p3_vec, vertlist[1]->p3_vec, vertlist[2]->p3_vec)};
-		return (vm_vec_dot(tempv,vertlist[1]->p3_vec) < 0);
+		return (vm_vec_build_dot(tempv,vertlist[1]->p3_vec) < 0);
 }
 
 #if !DXX_USE_OGL
@@ -147,7 +147,7 @@ free_points:
 
 //draw a flat-shaded face.
 //returns 1 if off screen, 0 if drew
-void _g3_draw_poly(grs_canvas &canvas, const std::span<cg3s_point *const> pointlist, const uint8_t color)
+void _g3_draw_poly(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const> pointlist, const uint8_t color)
 {
 	g3s_codes cc;
 
@@ -191,7 +191,7 @@ void _g3_draw_poly(grs_canvas &canvas, const std::span<cg3s_point *const> pointl
 }
 
 //draw a texture-mapped face.
-void _g3_draw_tmap(grs_canvas &canvas, const std::span<cg3s_point *const> pointlist, const g3s_uvl *const uvl_list, const g3s_lrgb *const light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+void _g3_draw_tmap(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const> pointlist, const g3s_uvl *const uvl_list, const g3s_lrgb *const light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
 {
 	g3s_codes cc;
 
@@ -272,7 +272,7 @@ free_points:
 
 //draw a sortof sphere - i.e., the 2d radius is proportional to the 3d
 //radius, but not to the distance from the eye
-void g3_draw_sphere(grs_canvas &canvas, cg3s_point &pnt, const fix rad, const uint8_t color)
+void g3_draw_sphere(grs_canvas &canvas, g3_draw_sphere_point &pnt, const fix rad, const uint8_t color)
 {
 	if ((pnt.p3_codes & clipping_code::behind) == clipping_code::None)
 	{

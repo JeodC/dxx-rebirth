@@ -152,17 +152,17 @@ int toggle_outline_mode(void)
 {
 	return Outline_mode = !Outline_mode;
 }
-#endif
 
-#ifndef NDEBUG
 namespace {
-static void draw_outline(const g3_draw_line_context &context, const unsigned nverts, cg3s_point *const *const pointlist)
+
+static void draw_outline(const g3_draw_line_context &context, const std::span<g3_draw_line_point *> pointlist)
 {
-	const unsigned e = nverts - 1;
+	const auto e{pointlist.size() - 1u};
 	range_for (const unsigned i, xrange(e))
 		g3_draw_line(context, *pointlist[i], *pointlist[i + 1]);
 	g3_draw_line(context, *pointlist[e], *pointlist[0]);
 }
+
 }
 #endif
 
@@ -236,7 +236,7 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
 	grs_bitmap  *bm;
 
-	std::array<cg3s_point *, 4> pointlist;
+	std::array<g3_draw_tmap_point *, 4> pointlist;
 
 	Assert(nv <= pointlist.size());
 
@@ -373,7 +373,7 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 	{
 		const uint8_t color = BM_XRGB(63, 63, 63);
 		g3_draw_line_context context{canvas, color};
-		draw_outline(context, nv, pointlist.data());
+		draw_outline(context, std::span(pointlist).first(nv));
 	}
 #endif
 }
@@ -389,7 +389,7 @@ static void check_face(grs_canvas &canvas, const vmsegidx_t segnum, const sidenu
 #if DXX_USE_EDITOR
 	if (_search_mode) {
 		std::array<g3s_lrgb, 4> dyn_light{};
-		std::array<cg3s_point *, 4> pointlist;
+		std::array<g3_draw_tmap_point *, 4> pointlist;
 #if DXX_USE_OGL
 		(void)tmap1;
 		(void)tmap2;
@@ -498,9 +498,9 @@ static void render_side(fvcvertptr &vcvertptr, grs_canvas &canvas, const vcsegpt
 		(sside.type == side_type::tri_13)
 			? 1
 			: 0;
-	const auto tvec = vm_vec_normalized_quick(vm_vec_sub(Viewer_eye, vcvertptr(vertnum_list[which_vertnum])));
+	const auto tvec = vm_vec_normalized_quick(vm_vec_build_sub(Viewer_eye, vcvertptr(vertnum_list[which_vertnum])));
 	auto &normals = sside.normals;
-	const auto v_dot_n0 = vm_vec_dot(tvec, normals[0]);
+	const auto v_dot_n0 = vm_vec_build_dot(tvec, normals[0]);
 	//	========== Mark: Here is the change...beginning here: ==========
 
 	std::index_sequence<0, 1, 2, 3> is_quad;
@@ -517,7 +517,7 @@ static void render_side(fvcvertptr &vcvertptr, grs_canvas &canvas, const vcsegpt
 		//	to render it as a single quadrilateral.  This is a function of how far away the viewer is, how non-planar
 		//	the face is, how normal to the surfaces the view is.
 		//	Now, if both dot products are close to 1.0, then render two triangles as a single quad.
-		const auto v_dot_n1 = vm_vec_dot(tvec, normals[1]);
+		const auto v_dot_n1 = vm_vec_build_dot(tvec, normals[1]);
 
 		if (v_dot_n0 < v_dot_n1) {
 			min_dot = v_dot_n0;
@@ -530,7 +530,7 @@ static void render_side(fvcvertptr &vcvertptr, grs_canvas &canvas, const vcsegpt
 		//	Determine whether to detriangulate side: (speed hack, assumes Tulate_min_ratio == F1_0*2, should fixmul(min_dot, Tulate_min_ratio))
 		if (DETRIANGULATION && (min_dot + F1_0 / 256 > max_dot || (Viewer->segnum != segp && min_dot > Tulate_min_dot && max_dot < min_dot * 2)) &&
 			//	The other detriangulation code doesn't deal well with badly non-planar sides.
-			vm_vec_dot(normals[0], normals[1]) >= Min_n0_n1_dot
+			vm_vec_build_dot(normals[0], normals[1]) >= Min_n0_n1_dot
 			)
 		{
 			check_render_face(canvas, is_quad, segp, sidenum, 0, vertnum_list, uside.tmap_num, uside.tmap_num2, uside.uvls, wid_flags);
@@ -702,9 +702,11 @@ g3s_codes rotate_list(fvcvertptr &vcvertptr, const std::span<const vertnum_t> po
 	g3s_codes cc;
 	const auto current_generation{s_current_generation};
 	const auto cheats_acid{cheats.acid};
-	const float f = likely(!cheats_acid)
-		? 0.0f /* unused */
-		: 2.0f * (static_cast<float>(timer_query()) / F1_0);
+	const float f{
+		likely(!cheats_acid)
+			? 0.f /* unused */
+			: (static_cast<float>(timer_query()) / F0_5)
+	};
 
 	for (const auto pnum : pointnumlist)
 	{
@@ -713,13 +715,12 @@ g3s_codes rotate_list(fvcvertptr &vcvertptr, const std::span<const vertnum_t> po
 		{
 			pnt.p3_last_generation = current_generation;
 			auto &v = *vcvertptr(pnum);
-			vertex tmpv;
 			g3_rotate_point(pnt, likely(!cheats_acid) ? v : (
-				tmpv = v,
-				tmpv.x += fl2f(sinf(f + f2fl(tmpv.x))),
-				tmpv.y += fl2f(sinf(f * 1.5f + f2fl(tmpv.y))),
-				tmpv.z += fl2f(sinf(f * 2.5f + f2fl(tmpv.z))),
-				tmpv
+				vertex{
+					v.x + fl2f(sinf(f + f2fl(v.x))),
+					v.y + fl2f(sinf(f * 1.5f + f2fl(v.y))),
+					v.z + fl2f(sinf(f * 2.5f + f2fl(v.z))),
+				}
 			));
 		}
 		cc.uand &= pnt.p3_codes;
@@ -981,17 +982,26 @@ static std::optional<sidenum_t> find_seg_side(const shared_segment &seg, const s
 }
 
 [[nodiscard]]
-static bool compare_child(fvcvertptr &vcvertptr, const vms_vector &Viewer_eye, const shared_segment &seg, const shared_segment &cseg, const sidenum_t edgeside)
+static fix compare_child(fvcvertptr &vcvertptr, const vms_vector &Viewer_eye, const shared_segment &seg, const shared_segment &cseg, const sidenum_t edgeside)
 {
 	const auto &cside = cseg.sides[edgeside];
-	const auto &sv = Side_to_verts[edgeside][cside.type == side_type::tri_13 ? side_relative_vertnum::_1 : side_relative_vertnum::_0];
-	const auto &temp{vm_vec_sub(Viewer_eye, vcvertptr(seg.verts[sv]))};
+	const auto ctype{cside.type};
+	const auto &sv = Side_to_verts[edgeside][ctype == side_type::tri_13 ? side_relative_vertnum::_1 : side_relative_vertnum::_0];
+	const auto &temp{vm_vec_build_sub(Viewer_eye, vcvertptr(seg.verts[sv]))};
 	const auto &cnormal = cside.normals;
-	return vm_vec_dot(cnormal[0], temp) < 0 || vm_vec_dot(cnormal[1], temp) < 0;
+	const auto d0{vm_vec_build_dot(cnormal[0], temp)};
+	if (d0 < 0)
+		return d0;
+	if (ctype == side_type::quad)
+		/* For a quad side, both normals are the same, so the result computed
+		 * below would have the same value as `d0`.  Skip computing that result
+		 * and just return `d0`.
+		 */
+		return d0;
+	return vm_vec_build_dot(cnormal[1], temp);
 }
 
 //see if the order matters for these two children.
-//returns 0 if order doesn't matter, 1 if c0 before c1, -1 if c1 before c0
 [[nodiscard]]
 static bool compare_children(fvcvertptr &vcvertptr, const vms_vector &Viewer_eye, const vcsegptridx_t seg, const sidenum_t s0, const sidenum_t s1)
 {
@@ -1011,14 +1021,14 @@ static bool compare_children(fvcvertptr &vcvertptr, const vms_vector &Viewer_eye
 	const auto edgeside0 = find_seg_side(seg0, edge_verts, find_connect_side(seg, seg0));
 	if (!edgeside0)
 		return false;
-	const auto r0 = compare_child(vcvertptr, Viewer_eye, seg, seg0, *edgeside0);
+	const auto r0{compare_child(vcvertptr, Viewer_eye, seg, seg0, *edgeside0) < 0};
 	if (!r0)
 		return r0;
 	const auto &&seg1 = seg.absolute_sibling(sseg.children[s1]);
 	const auto edgeside1 = find_seg_side(seg1, edge_verts, find_connect_side(seg, seg1));
 	if (!edgeside1)
 		return false;
-	return !compare_child(vcvertptr, Viewer_eye, seg, seg1, *edgeside1);
+	return !(compare_child(vcvertptr, Viewer_eye, seg, seg1, *edgeside1) < 0);
 }
 
 //short the children of segment to render in the correct order
@@ -1420,7 +1430,7 @@ static void build_segment_list(render_state_t &rstate, const vms_vector &Viewer_
 						auto codes_and_2d = codes_and_3d;
 						range_for (const auto i, Side_to_verts[siden])
 						{
-							g3s_point *pnt = &Segment_points[seg->verts[i]];
+							const g3_projected_point *const pnt{&Segment_points[seg->verts[i]]};
 
 							if (! (pnt->p3_flags&projection_flag::projected)) {no_proj_flag=1; break;}
 

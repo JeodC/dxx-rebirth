@@ -134,9 +134,9 @@ enum class collision_result : bool
 namespace dsx {
 
 #if DXX_BUILD_DESCENT == 1
-constexpr std::integral_constant<unsigned, 4> MAX_CONTROLCEN_GUNS{};
+constexpr std::size_t MAX_CONTROLCEN_GUNS{4};
 #elif DXX_BUILD_DESCENT == 2
-constexpr std::integral_constant<unsigned, 8> MAX_CONTROLCEN_GUNS{};
+constexpr std::size_t MAX_CONTROLCEN_GUNS{8};
 struct d_unique_buddy_state;
 #endif
 
@@ -172,8 +172,20 @@ enum class player_dead_state : uint8_t
 };
 
 namespace dcx {
+
 extern player_dead_state Player_dead_state;          // !0 means player is dead!
 extern objnum_t Player_fired_laser_this_frame;
+
+// create quaternion structure from object data which greatly saves bytes by using quaternion instead or orientation matrix
+[[nodiscard]]
+quaternionpos build_quaternionpos(const object_base &objp);
+
+// Extract information from an object (objp->orient, objp->pos,
+// objp->segnum), stuff in a shortpos structure.  See typedef
+// shortpos.
+[[nodiscard]]
+shortpos create_shortpos_native(const d_level_shared_segment_state &, const object_base &objp);
+
 }
 
 #ifdef DXX_BUILD_DESCENT
@@ -240,20 +252,16 @@ void fix_object_segs();
 
 void dead_player_end();
 
-// Extract information from an object (objp->orient, objp->pos,
-// objp->segnum), stuff in a shortpos structure.  See typedef
-// shortpos.
-void create_shortpos_little(const d_level_shared_segment_state &, shortpos &spp, const object_base &objp);
-void create_shortpos_native(const d_level_shared_segment_state &, shortpos &spp, const object_base &objp);
-
+#if DXX_USE_MULTIPLAYER
+#if DXX_BUILD_DESCENT == 2
 // Extract information from a shortpos, stuff in objp->orient
 // (matrix), objp->pos, objp->segnum
-void extract_shortpos_little(vmobjptridx_t objp, const shortpos *spp);
+void multi_object_warp_to_shortpos(vmobjptridx_t objp, const shortpos &spp);
+#endif
 
-// create and extract quaternion structure from object data which greatly saves bytes by using quaternion instead or orientation matrix
-[[nodiscard]]
-quaternionpos build_quaternionpos(const object_base &objp);
-void extract_quaternionpos(vmobjptridx_t objp, quaternionpos &qpp);
+// reset object position from quaternion structure
+void extract_quaternionpos(fvmobjptr &vmobjptr, fvmsegptr &vmsegptr, vmobjptridx_t objp, quaternionpos &qpp);
+#endif
 
 // delete objects, such as weapons & explosions, that shouldn't stay
 // between levels if clear_all is set, clear even proximity bombs

@@ -236,9 +236,9 @@ private:
 	}
 protected:
 	template <std::size_t N>
-		std::array<cg3s_point *, N> prepare_point_list(const uint_fast32_t nv, const uint8_t *const p)
+		std::array<g3_draw_tmap_point *, N> prepare_point_list(const uint_fast32_t nv, const uint8_t *const p)
 		{
-			std::array<cg3s_point *, N> point_list;
+			std::array<g3_draw_tmap_point *, N> point_list;
 			for (uint_fast32_t i = 0; i < nv; ++i)
 				point_list[i] = &Interp_point_list[wp(p + 30)[i]];
 			return point_list;
@@ -246,7 +246,7 @@ protected:
 	g3s_lrgb get_noglow_light(const uint8_t *const p) const
 	{
 		g3s_lrgb light;
-		const auto negdot = -vm_vec_dot(View_matrix.fvec, *vp(p + 16));
+		const auto negdot = -vm_vec_build_dot(View_matrix.fvec, *vp(p + 16));
 		const auto color = (f1_0 / 4) + ((negdot * 3) / 4);
 		set_color_by_model_light(&g3s_lrgb::r, light, color);
 		set_color_by_model_light(&g3s_lrgb::g, light, color);
@@ -278,12 +278,8 @@ protected:
 	}
 	void op_rodbm(const uint8_t *const p)
 	{
-		const auto &&rod_bot_p = g3_rotate_point(*vp(p + 20));
-		const auto &&rod_top_p = g3_rotate_point(*vp(p + 4));
-		const g3s_lrgb rodbm_light{
-			f1_0, f1_0, f1_0
-		};
-		g3_draw_rod_tmap(canvas, *model_bitmaps[w(p + 2)], rod_bot_p, w(p + 16), rod_top_p, w(p + 32), rodbm_light, tmap_drawer_ptr);
+		const g3_instance_context viewer_context{View_matrix, View_position};
+		g3_draw_rod_tmap(canvas, *model_bitmaps[w(p + 2)], /* bot_point = */ g3_rotated_point{viewer_context, *vp(p + 20)}, w(p + 16), /* top_point = */ g3_rotated_point{viewer_context, *vp(p + 4)}, w(p + 32), g3s_lrgb{F1_0, F1_0, F1_0}, tmap_drawer_ptr);
 	}
 	void op_subcall(const uint8_t *const p, const glow_values_t *const glow_values)
 	{
@@ -338,8 +334,7 @@ public:
 					? 255
 					: gr_find_closest_color_15bpp(packed_color_r5g5b5{w(p + 28)});
 #endif
-				const auto point_list = prepare_point_list<MAX_POINTS_PER_POLY>(nv, p);
-				g3_draw_poly(canvas, nv, point_list, color);
+				g3_draw_poly(canvas, nv, prepare_point_list<MAX_POINTS_PER_POLY>(nv, p), color);
 		}
 	}
 	static g3s_lrgb get_glow_light(const fix c)
@@ -366,8 +361,7 @@ public:
 			uvl_list[i] = (reinterpret_cast<const g3s_uvl *>(p+30+((nv&~1)+1)*2))[i];
 			uvl_list[i].l = average_light;
 		}
-		const auto point_list = prepare_point_list<MAX_POINTS_PER_POLY>(nv, p);
-		g3_draw_tmap(canvas, nv, point_list, uvl_list, lrgb_list, *model_bitmaps[w(p + 28)], tmap_drawer_ptr);
+		g3_draw_tmap(canvas, nv, prepare_point_list<MAX_POINTS_PER_POLY>(nv, p), uvl_list, lrgb_list, *model_bitmaps[w(p + 28)], tmap_drawer_ptr);
 	}
 	void op_sortnorm(const uint8_t *const p)
 	{
@@ -430,8 +424,7 @@ public:
 		lrgb_list.fill(get_noglow_light(p));
 		range_for (const uint_fast32_t i, xrange(nv))
 			uvl_list[i] = (reinterpret_cast<const g3s_uvl *>(p+30+((nv&~1)+1)*2))[i];
-		const auto point_list = prepare_point_list<MAX_POINTS_PER_POLY>(nv, p);
-		g3_draw_tmap(canvas, nv, point_list, uvl_list, lrgb_list, *model_bitmaps[w(p + 28)], tmap_drawer_ptr);
+		g3_draw_tmap(canvas, nv, prepare_point_list<MAX_POINTS_PER_POLY>(nv, p), uvl_list, lrgb_list, *model_bitmaps[w(p + 28)], tmap_drawer_ptr);
 	}
 	void op_sortnorm(const uint8_t *const p)
 	{

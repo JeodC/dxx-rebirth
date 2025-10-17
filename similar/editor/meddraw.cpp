@@ -32,6 +32,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "segment.h"
 #include "segpoint.h"
 #include "gameseg.h"
+#include "common/3d/globvars.h"
 #include "gr.h"
 #include "ui.h"
 #include "editor/editor.h"
@@ -92,6 +93,7 @@ static void draw_seg_objects(grs_canvas &canvas, const unique_segment &seg)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptridx = Objects.vcptridx;
+	const g3_instance_context viewer_context{View_matrix, View_position};
 	range_for (const auto obj, objects_in(seg, vcobjptridx, vcsegptr))
 	{
 		const uint8_t color = (obj->type == OBJ_PLAYER && static_cast<icobjptridx_t::index_type>(obj) > 0)
@@ -100,7 +102,7 @@ static void draw_seg_objects(grs_canvas &canvas, const unique_segment &seg)
 				? PLAYER_COLOR
 				: ROBOT_COLOR
 			);
-		g3_draw_sphere(canvas, /* sphere_point = */ g3_rotate_point(obj->pos), obj->size, color);
+		g3_draw_sphere(canvas, /* sphere_point = */ g3_draw_sphere_point{viewer_context, obj->pos}, obj->size, color);
 	}
 }
 
@@ -160,13 +162,14 @@ static void check_segment(const vmsegptridx_t seg)
 
 		range_for (auto &fn, Side_to_verts)
 		{
-			std::array<cg3s_point *, 3> vert_list;
-			vert_list[0] = &Segment_points[seg->verts[fn[side_relative_vertnum::_0]]];
-			vert_list[1] = &Segment_points[seg->verts[fn[side_relative_vertnum::_1]]];
-			vert_list[2] = &Segment_points[seg->verts[fn[side_relative_vertnum::_2]]];
+			std::array<g3_draw_tmap_point *, 3> vert_list{{
+				&Segment_points[seg->verts[fn[side_relative_vertnum::_0]]],
+				&Segment_points[seg->verts[fn[side_relative_vertnum::_1]]],
+				&Segment_points[seg->verts[fn[side_relative_vertnum::_2]]],
+			}};
 			g3_check_and_draw_poly(*grd_curcanv, vert_list, color);
 
-			vert_list[1] = &Segment_points[seg->verts[fn[side_relative_vertnum::_2]]];
+			vert_list[1] = vert_list[2];
 			vert_list[2] = &Segment_points[seg->verts[fn[side_relative_vertnum::_3]]];
 			g3_check_and_draw_poly(*grd_curcanv, vert_list, color);
 		}
@@ -354,13 +357,10 @@ static void add_edges(const shared_segment &seg)
 
 		for (auto &&[idx, sidep] : enumerate(seg.sides))
 		{
-			int	num_vertices;
-			const auto &&[num_faces, vertex_list] = create_all_vertex_lists(seg, sidep, idx);
-			if (num_faces == 1)
-				num_vertices = 4;
-			else
-				num_vertices = 3;
+			const auto &&vertex_list = create_all_vertex_lists(seg, sidep, idx);
+			const unsigned num_vertices{vertex_list.side_type == vertex_array_side_type::quad ? 4u : 3u};
 
+			const unsigned num_faces{vertex_list.side_type == vertex_array_side_type::quad ? 1u : 2u};
 			for (fn=0; fn<num_faces; fn++) {
 				//Note: normal check appears to be the wrong way since the normals points in, but we're looking from the outside
 				if (g3_check_normal_facing(vcvertptr(seg.verts[vertex_list[fn*3]]), sidep.normals[fn]))
@@ -694,9 +694,9 @@ static void draw_coordinate_axes(void)
 	const auto &&av11 = vmvertptr(Axes_verts[11]);
 	const auto &&av12 = vmvertptr(Axes_verts[12]);
 	const auto &&av14 = vmvertptr(Axes_verts[14]);
-	const auto &&xvec{vm_vec_sub(av1, av0)};
-	const auto &&yvec{vm_vec_sub(av2, av0)};
-	const auto &&zvec{vm_vec_sub(av3, av0)};
+	const auto &&xvec{vm_vec_build_sub(av1, av0)};
+	const auto &&yvec{vm_vec_build_sub(av2, av0)};
+	const auto &&zvec{vm_vec_build_sub(av3, av0)};
 
 	// Create the letter X
 	tvec = xvec;

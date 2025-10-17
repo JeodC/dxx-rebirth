@@ -112,6 +112,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "editor/esegment.h"
 #endif
 
+#include "d_construct.h"
 #include "d_enumerate.h"
 #include "d_levelstate.h"
 #include "d_range.h"
@@ -690,7 +691,7 @@ void move_player_2_segment(const vmsegptridx_t seg, const sidenum_t side)
 	console->pos = compute_segment_center(vcvertptr, seg);
 	auto vp{compute_center_point_on_side(vcvertptr, seg, side)};
 	vm_vec_sub2(vp, console->pos);
-	vm_vector_to_matrix(console->orient, vp);
+	reconstruct_at(console->orient, vm_vector_to_matrix, vp);
 	obj_relink(vmobjptr, vmsegptr, console, seg);
 }
 #endif
@@ -1100,9 +1101,13 @@ static void do_cloak_stuff()
 				pl_flags &= ~PLAYER_FLAGS_CLOAKED;
 				if (i == Player_num) {
 					multi_digi_play_sample(sound_effect::SOUND_CLOAK_OFF, F1_0);
+#if DXX_USE_MULTIPLAYER
+					if (!(Game_mode & GM_MULTI))
+						continue;
 					maybe_drop_net_powerup(powerup_type_t::POW_CLOAK, 1, 0);
 					if ( Newdemo_state != ND_STATE_PLAYBACK )
 						multi_send_decloak(); // For demo recording
+#endif
 				}
 			}
 		}

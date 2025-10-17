@@ -68,7 +68,8 @@ static std::unique_ptr<uint8_t[]> light_array;
 
 static grs_bitmap *terrain_bm;
 static int org_i,org_j;
-static void build_light_table();
+[[nodiscard]]
+static std::unique_ptr<uint8_t[]> build_light_table(std::size_t grid_w, std::size_t grid_h);
 
 }
 
@@ -77,9 +78,9 @@ static void build_light_table();
 namespace {
 
 // ------------------------------------------------------------------------
-static void draw_cell(grs_canvas &canvas, const vms_vector &Viewer_eye, const int i, const int j, cg3s_point &p0, cg3s_point &p1, cg3s_point &p2, cg3s_point &p3, int &mine_tiles_drawn)
+static void draw_cell(grs_canvas &canvas, const vms_vector &Viewer_eye, const int i, const int j, g3_draw_tmap_point &p0, g3_draw_tmap_point &p1, g3_draw_tmap_point &p2, g3_draw_tmap_point &p3, int &mine_tiles_drawn)
 {
-	std::array<cg3s_point *, 3> pointlist{{
+	std::array<g3_draw_tmap_point *, 3> pointlist{{
 		&p0,
 		&p1,
 		&p3,
@@ -232,9 +233,9 @@ void render_terrain(grs_canvas &canvas, const vms_vector &Viewer_eye, const vms_
 	vm_vec_scale_add2(start_point,surface_orient.fvec,-(org_j - low_j)*GRID_SCALE);
 
 	{
-		const auto tv{vm_vec_sub(Viewer->pos, start_point)};
-	viewer_i = vm_vec_dot(tv,surface_orient.rvec) / GRID_SCALE;
-	viewer_j = vm_vec_dot(tv,surface_orient.fvec) / GRID_SCALE;
+		const auto tv{vm_vec_build_sub(Viewer->pos, start_point)};
+	viewer_i = vm_vec_build_dot(tv,surface_orient.rvec) / GRID_SCALE;
+	viewer_j = vm_vec_build_dot(tv,surface_orient.fvec) / GRID_SCALE;
 	}
 
 	auto last_p = g3_rotate_point(start_point);
@@ -410,8 +411,7 @@ void load_terrain(const char *filename)
 //	d_free(height_bitmap.bm_data);
 
 	terrain_bm = terrain_bitmap;
-
-	build_light_table();
+	light_array = build_light_table(grid_w, grid_h);
 }
 
 namespace dcx {
@@ -436,7 +436,7 @@ constexpr vms_vector light{0x2e14,0xe8f5,0x5eb8};
 static fix get_face_light(const vms_vector &p0,const vms_vector &p1,const vms_vector &p2)
 {
 	const auto norm{vm_vec_normal(p0, p1, p2)};
-	return -vm_vec_dot(norm,light);
+	return -vm_vec_build_dot(norm,light);
 }
 
 static fix get_avg_light(int i,int j)
@@ -460,35 +460,31 @@ static fix get_avg_light(int i,int j)
 	return sum/6;
 }
 
-static void build_light_table()
+static std::unique_ptr<uint8_t[]> build_light_table(const std::size_t grid_w, const std::size_t grid_h)
 {
 	std::size_t alloc = grid_w*grid_h;
-	light_array = std::make_unique<uint8_t[]>(alloc);
-	memset(light_array.get(), 0, alloc);
+	std::unique_ptr<uint8_t[]> light_array{std::make_unique<uint8_t[]>(alloc)};
 	int i,j;
-	fix l, l2, min_l = INT32_MAX, max_l = 0;
+	fix min_l = INT32_MAX, max_l = 0;
 	for (i=1;i<grid_w;i++)
 		for (j=1;j<grid_h;j++) {
-			l = get_avg_light(i,j);
-
+			const auto l{get_avg_light(i, j)};
 			if (l > max_l)
 				max_l = l;
-
 			if (l < min_l)
 				min_l = l;
 		}
 
 	for (i=1;i<grid_w;i++)
 		for (j=1;j<grid_h;j++) {
-
-			l = get_avg_light(i,j);
+			const auto l{get_avg_light(i, j)};
 
 			if (min_l == max_l) {
 				LIGHT(i,j) = l>>8;
 				continue;
 			}
 
-			l2 = fixdiv((l-min_l),(max_l-min_l));
+			auto l2{fixdiv((l - min_l), (max_l - min_l))};
 
 			if (l2==f1_0)
 				l2--;
@@ -496,6 +492,7 @@ static void build_light_table()
 			LIGHT(i,j) = l2>>8;
 
 		}
+	return light_array;
 }
 
 }

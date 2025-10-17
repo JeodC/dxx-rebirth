@@ -203,7 +203,7 @@ static void init_debris_object(object_base &debris, const object_base &parent, c
 	debris.rtype.pobj_info.tmap_override = parent.rtype.pobj_info.tmap_override;
 
 	//Set physics data for this object
-	debris.mtype.phys_info.velocity = /* added_scaled_random_velocity = */ vm_vec_add(
+	debris.mtype.phys_info.velocity = /* added_scaled_random_velocity = */ vm_vec_build_add(
 		/* scaled_random_velocity = */ vm_vec_copy_scale(
 			/* normalized_random_velocity = */ vm_vec_normalized_quick(
 				/* random_velocity = */ vms_vector{
@@ -1658,8 +1658,8 @@ unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
 	auto &v1{*vcvertptr(vertnum_list[1])};
 	auto &v2{*vcvertptr(vertnum_list[2])};
 
-	const auto &&vv0{vm_vec_sub(v0, v1)};
-	const auto &&vv1{vm_vec_sub(v2, v1)};
+	const auto &&vv0{vm_vec_build_sub(v0, v1)};
+	const auto &&vv1{vm_vec_build_sub(v2, v1)};
 
 	//now create all the next explosions
 
@@ -1700,7 +1700,7 @@ void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime
 	const auto pos_right{vm_vec_scale_add(pos_left, obj.orient.rvec, obj.size / 2)};
 
 	if (count == 1)
-		pos_left = vm_vec_avg(pos_left, pos_right);
+		pos_left = vm_vec_build_avg(pos_left, pos_right);
 
 	const auto &&objseg{Segments.vmptridx(obj.segnum)};
 	{

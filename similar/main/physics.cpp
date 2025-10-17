@@ -47,6 +47,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define MAX_OBJECT_VEL	i2f(100)
 #endif
 
+#include "d_construct.h"
 #include "d_levelstate.h"
 #include "compiler-range_for.h"
 
@@ -55,12 +56,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 constexpr fix ROLL_RATE{0x2000};
 constexpr fixang DAMP_ANG{0x400};	//min angle to bank
 constexpr fix TURNROLL_SCALE{0x4ec4/2};
-
-//make sure matrix is orthogonal
-void check_and_fix_matrix(vms_matrix &m)
-{
-	vm_vector_to_matrix_u(m, m.fvec, m.uvec);
-}
 
 namespace {
 
@@ -88,7 +83,7 @@ static void do_physics_align_object(object_base &obj)
 
 	range_for (auto &i, vcsegptr(obj.segnum)->shared_segment::sides)
 	{
-		const auto d{vm_vec_dot(i.normals[0], obj.orient.uvec)};
+		const auto d{vm_vec_build_dot(i.normals[0], obj.orient.uvec)};
 		if (largest_d < d)
 		{
 			largest_d = d;
@@ -101,11 +96,11 @@ static void do_physics_align_object(object_base &obj)
 		return;
 	const vms_vector desired_upvec{
 		get_side_is_quad(*best_side)
-			? vm_vec_normalized(vm_vec_avg(best_side->normals[0], best_side->normals[1]))
+			? vm_vec_normalized(vm_vec_build_avg(best_side->normals[0], best_side->normals[1]))
 			: best_side->normals[0]
 	};
 
-	if (labs(vm_vec_dot(desired_upvec, obj.orient.fvec)) < f1_0 / 2)
+	if (labs(vm_vec_build_dot(desired_upvec, obj.orient.fvec)) < f1_0 / 2)
 	{
 		const auto temp_matrix{vm_vector_to_matrix_u(obj.orient.fvec, desired_upvec)};
 
@@ -130,24 +125,32 @@ static void do_physics_align_object(object_base &obj)
 			obj.orient = vm_matrix_x_matrix(obj.orient, rotmat);
 		}
 	}
-
 }
 
-static void set_object_turnroll(object_base &obj, const fix frametime)
+[[nodiscard]]
+static fixang set_object_turnroll(object_base &obj, const fix frametime)
 {
 	const fixang desired_bank{multiply_with_clamp_to_fixang({-obj.mtype.phys_info.rotvel.y}, {TURNROLL_SCALE})};
-	if (obj.mtype.phys_info.turnroll != desired_bank)
+	if (const fix delta_ang{desired_bank - obj.mtype.phys_info.turnroll})
 	{
-		fixang delta_ang;
 		const fixang raw_max_roll{multiply_with_clamp_to_fixang(ROLL_RATE, frametime)};
-		delta_ang = desired_bank - obj.mtype.phys_info.turnroll;
-		const fixang max_roll{
-			std::abs(delta_ang) < raw_max_roll
-				? delta_ang
-				: (delta_ang < 0 ? static_cast<fixang>(-raw_max_roll) : raw_max_roll)
-		};
-		obj.mtype.phys_info.turnroll += max_roll;
+		/* Casting to `fixang` is safe:
+		 * - `raw_max_roll` is a positive `fixang`, since `ROLL_RATE` is
+		 *   positive and `frametime` is positive, so `raw_max_roll` is in the
+		 *   range [`1`, `INT16_MAX`].
+		 * - `-raw_max_roll` is then in the range [`-INT16_MAX`, `-1`].
+		 * - Therefore, [`-raw_max_roll`, `raw_max_roll`] is at worst
+		 *   [`-INT16_MAX`, `INT16_MAX`].
+		 * - `fixang` can represent all values in [`-INT16_MAX`, `INT16_MAX`],
+		 *   so the conversion does not change the value.
+		 */
+		const auto max_roll{static_cast<fixang>(std::clamp<fix>(delta_ang, -raw_max_roll, raw_max_roll))};
+		const auto updated_turnroll{obj.mtype.phys_info.turnroll + max_roll};
+		static constexpr fix minfixang{std::numeric_limits<fixang>::min()};
+		static constexpr fix maxfixang{std::numeric_limits<fixang>::max()};
+		obj.mtype.phys_info.turnroll = {static_cast<fixang>(std::clamp<fix>(updated_turnroll, minfixang, maxfixang))};
 	}
+	return obj.mtype.phys_info.turnroll;
 }
 
 }
@@ -213,12 +216,13 @@ static void do_physics_sim_rot(object_base &obj)
 	//now rotate object
 
 	//unrotate object for bank caused by turn
-	if (const auto turnroll{obj.mtype.phys_info.turnroll})
+	const fixang old_turnroll{obj.mtype.phys_info.turnroll};
+	if (old_turnroll)
 	{
 		const auto &&rotmat{vm_angles_2_matrix(
 			vms_angvec{
 				.p = fixang{0},
-				.b = static_cast<fixang>(-turnroll),
+				.b = static_cast<fixang>(-old_turnroll),
 				.h = fixang{0}
 			})};
 		obj.orient = vm_matrix_x_matrix(obj.orient, rotmat);
@@ -233,15 +237,12 @@ static void do_physics_sim_rot(object_base &obj)
 				.h = multiply_with_clamp_to_fixang(obj.mtype.phys_info.rotvel.y, frametime)
 			}));
 
-	if (obj.mtype.phys_info.flags & PF_TURNROLL)
-		set_object_turnroll(obj, frametime);
-
 	//re-rotate object for bank caused by turn
 	/* The call to `set_object_turnroll` may have changed
-	 * `.phys_info.turnroll`, so it must be reread here.  The value loaded
-	 * above is stale.
+	 * `.phys_info.turnroll`, so use the returned turnroll, which may differ
+	 * from `old_turnroll`.
 	 */
-	if (const auto turnroll{obj.mtype.phys_info.turnroll})
+	if (const fixang turnroll{(obj.mtype.phys_info.flags & PF_TURNROLL) ? set_object_turnroll(obj, frametime) : old_turnroll})
 	{
 		obj.orient = vm_matrix_x_matrix(obj.orient, vm_angles_2_matrix(
 				vms_angvec{
@@ -404,7 +405,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		//	If retry count is getting large, then we are trying to do something stupid.
 		if (count > 8) break; // in original code this was 3 for all non-player objects. still leave us some limit in case fvi goes apeshit.
 
-		const auto new_pos = vm_vec_add(obj->pos,frame_vec);
+		const auto new_pos = vm_vec_build_add(obj->pos,frame_vec);
 		int flags{0};
 		if (obj->type == OBJ_WEAPON)
 			flags |= FQ_TRANSPOINT;
@@ -501,7 +502,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 			vms_vector moved_vec_n;
 			const auto actual_dist{vm_vec_normalized_dir(moved_vec_n, obj->pos, save_pos)};
 
-			if (fate == fvi_hit_type::Wall && vm_vec_dot(moved_vec_n,frame_vec) < 0)
+			if (fate == fvi_hit_type::Wall && vm_vec_build_dot(moved_vec_n,frame_vec) < 0)
 			{		//moved backwards
 
 				//don't change position or sim_time
@@ -538,8 +539,8 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 
 				// Find hit speed	
 
-				const auto moved_v{vm_vec_sub(obj->pos, save_pos)};
-				auto wall_part{vm_vec_dot(moved_v,hit_info.hit_wallnorm)};
+				const auto moved_v{vm_vec_build_sub(obj->pos, save_pos)};
+				auto wall_part{vm_vec_build_dot(moved_v,hit_info.hit_wallnorm)};
 
 				if ((wall_part != 0 && moved_time>0 && (hit_speed=-fixdiv(wall_part,moved_time))>0) || obj->type == OBJ_WEAPON || obj->type == OBJ_DEBRIS)
 					result = collide_object_with_wall(
@@ -588,7 +589,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 					}
 					else {					// Slide object along wall
 
-						wall_part = vm_vec_dot(hit_info.hit_wallnorm,obj->mtype.phys_info.velocity);
+						wall_part = vm_vec_build_dot(hit_info.hit_wallnorm,obj->mtype.phys_info.velocity);
 
 						// if wall_part, make sure the value is sane enough to get usable velocity computed
 						if (wall_part < 0 && wall_part > -f1_0) wall_part = -f1_0;
@@ -626,7 +627,14 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 						}
 
 						if (bounced && obj->type == OBJ_WEAPON)
-							vm_vector_to_matrix_u(obj->orient, obj->mtype.phys_info.velocity, obj->orient.uvec);
+						{
+							/* Copy `objp.orient.uvec` into a temporary and pass the temporary,
+							 * since it is undefined behavior to access `objp.orient` after the old
+							 * object is destroyed until the new value is constructed.
+							 */
+							auto old_uvec{obj->orient.uvec};
+							reconstruct_at(obj->orient, vm_vector_to_matrix_u, obj->mtype.phys_info.velocity, std::move(old_uvec));
+						}
 #endif
 
 						try_again = 1;
@@ -650,7 +658,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 					const fix size0{hit->size};
 					const fix size1{obj->size};
 					Assert(size0+size1 != 0);	// Error, both sizes are 0, so how did they collide, anyway?!?
-					auto pos_hit{vm_vec_scale_add(ppos0, vm_vec_sub(ppos1, ppos0), fixdiv(size0, size0 + size1))};
+					auto pos_hit{vm_vec_scale_add(ppos0, vm_vec_build_sub(ppos1, ppos0), fixdiv(size0, size0 + size1))};
 
 					collide_two_objects(Robot_info, obj, hit, pos_hit);
 				}
@@ -701,7 +709,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		&& (fate == fvi_hit_type::Wall || fate == fvi_hit_type::Object || fate == fvi_hit_type::BadP0)
 		)
 	{	
-		const auto moved_vec{vm_vec_sub(obj->pos, start_pos)};
+		const auto moved_vec{vm_vec_build_sub(obj->pos, start_pos)};
 		obj->mtype.phys_info.velocity = vm_vec_copy_scale(moved_vec, fixdiv(F1_0, FrameTime));
 	}
 
@@ -726,7 +734,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				//bump object back
 
 				auto &s = orig_segp.s.sides[sidenum];
-				const auto &&vertex_list = create_abs_vertex_lists(orig_segp, s, sidenum).second;
+				const auto &&vertex_list{create_abs_vertex_lists(orig_segp, s, sidenum).vertex_list};
 
 				//let's pretend this wall is not triangulated
 				const auto b{begin(vertex_list)};
@@ -767,6 +775,18 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 }
 
 namespace dcx {
+
+//make sure matrix is orthogonal
+void check_and_fix_matrix(vms_matrix &m)
+{
+	/* Copy `m.fvec`, `m.uvec` into temporaries and pass the temporaries, since
+	 * it is undefined behavior to access `m` after the old object is destroyed
+	 * until the new value is constructed.
+	 */
+	auto old_fvec{m.fvec};
+	auto old_uvec{m.uvec};
+	reconstruct_at(m, vm_vector_to_matrix_u, std::move(old_fvec), std::move(old_uvec));
+}
 
 //Applies an instantaneous force on an object, resulting in an instantaneous
 //change in velocity.

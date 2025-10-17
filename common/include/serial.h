@@ -22,7 +22,7 @@
 
 namespace serial {
 
-template <std::size_t Expected, std::size_t Actual>
+template <std::uint64_t Expected, std::uint64_t Actual>
 concept check_equal_value = (Expected == Actual);
 
 template <typename... Args>
@@ -311,7 +311,7 @@ static inline detail::sign_extend_type<extended_signed_type, wrapped_type> sign_
 		process_buffer(std::forward<Accessor &&>(accessor), _SERIAL_UDT_UNWRAP_LIST MEMBERLIST);	\
 	}	\
 	\
-	__attribute_unused	\
+	dxx_compiler_attribute_unused	\
 	static inline auto udt_to_message(TYPE &NAME) { \
 		return serial::message MEMBERLIST;	\
 	}

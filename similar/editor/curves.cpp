@@ -221,7 +221,6 @@ int generate_curve(const fix r1scale, const fix r4scale)
     firstsegflag = 1;
     enddist = F1_0; nextdist = 0;
     while ( enddist > fixmul( nextdist, 1.5*F1_0 )) {
-            vms_matrix  rotmat;
             if (firstsegflag==1)
                 firstsegflag=0;
             else
@@ -234,13 +233,12 @@ int generate_curve(const fix r1scale, const fix r4scale)
             vm_vec_normalized_dir(vec_dir, coord, prev_point);
 			if (!med_attach_segment(Cursegp, vmsegptr(&New_segment), Curside, AttachSide))
 		{
-			med_extract_matrix_from_segment(cursegp, rotmat);                   // rotmat := matrix describing orientation of Cursegp
-			const auto tdest = vm_vec_rotate(vec_dir,rotmat);	// tdest := vec_dir in reference frame of Cursegp
+			auto rotmat{med_extract_matrix_from_segment(cursegp)};                   // rotmat := matrix describing orientation of Cursegp
+			const auto tdest{vm_vec_build_rotated(vec_dir, rotmat)};	// tdest := vec_dir in reference frame of Cursegp
 			vec_dir = tdest;
 
 			{
-				vms_matrix rotmat2;
-				vm_vector_to_matrix(rotmat2, vec_dir);
+				auto rotmat2{vm_vector_to_matrix(vec_dir)};
             med_rotate_segment( Cursegp, rotmat2 );
 			}
 			prev_point = coord;
@@ -284,13 +282,6 @@ int generate_curve(const fix r1scale, const fix r4scale)
 
     if (CurveNumSegs) return 1;
         else return 0;
-}
-
-[[nodiscard]]
-static inline vms_matrix vm_vec_ang_2_matrix (const vms_vector &v, fixang a)
-{
-	vms_matrix m;
-	return vm_vec_ang_2_matrix(m, v, a), m;
 }
 
 void generate_banked_curve(const fix maxscale, vms_equation coeffs)
@@ -339,7 +330,6 @@ void generate_banked_curve(const fix maxscale, vms_equation coeffs)
     firstsegflag = 1;
     enddist = F1_0; nextdist = 0;
     while ( enddist > fixmul( nextdist, 1.5*F1_0 )) {
-            vms_matrix  rotmat;
             if (firstsegflag==1)
                 firstsegflag=0;
             else
@@ -352,10 +342,10 @@ void generate_banked_curve(const fix maxscale, vms_equation coeffs)
             vm_vec_normalized_dir(vec_dir, coord, prev_point);
 			if (!med_attach_segment(Cursegp, vmsegptr(&New_segment), Curside, AttachSide))
 			{
-				med_extract_matrix_from_segment(cursegp, rotmat);                   // rotmat := matrix describing orientation of Cursegp
-			const auto tdest = vm_vec_rotate(vec_dir,rotmat);	// tdest := vec_dir in reference frame of Cursegp
+				auto rotmat{med_extract_matrix_from_segment(cursegp)};                   // rotmat := matrix describing orientation of Cursegp
+			const auto tdest{vm_vec_build_rotated(vec_dir, rotmat)};	// tdest := vec_dir in reference frame of Cursegp
 			vec_dir = tdest;
-            const auto rotmat2 = vm_vec_ang_2_matrix(vec_dir,scaled_ang);
+            const auto rotmat2{vm_vec_ang_2_matrix(vec_dir, scaled_ang)};
 
 			med_rotate_segment( Cursegp, rotmat2 );
 			prev_point = coord;

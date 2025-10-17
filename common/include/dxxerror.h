@@ -34,9 +34,11 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 namespace dcx {
 
-void Warning_puts(const char *str) __attribute_nonnull();
+dxx_compiler_attribute_cold
+void Warning_puts(const char *str) dxx_compiler_attribute_nonnull();
 void Warning(const char *fmt) = delete;
-void Warning(const char *fmt,...) __attribute_format_printf(1, 2);				//print out warning message to user
+dxx_compiler_attribute_cold
+void Warning(const char *fmt,...) dxx_compiler_attribute_format_printf(1, 2);				//print out warning message to user
 #if DXX_USE_EDITOR
 void set_warn_func(void (*f)(std::span<const char> s));	//specifies the function to call with warning messages
 #if !(defined(WIN32) || defined(__APPLE__) || defined(__MACH__))
@@ -44,12 +46,12 @@ void clear_warn_func();//say this function no longer valid
 #endif
 #endif
 [[noreturn]]
-__attribute_nonnull()
+dxx_compiler_attribute_nonnull()
 void Error_puts(const char *file, unsigned line, const char *func, const char *str);
 #define Error_puts(F)	Error_puts(__FILE__, __LINE__, __func__, F)
 [[noreturn]]
-__attribute_format_printf(4, 5)
-__attribute_nonnull()
+dxx_compiler_attribute_format_printf(4, 5)
+dxx_compiler_attribute_nonnull()
 void Error(const char *file, unsigned line, const char *func, const char *fmt,...);				//exit with error code=1, print message
 #define Error(F,...)	dxx_call_printf_checked(Error,(Error_puts),(__FILE__, __LINE__, __func__),(F),##__VA_ARGS__)
 
@@ -65,7 +67,7 @@ static inline void UserError_puts(const char (&str)[len])
 
 void UserError(const char *) = delete;
 [[noreturn]]
-void UserError(const char *fmt, ...) __attribute_format_printf(1, 2);
+void UserError(const char *fmt, ...) dxx_compiler_attribute_format_printf(1, 2);
 
 }
 #define DXX_STRINGIZE_FL2(F,L,S)	F ":" #L ": " S
@@ -114,9 +116,9 @@ void UserError(const char *fmt, ...) __attribute_format_printf(1, 2);
 namespace dcx {
 
 // Encourage optimizer to treat d_debugbreak paths as unlikely
-__attribute_cold
+dxx_compiler_attribute_cold
 // Requested by btb to force Xcode to stay in the calling function
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline void d_debugbreak()
 {
 	/* Allow explicit activation in NDEBUG builds */

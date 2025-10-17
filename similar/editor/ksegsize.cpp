@@ -43,6 +43,52 @@ static std::array<vertnum_t, MAX_MODIFIED_VERTICES>		Modified_vertices;
 int Modified_vertex_index{0};
 }
 
+namespace dcx {
+
+namespace {
+
+// ------------------------------------------------------------------------------------------
+//	Extract a vector from a segment.  The vector goes from the start face to the end face.
+//	The point on each face is the average of the four points forming the face.
+[[nodiscard]]
+static vms_vector extract_vector_from_segment_side(const shared_segment &sp, const sidenum_t side, const side_relative_vertnum vla, const side_relative_vertnum vlb, const side_relative_vertnum vra, const side_relative_vertnum vrb)
+{
+	vms_vector vp;
+	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
+	auto &Vertices = LevelSharedVertexState.get_vertices();
+	auto &sv = Side_to_verts[side];
+	auto &verts = sp.verts;
+	auto &vcvertptr = Vertices.vcptr;
+	vm_vec_add(vp,
+		vm_vec_build_sub(vcvertptr(verts[sv[vra]]), vcvertptr(verts[sv[vla]])),
+		vm_vec_build_sub(vcvertptr(verts[sv[vrb]]), vcvertptr(verts[sv[vlb]]))
+	);
+	vm_vec_scale(vp, F1_0/2);
+	return vp;
+}
+
+}
+
+// ------------------------------------------------------------------------------------------
+//	Extract the right vector from segment *sp, return in *vp.
+//	The forward vector is defined to be the vector from the the center of the left face of the segment
+// to the center of the right face of the segment.
+vms_vector med_extract_right_vector_from_segment_side(const shared_segment &sp, const sidenum_t sidenum)
+{
+	return extract_vector_from_segment_side(sp, sidenum, side_relative_vertnum::_3, side_relative_vertnum::_2, side_relative_vertnum::_0, side_relative_vertnum::_1);
+}
+
+// ------------------------------------------------------------------------------------------
+//	Extract the up vector from segment *sp, return in *vp.
+//	The forward vector is defined to be the vector from the the center of the bottom face of the segment
+// to the center of the top face of the segment.
+vms_vector med_extract_up_vector_from_segment_side(const shared_segment &sp, const sidenum_t sidenum)
+{
+	return extract_vector_from_segment_side(sp, sidenum, side_relative_vertnum::_1, side_relative_vertnum::_2, side_relative_vertnum::_0, side_relative_vertnum::_3);
+}
+
+}
+
 namespace dsx {
 
 namespace {
@@ -150,11 +196,9 @@ static void scale_free_verts(const shared_segment &sp, const vms_vector &vp, con
 //	Make segment *sp bigger in dimension dimension by amount amount.
 static void med_scale_segment_new(const shared_segment &sp, const int dimension, const fix amount)
 {
-	vms_matrix	mat;
-
 	Modified_vertex_index = 0;
 
-	med_extract_matrix_from_segment(sp, mat);
+	auto mat{med_extract_matrix_from_segment(sp)};
 
 	const vms_vector *vec;
 	sidenum_t side0, side1;
@@ -183,41 +227,6 @@ static void med_scale_segment_new(const shared_segment &sp, const int dimension,
 	validate_modified_segments();
 }
 
-// ------------------------------------------------------------------------------------------
-//	Extract a vector from a segment.  The vector goes from the start face to the end face.
-//	The point on each face is the average of the four points forming the face.
-static void extract_vector_from_segment_side(const shared_segment &sp, const sidenum_t side, vms_vector &vp, const side_relative_vertnum vla, const side_relative_vertnum vlb, const side_relative_vertnum vra, const side_relative_vertnum vrb)
-{
-	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
-	auto &Vertices = LevelSharedVertexState.get_vertices();
-	auto &sv = Side_to_verts[side];
-	auto &verts = sp.verts;
-	auto &vcvertptr = Vertices.vcptr;
-	vm_vec_add(vp,
-		vm_vec_sub(vcvertptr(verts[sv[vra]]), vcvertptr(verts[sv[vla]])),
-		vm_vec_sub(vcvertptr(verts[sv[vrb]]), vcvertptr(verts[sv[vlb]]))
-	);
-	vm_vec_scale(vp, F1_0/2);
-}
-
-}
-
-// ------------------------------------------------------------------------------------------
-//	Extract the right vector from segment *sp, return in *vp.
-//	The forward vector is defined to be the vector from the the center of the left face of the segment
-// to the center of the right face of the segment.
-void med_extract_right_vector_from_segment_side(const shared_segment &sp, const sidenum_t sidenum, vms_vector &vp)
-{
-	extract_vector_from_segment_side(sp, sidenum, vp, side_relative_vertnum::_3, side_relative_vertnum::_2, side_relative_vertnum::_0, side_relative_vertnum::_1);
-}
-
-// ------------------------------------------------------------------------------------------
-//	Extract the up vector from segment *sp, return in *vp.
-//	The forward vector is defined to be the vector from the the center of the bottom face of the segment
-// to the center of the top face of the segment.
-void med_extract_up_vector_from_segment_side(const shared_segment &sp, const sidenum_t sidenum, vms_vector &vp)
-{
-	extract_vector_from_segment_side(sp, sidenum, vp, side_relative_vertnum::_1, side_relative_vertnum::_2, side_relative_vertnum::_0, side_relative_vertnum::_3);
 }
 
 namespace {
@@ -228,14 +237,14 @@ static int segsize_common(int dimension, fix amount)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
-	vms_vector	uvec, rvec, scalevec;
+	vms_vector	scalevec;
 
 	Degenerate_segment_found = 0;
 
 	med_scale_segment_new(Cursegp, dimension, amount);
 
-	med_extract_up_vector_from_segment_side(Cursegp, Curside, uvec);
-	med_extract_right_vector_from_segment_side(Cursegp, Curside, rvec);
+	const auto uvec{med_extract_up_vector_from_segment_side(Cursegp, Curside)};
+	const auto rvec{med_extract_right_vector_from_segment_side(Cursegp, Curside)};
 	auto &vcvertptr = Vertices.vcptr;
 	const auto fvec{extract_forward_vector_from_segment(vcvertptr, Cursegp)};
 

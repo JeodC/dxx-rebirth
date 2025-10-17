@@ -366,7 +366,7 @@ static unsigned generate_extra_starts_by_displacement_within_segment(const unsig
 		for (auto &&[side, displacement] : zip(displacement_sides, vec_displacement))
 		{
 			const auto center_on_side{compute_center_point_on_side(vcvertptr, seg, side)};
-			displacement = vm_vec_sub(center_on_side, old_player_init.pos);
+			displacement = vm_vec_build_sub(center_on_side, old_player_init.pos);
 		}
 		const auto displace_player = [&](const unsigned plridx, object_base &plrobj, const unsigned displacement_direction) {
 			vms_vector disp{};
@@ -379,7 +379,7 @@ static unsigned generate_extra_starts_by_displacement_within_segment(const unsig
 					continue;
 				}
 				const auto &v = vec_displacement[i];
-				const auto &va = (displacement_direction & (1 << i)) ? v : vm_vec_negated(v);
+				const auto &va{(displacement_direction & (1 << i)) ? v : vm_vec_build_negated(v)};
 				con_printf(CON_NORMAL, "Add displacement of {%i, %i, %i} for dimension %u for player %u.", va.x, va.y, va.z, underlying_value(side), plridx);
 				++ dimensions;
 				vm_vec_add2(disp, va);
@@ -388,7 +388,7 @@ static unsigned generate_extra_starts_by_displacement_within_segment(const unsig
 				return;
 			vm_vec_normalize(disp);
 			vm_vec_scale(disp, fixmul(old_player_obj.size, size_scalar >> 1));
-			const auto target_position = vm_vec_add(Player_init[plridx].pos, disp);
+			const auto target_position = vm_vec_build_add(Player_init[plridx].pos, disp);
 			if (const auto sidemask = get_seg_masks(vcvertptr, target_position, vcsegptr(plrobj.segnum), 1).sidemask; sidemask != sidemask_t{})
 			{
 				con_printf(CON_NORMAL, "Cannot displace player %u at {%i, %i, %i} to {%i, %i, %i}: would be outside segment for sides %x.", plridx, plrobj.pos.x, plrobj.pos.y, plrobj.pos.z, target_position.x, target_position.y, target_position.z, underlying_value(sidemask));
@@ -1380,7 +1380,7 @@ int p_secret_level_destroyed(void)
 
 namespace {
 
-static void do_screen_message(const char *msg) __attribute_nonnull();
+static void do_screen_message(const char *msg) dxx_compiler_attribute_nonnull();
 static void do_screen_message(const char *msg)
 {
 	
@@ -1407,7 +1407,7 @@ namespace dsx {
 namespace {
 void do_screen_message_fmt(const char *) = delete;
 
-__attribute_format_printf(1, 2)
+dxx_compiler_attribute_format_printf(1, 2)
 static void do_screen_message_fmt(const char *fmt, ...)
 {
 	va_list arglist;

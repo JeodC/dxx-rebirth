@@ -67,6 +67,9 @@ struct d_level_unique_robot_awareness_state
 extern d_level_unique_robot_awareness_state LevelUniqueRobotAwarenessState;
 #endif
 
+[[nodiscard]]
+vms_vector make_random_vector();
+
 }
 struct PHYSFS_File;
 
@@ -142,6 +145,16 @@ namespace dcx {
 
 struct d_level_shared_boss_state
 {
+	/* Descent 1 bosses use a compile-time constant interval between each cloak
+	 * iteration and a constant, but different, interval between teach teleport
+	 * iteration.
+	 *
+	 * Descent 2 bosses use a level-dependent interval between each cloak and
+	 * each teleport.  Record the Descent 1 constant intervals for static use
+	 * in Descent 1, and for use by Descent 2 when emulating Descent 1.
+	 */
+	using D1_Boss_cloak_interval = std::integral_constant<fix, F1_0 * 10>;
+	using D1_Boss_teleport_interval = std::integral_constant<fix, F1_0 * 8>;
 	struct special_segment_array_t : public count_array_t<vcsegidx_t, 100> {};
 	struct gate_segment_array_t : public special_segment_array_t {};
 	struct teleport_segment_array_t : public special_segment_array_t {};
@@ -158,9 +171,9 @@ namespace dsx {
 
 struct d_level_shared_boss_state : ::dcx::d_level_shared_boss_state
 {
-	// Time between cloaks
-	using D1_Boss_cloak_interval = std::integral_constant<fix, F1_0 * 10>;
-	using D1_Boss_teleport_interval = std::integral_constant<fix, F1_0 * 8>;
+	/* Time in `fix`-seconds between successive uses of the cloak/teleport
+	 * abilities.
+	 */
 #if DXX_BUILD_DESCENT == 1
 	static constexpr D1_Boss_cloak_interval Boss_cloak_interval{};
 	static constexpr D1_Boss_teleport_interval Boss_teleport_interval{};
@@ -194,20 +207,6 @@ void ai_turn_towards_vector(const vms_vector &vec_to_player, object_base &obj, f
 void init_ai_objects(const d_robot_info_array &Robot_info);
 void create_n_segment_path(vmobjptridx_t objp, const robot_info &robptr, unsigned path_length, imsegidx_t avoid_seg);
 void create_n_segment_path_to_door(vmobjptridx_t objp, const robot_info &robptr, unsigned path_length);
-}
-#endif
-namespace dcx {
-void make_random_vector(vms_vector &vec);
-[[nodiscard]]
-static inline vms_vector make_random_vector()
-{
-	vms_vector v;
-	return make_random_vector(v), v;
-}
-
-}
-#ifdef DXX_BUILD_DESCENT
-namespace dsx {
 void init_robots_for_level();
 #if DXX_BUILD_DESCENT == 2
 int polish_path(vmobjptridx_t objp, point_seg *psegs, int num_points);
@@ -276,9 +275,9 @@ std::size_t create_bfs_list(const object &robot, const robot_info &robptr, vcseg
 extern void init_thief_for_level();
 
 void start_robot_death_sequence(object &objp);
-void buddy_message_str(const char * str) __attribute_nonnull();
+void buddy_message_str(const char * str) dxx_compiler_attribute_nonnull();
 void buddy_message(const char *) = delete;
-void buddy_message(const char * format, ... ) __attribute_format_printf(1, 2);
+void buddy_message(const char * format, ... ) dxx_compiler_attribute_format_printf(1, 2);
 
 extern void special_reactor_stuff(void);
 #endif

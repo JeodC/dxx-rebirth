@@ -55,6 +55,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "vclip.h"
 
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_levelstate.h"
 #include "d_underlying_value.h"
 #include "partial_range.h"
@@ -273,7 +274,7 @@ static void do_muzzle_stuff(segnum_t segnum, const vms_vector &pos)
 }
 
 [[noreturn]]
-__attribute_cold
+dxx_compiler_attribute_cold
 static void report_invalid_weapon_render_type(const int weapon_type, const weapon_info::render_type render)
 {
 	char buf[96];
@@ -433,7 +434,7 @@ namespace {
 // ---------------------------------------------------------------------------------
 static bool create_omega_blobs(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const weapon_info_array &Weapon_info, const Difficulty_level_type Difficulty_level, const imsegptridx_t firing_segnum, const vms_vector &firing_pos, const vms_vector &goal_pos, const vmobjptridx_t parent_objp)
 {
-	const auto &&[magnitude_to_goal, vec_to_goal] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(goal_pos, firing_pos));
+	const auto &&[magnitude_to_goal, vec_to_goal] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(goal_pos, firing_pos));
 	const fix dist_to_goal{magnitude_to_goal};
 	const auto &&[omega_blob_dist, num_omega_blobs] = [](const unsigned dist_to_goal) -> std::pair<fix, unsigned> {
 		if (dist_to_goal < MIN_OMEGA_BLOBS * MIN_OMEGA_DIST)
@@ -477,7 +478,7 @@ static bool create_omega_blobs(d_level_unique_object_state &LevelUniqueObjectSta
 	auto perturb_vec{make_random_vector()};
 	vm_vec_scale_add2(perturb_vec, parent_objp->orient.uvec, -F1_0/2);
 
-	Doing_lighting_hack_flag = 1;	//	Ugly, but prevents blobs which are probably outside the mine from killing framerate.
+	Doing_lighting_hack_flag = lighting_hack::ignore_out_of_mine_location;	//	Ugly, but prevents blobs which are probably outside the mine from killing framerate.
 
 	imobjptridx_t last_created_objnum{object_none};
 	for (const auto i : xrange(num_omega_blobs))
@@ -522,7 +523,7 @@ static bool create_omega_blobs(d_level_unique_object_state &LevelUniqueObjectSta
 		vm_vec_add2(blob_pos, omega_delta_vector);
 	}
 
-	Doing_lighting_hack_flag = 0;
+	Doing_lighting_hack_flag = lighting_hack::normal;
 
 	//	Make last one move faster, but it's already moving at speed = F1_0*4.
 	if (last_created_objnum != object_none) {
@@ -716,7 +717,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	//	not apply to the Omega Cannon.
 	if (weapon_type == weapon_id_type::OMEGA_ID) {
 		// Create orientation matrix for tracking purposes.
-		vm_vector_to_matrix_u(obj->orient, direction, parent->orient.uvec);
+		reconstruct_at(obj->orient, vm_vector_to_matrix_u, direction, parent->orient.uvec);
 
 		if (parent != Viewer && parent->type != OBJ_WEAPON) {
 			// Muzzle flash
@@ -832,7 +833,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	// Create orientation matrix so we can look from this pov
 	//	Homing missiles also need an orientation matrix so they know if they can make a turn.
 	if ((weapon_info.homing_flag && (obj->ctype.laser_info.track_goal = object_none, true)) || obj->render_type == render_type::RT_POLYOBJ)
-		vm_vector_to_matrix_u(obj->orient, direction, parent->orient.uvec);
+		reconstruct_at(obj->orient, vm_vector_to_matrix_u, direction, parent->orient.uvec);
 
 	if (( parent != Viewer ) && (parent->type != OBJ_WEAPON))	{
 		// Muzzle flash
@@ -879,7 +880,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	//	Find out if moving backwards.
 	if (is_proximity_bomb_or_player_smart_mine(weapon_type)) {
 		parent_speed = vm_vec_mag_quick(parent->mtype.phys_info.velocity);
-		if (vm_vec_dot(parent->mtype.phys_info.velocity, parent->orient.fvec) < 0)
+		if (vm_vec_build_dot(parent->mtype.phys_info.velocity, parent->orient.fvec) < 0)
 			parent_speed = -parent_speed;
 	} else
 		parent_speed = 0;
@@ -1067,13 +1068,13 @@ static int object_is_trackable(const imobjptridx_t objp, const vmobjptridx_t tra
 				return 0;
 #endif
 	}
-	auto vector_to_goal{vm_vec_normalized_quick(vm_vec_sub(objp->pos, tracker->pos))};
-	*dot = vm_vec_dot(vector_to_goal, tracker->orient.fvec);
+	auto vector_to_goal{vm_vec_normalized_quick(vm_vec_build_sub(objp->pos, tracker->pos))};
+	*dot = vm_vec_build_dot(vector_to_goal, tracker->orient.fvec);
 
 #if DXX_BUILD_DESCENT == 2
 	if ((*dot < get_scaled_min_trackable_dot()) && (*dot > F1_0*9/10)) {
 		vm_vec_normalize(vector_to_goal);
-		*dot = vm_vec_dot(vector_to_goal, tracker->orient.fvec);
+		*dot = vm_vec_build_dot(vector_to_goal, tracker->orient.fvec);
 	}
 #endif
 
@@ -1222,12 +1223,12 @@ imobjptridx_t find_homing_object_complete(const vms_vector &curpos, const vmobjp
 #endif
 		}
 
-		auto vec_to_curobj{vm_vec_sub(curobjp->pos, curpos)};
+		auto vec_to_curobj{vm_vec_build_sub(curobjp->pos, curpos)};
 		auto dist{vm_vec_mag2(vec_to_curobj)};
 
 		if (build_vm_distance_squared(dist) < max_trackable_dist) {
 			vm_vec_normalize(vec_to_curobj);
-			fix dot{vm_vec_dot(vec_to_curobj, tracker->orient.fvec)};
+			fix dot{vm_vec_build_dot(vec_to_curobj, tracker->orient.fvec)};
 			if (is_proximity)
 				dot = ((dot << 3) + dot) >> 3;		//	I suspect Watcom would be too stupid to figure out the obvious...
 
@@ -1349,8 +1350,8 @@ static imobjptridx_t Laser_player_fire_spread_delay(const d_robot_info_array &Ro
 	fvi_info		hit_data;
 	// Find the initial position of the laser
 	auto pnt{&Player_ship->gun_points[gun_num]};
-	const auto gun_point{vm_vec_rotate(*pnt, vm_transposed_matrix(obj->orient))};
-	auto LaserPos{vm_vec_add(obj->pos, gun_point)};
+	const auto gun_point{vm_vec_build_rotated(*pnt, vm_transposed_matrix(obj->orient))};
+	auto LaserPos{vm_vec_build_add(obj->pos, gun_point)};
 
 	//	If supposed to fire at a delayed time (delay_time), then move this point backwards.
 	if (delay_time)
@@ -1559,7 +1560,7 @@ static void homing_missile_turn_towards_velocity(object_base &obj, vms_vector ne
 {
 	vm_vec_scale(new_fvec, ft * HOMING_MISSILE_SCALE);
 	vm_vec_add2(new_fvec, obj.orient.fvec);
-	vm_vector_to_matrix(obj.orient, vm_vec_normalized_quick(new_fvec));
+	reconstruct_at(obj.orient, vm_vector_to_matrix, vm_vec_normalized_quick(new_fvec));
 }
 
 }
@@ -1638,7 +1639,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 
 				if (track_goal != object_none)
 				{
-					auto vector_to_object{vm_vec_sub(track_goal->pos, obj->pos)};
+					auto vector_to_object{vm_vec_build_sub(track_goal->pos, obj->pos)};
 					vm_vec_normalize_quick(vector_to_object);
 					auto &&[speed_magnitude, temp_vec] = vm_vec_normalize_quick_with_magnitude(obj->mtype.phys_info.velocity);
 					fix speed{speed_magnitude};
@@ -1649,7 +1650,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 							speed = max_speed;
 					}
 #if DXX_BUILD_DESCENT == 1
-					dot = vm_vec_dot(temp_vec, vector_to_object);
+					dot = vm_vec_build_dot(temp_vec, vector_to_object);
 #endif
 					vm_vec_add2(temp_vec, vector_to_object);
 					//	The boss' smart children track better...
@@ -1699,7 +1700,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 
 			if (track_goal != object_none)
 			{
-				auto vector_to_object{vm_vec_sub(track_goal->pos, obj->pos)};
+				auto vector_to_object{vm_vec_build_sub(track_goal->pos, obj->pos)};
 				vm_vec_normalize_quick(vector_to_object);
 				temp_vec = obj->mtype.phys_info.velocity;
 				speed = vm_vec_normalize_quick(temp_vec);
@@ -1710,7 +1711,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 						speed = max_speed;
 				}
 #if DXX_BUILD_DESCENT == 1
-				dot = vm_vec_dot(temp_vec, vector_to_object);
+				dot = vm_vec_build_dot(temp_vec, vector_to_object);
 #endif
 				vm_vec_add2(temp_vec, vector_to_object);
 				//	The boss' smart children track better...

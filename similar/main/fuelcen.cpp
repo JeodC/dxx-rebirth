@@ -53,6 +53,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "multibot.h"
 #include "escort.h"
 #include "compiler-poison.h"
+#include "d_construct.h"
 #include "d_enumerate.h"
 #include "compiler-range_for.h"
 #include "d_levelstate.h"
@@ -101,7 +102,7 @@ void fuelcen_reset()
 }
 
 #ifndef NDEBUG		//this is sometimes called by people from the debugger
-__attribute_used
+dxx_compiler_attribute_used
 static void reset_all_robot_centers()
 {
 	// Remove all materialization centers
@@ -229,7 +230,7 @@ void trigger_matcen(const vmsegptridx_t segp)
 	//	Create a bright object in the segment.
 	auto &vcvertptr = Vertices.vcptr;
 	auto pos{compute_segment_center(vcvertptr, segp)};
-	const auto &&delta{vm_vec_sub(vcvertptr(segp->verts.front()), pos)};
+	const auto &&delta{vm_vec_build_sub(vcvertptr(segp->verts.front()), pos)};
 	vm_vec_scale_add2(pos, delta, F1_0/2);
 	const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_LIGHT, 0, segp, pos, nullptr, 0, object::control_type::light, object::movement_type::None, render_type::RT_NONE);
 	if (objnum != object_none) {
@@ -476,7 +477,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 			auto obj = object_create_explosion_without_damage(Vclip, robotcen_segp, cur_object_loc, i2f(10), vclip_index::morphing_robot);
 
 			if (obj != object_none)
-				extract_orient_from_segment(vcvertptr, obj->orient, robotcen_segp);
+				reconstruct_at(obj->orient, extract_orient_from_segment, vcvertptr, robotcen_segp);
 
 			digi_link_sound_to_pos(Vclip[vclip_index::morphing_robot].sound_num, robotcen_segp, sidenum_t::WLEFT, cur_object_loc, 0, F1_0);
 			robotcen->Flag	= 1;
@@ -523,8 +524,15 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 						multi_send_create_robot(numrobotcen, obj, type);
 					obj->matcen_creator = underlying_value(numrobotcen) | 0x80;
 
+					/* Copy `objp.orient.uvec` into a temporary and pass the temporary,
+					 * since it is undefined behavior to access `objp.orient` after the old
+					 * object is destroyed until the new value is constructed.
+					 */
+					{
 					// Make object faces player...
-					vm_vector_to_matrix_u(obj->orient, vm_vec_sub(ConsoleObject->pos, obj->pos), obj->orient.uvec);
+						auto old_uvec{obj->orient.uvec};
+						reconstruct_at(obj->orient, vm_vector_to_matrix_u, vm_vec_build_sub(ConsoleObject->pos, obj->pos), std::move(old_uvec));
+					}
 	
 					morph_start(LevelUniqueMorphObjectState, LevelSharedPolygonModelState, obj);
 					//robotcen->last_created_obj = obj;
@@ -685,6 +693,8 @@ void init_all_matcens(void)
 
 }
 
+namespace {
+
 struct d1mi_v25
 {
 	matcen_info *m;
@@ -702,8 +712,13 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(d1mi_v25, p, D1_MATCEN_V25_MEMBERLIST);
 DEFINE_SERIAL_UDT_TO_MESSAGE(d1cmi_v25, p, D1_MATCEN_V25_MEMBERLIST);
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(d1mi_v25, 16);
 
+}
+
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
+
+namespace {
+
 struct d1mi_v26
 {
 	matcen_info *m;
@@ -720,6 +735,8 @@ struct d1cmi_v26
 DEFINE_SERIAL_UDT_TO_MESSAGE(d1mi_v26, p, D1_MATCEN_V26_MEMBERLIST);
 DEFINE_SERIAL_UDT_TO_MESSAGE(d1cmi_v26, p, D1_MATCEN_V26_MEMBERLIST);
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(d1mi_v26, 20);
+
+}
 
 void matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi, int version)
 {

@@ -82,6 +82,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "playsave.h"
 
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_levelstate.h"
 #include "partial_range.h"
 #include <utility>
@@ -391,8 +392,7 @@ static void nd_write_angvec(const vms_angvec &v)
 
 static void nd_write_shortpos(const object_base &obj)
 {
-	shortpos sp;
-	create_shortpos_native(LevelSharedSegmentState, sp, obj);
+	auto sp{create_shortpos_native(LevelSharedSegmentState, obj)};
 
 	const auto rtype = obj.render_type;
 	if ((rtype == render_type::RT_POLYOBJ || rtype == render_type::RT_HOSTAGE || rtype == render_type::RT_MORPH) || obj.type == OBJ_CAMERA)
@@ -546,8 +546,7 @@ static void nd_read_shortpos(object_base &obj)
 	my_extract_shortpos(obj, &sp);
 	if (obj.type == OBJ_FIREBALL && get_fireball_id(obj) == vclip_index::morphing_robot && rtype == render_type::RT_FIREBALL && obj.control_source == object::control_type::explosion)
 	{
-		auto &vcvertptr = Vertices.vcptr;
-		extract_orient_from_segment(vcvertptr, obj.orient, vcsegptr(obj.segnum));
+		reconstruct_at(obj.orient, extract_orient_from_segment, Vertices.vcptr, vcsegptr(obj.segnum));
 	}
 }
 
@@ -3701,7 +3700,7 @@ static window_event_result interpolate_frame(fix d_play, fix d_recorded)
 							vm_vec_scale(rvec2, factor);
 							vm_vec_add2(rvec1, rvec2);
 							vm_vec_normalize_quick(rvec1); // Note: Doesn't matter if this is null, if null, vm_vector_to_matrix will just use fvec1
-							vm_vector_to_matrix_r(i.orient, fvec1, rvec1);
+							reconstruct_at(i.orient, vm_vector_to_matrix_r, fvec1, rvec1);
 						}
 					}
 

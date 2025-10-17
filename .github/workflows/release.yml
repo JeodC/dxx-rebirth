@@ -40,6 +40,9 @@ jobs:
           cd ../DXX-Rebirth-MacOS14-arm64 && zip -r ../dxx-rebirth-macos-arm64.zip ./*
           cd ../DXX-Rebirth-Windows-x86_64 && zip -r ../dxx-rebirth-windows-x64.zip ./*
 
+      - name: Compress Artifacts
+        run: for dir in */; do (cd "$dir" && zip -r "../${dir%/}.zip" .); done
+
       - name: Create Release
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
         with:

@@ -450,7 +450,7 @@ static uint8_t show_buddy_message()
 	return 0;
 }
 
-__attribute_nonnull()
+dxx_compiler_attribute_nonnull()
 static void buddy_message_force_str(const char *str)
 {
 	auto &BuddyState = LevelUniqueObjectState.BuddyState;
@@ -458,7 +458,7 @@ static void buddy_message_force_str(const char *str)
 	HUD_init_message(HM_DEFAULT, "%c%c%s:%c%c %s", CC_COLOR, BM_XRGB(28, 0, 0), static_cast<const char *>(PlayerCfg.GuidebotName), CC_COLOR, BM_XRGB(0, 31, 0), str);
 }
 
-__attribute_format_printf(1, 0)
+dxx_compiler_attribute_format_printf(1, 0)
 static void buddy_message_force_va(const char *const fmt, va_list vl)
 {
 	char buf[128];
@@ -466,7 +466,7 @@ static void buddy_message_force_va(const char *const fmt, va_list vl)
 	buddy_message_force_str(buf);
 }
 
-__attribute_format_printf(1, 2)
+dxx_compiler_attribute_format_printf(1, 2)
 static void buddy_message_ignore_time(const char *const fmt, ...)
 {
 	auto &BuddyState = LevelUniqueObjectState.BuddyState;
@@ -504,14 +504,14 @@ void buddy_message_str(const char *str)
 namespace {
 
 //	-----------------------------------------------------------------------------
-static void thief_message_str(const char * str) __attribute_nonnull();
+static void thief_message_str(const char * str) dxx_compiler_attribute_nonnull();
 static void thief_message_str(const char * str)
 {
 	HUD_init_message(HM_DEFAULT, "%c%cTHIEF:%c%c %s", 1, BM_XRGB(28, 0, 0), 1, BM_XRGB(0, 31, 0), str);
 }
 
 static void thief_message(const char *) = delete;
-__attribute_format_printf(1, 2)
+dxx_compiler_attribute_format_printf(1, 2)
 static void thief_message(const char * format, ... )
 {
 
@@ -613,7 +613,10 @@ void set_escort_special_goal(d_unique_buddy_state &BuddyState, const int raw_spe
 
 	say_escort_goal(BuddyState.Escort_special_goal);
 	BuddyState.Escort_goal_object = ESCORT_GOAL_UNSPECIFIED;
-	multi_send_escort_goal(BuddyState);
+#if DXX_USE_MULTIPLAYER
+	if (Game_mode & GM_MULTI)
+		multi_send_escort_goal(BuddyState);
+#endif
 }
 
 namespace {
@@ -696,11 +699,10 @@ static std::pair<icsegidx_t, d_unique_buddy_state::Escort_goal_reachability> exi
 	auto &robptr = Robot_info[get_robot_id(Buddy_objp)];
 	const auto length = create_bfs_list(Buddy_objp, robptr, start_seg, powerup_flags, bfs_list);
 	{
-		const auto &&predicate = [](const segnum_t &s) {
-			return vcsegptr(s)->special == segment_special::fuelcen;
-		};
 		const auto &&rb = partial_const_range(bfs_list, length);
-		const auto &&i{std::ranges::find_if(rb, predicate)};
+		const auto &&i{std::ranges::find(rb, segment_special::fuelcen, [](const segnum_t &s) {
+			return vcsegptr(s)->special;
+		})};
 		if (i != rb.end())
 			return {*i, d_unique_buddy_state::Escort_goal_reachability::reachable};
 	}
@@ -1115,12 +1117,12 @@ static int maybe_buddy_fire_mega(const vmobjptridx_t objp, const vcobjptridx_t B
 {
 	auto &BuddyState = LevelUniqueObjectState.BuddyState;
 	auto &Objects = LevelUniqueObjectState.Objects;
-	const auto &&[dist, vec_to_robot] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(Buddy_objp->pos, objp->pos));
+	const auto &&[dist, vec_to_robot] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(Buddy_objp->pos, objp->pos));
 
 	if (dist > F1_0*100)
 		return 0;
 
-	const auto dot = vm_vec_dot(vec_to_robot, Buddy_objp->orient.fvec);
+	const auto dot = vm_vec_build_dot(vec_to_robot, Buddy_objp->orient.fvec);
 
 	if (dot < F1_0/2)
 		return 0;
@@ -1559,7 +1561,7 @@ void do_thief_frame(const vmobjptridx_t objp, const robot_info &robptr, const fi
 					//	If the player is close to looking at the thief, thief shall run away.
 					//	No more stupid thief trying to sneak up on you when you're looking right at him!
 					if (dist_to_player > F1_0*60) {
-						fix	dot = vm_vec_dot(vec_to_player, ConsoleObject->orient.fvec);
+						fix	dot = vm_vec_build_dot(vec_to_player, ConsoleObject->orient.fvec);
 						if (dot < -F1_0/2) {	//	Looking at least towards thief, so thief will run!
 							create_n_segment_path(objp, robptr, 10, ConsoleObject->segnum);
 							ailp->next_action_time = Thief_wait_times[Difficulty_level]/2;

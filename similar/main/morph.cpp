@@ -63,7 +63,7 @@ constexpr vms_vector morph_rotvel{0x4000,0x2000,0x1000};
 
 class invalid_morph_model_type : public std::runtime_error
 {
-	__attribute_cold
+	dxx_compiler_attribute_cold
 	static std::string prepare_message(const unsigned type)
 	{
 		std::array<char, 32 + sizeof("4294967295")> buf;
@@ -81,7 +81,7 @@ public:
 
 class invalid_morph_model_vertex_count : public std::runtime_error
 {
-	__attribute_cold
+	dxx_compiler_attribute_cold
 	static std::string prepare_message(const unsigned count, const polygon_model_index idx, const unsigned submodel_num)
 	{
 		std::array<char, 68 + 3 * sizeof("4294967295")> buf;
@@ -273,16 +273,23 @@ static void update_bounds(std::ranges::min_max_result<vms_vector> &minmaxv, cons
 	assign_min(minmaxv.min.*p, v.*p);
 }
 
-//takes pm, fills in min & max
+/* Take a `polymodel` as input.  Return both the minimum and maximum extents of
+ * the `vms_vector` members that make up the `polymodel`.
+ */
+[[nodiscard]]
 static std::ranges::min_max_result<vms_vector> find_min_max(const polymodel &pm, const unsigned submodel_num)
 {
 	const auto &&sd{parse_model_data_header(pm, submodel_num)};
+	std::ranges::min_max_result<vms_vector> result{};
 	const auto nverts{sd.nverts};
 	if (!nverts)
-		return {};
+	{
+		[[unlikely]];
+		return result;
+	}
 	const auto vp{reinterpret_cast<const vms_vector *>(sd.body)};
 
-	std::ranges::min_max_result<vms_vector> result{
+	result = {
 		.min = *vp,
 		.max = *vp
 	};

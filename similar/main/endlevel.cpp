@@ -83,6 +83,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_enumerate.h"
 #include "d_levelstate.h"
 #include "d_range.h"
@@ -273,7 +274,7 @@ static int chase_angles(vms_angvec *cur_angles,vms_angvec *desired_angles)
 //find the angle between the player's heading & the station
 static vms_angvec get_angs_to_object(const vms_vector &targ_pos, const vms_vector &cur_pos)
 {
-	return vm_extract_angles_vector(vm_vec_sub(targ_pos, cur_pos));
+	return vm_extract_angles_vector(vm_vec_build_sub(targ_pos, cur_pos));
 }
 
 #define MIN_D 0x100
@@ -302,7 +303,7 @@ static sidenum_t find_exit_side(const d_level_shared_segment_state &LevelSharedS
 		{
 			auto sidevec{compute_center_point_on_side(vcvertptr, pseg, i)};
 			vm_vec_normalized_dir_quick(sidevec,sidevec,segcenter);
-			d = vm_vec_dot(sidevec,prefvec);
+			d = vm_vec_build_dot(sidevec,prefvec);
 
 			if (labs(d) < MIN_D) d=0;
 
@@ -330,16 +331,16 @@ static void draw_mine_exit_cover(grs_canvas &canvas)
 		const auto vu{vm_vec_scale_add(v, mine_exit_orient.uvec, u)};
 		auto mru{mrd};
 		vm_vec_scale(mru, ur);
-		g3_rotate_point(p0, vm_vec_add(vu, mru));
-		g3_rotate_point(p1, vm_vec_sub(vu, mru));
+		g3_rotate_point(p0, vm_vec_build_add(vu, mru));
+		g3_rotate_point(p1, vm_vec_build_sub(vu, mru));
 	}
 	{
 		const auto vd{vm_vec_scale_add(v, mine_exit_orient.uvec, -d)};
 		vm_vec_scale(mrd, dr);
-		g3_rotate_point(p2, vm_vec_sub(vd, mrd));
-		g3_rotate_point(p3, vm_vec_add(vd, mrd));
+		g3_rotate_point(p2, vm_vec_build_sub(vd, mrd));
+		g3_rotate_point(p3, vm_vec_build_add(vd, mrd));
 	}
-	const std::array<cg3s_point *, 4> pointlist{{
+	const std::array<g3_draw_tmap_point *, 4> pointlist{{
 		&p0,
 		&p1,
 		&p2,
@@ -573,7 +574,6 @@ static void render_external_scene(fvcobjptridx &vcobjptridx, grs_canvas &canvas,
 #if DXX_USE_OGL
 	int orig_Render_depth = Render_depth;
 #endif
-	g3s_lrgb lrgb = { f1_0, f1_0, f1_0 };
 
 	auto Viewer_eye = Viewer->pos;
 
@@ -606,7 +606,7 @@ static void render_external_scene(fvcobjptridx &vcobjptridx, grs_canvas &canvas,
 			if (! (p.p3_flags & projection_flag::overflow)) {
 				push_interpolation_method save_im(0);
 				//gr_bitmapm(f2i(p.p3_sx)-32,f2i(p.p3_sy)-32,satellite_bitmap);
-				g3_draw_rod_tmap(canvas, *satellite_bitmap, p, SATELLITE_WIDTH, top_pnt, SATELLITE_WIDTH, lrgb, draw_tmap);
+				g3_draw_rod_tmap(canvas, *satellite_bitmap, p, SATELLITE_WIDTH, top_pnt, SATELLITE_WIDTH, g3s_lrgb{F1_0, F1_0, F1_0}, draw_tmap);
 			}
 		}
 	}
@@ -829,8 +829,8 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 	if (!outside_mine) {
 
 		if (Endlevel_sequence==EL_OUTSIDE) {
-			const auto tvec{vm_vec_sub(ConsoleObject->pos, mine_side_exit_point)};
-			if (vm_vec_dot(tvec,mine_exit_orient.fvec) > 0) {
+			const auto tvec{vm_vec_build_sub(ConsoleObject->pos, mine_side_exit_point)};
+			if (vm_vec_build_dot(tvec,mine_exit_orient.fvec) > 0) {
 				vms_vector mov_vec;
 
 				outside_mine = 1;
@@ -1001,7 +1001,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 			auto cam_angles{vm_extract_angles_matrix(endlevel_camera->orient)};
 			cam_angles.b += fixmul(bank_rate,FrameTime);
-			vm_angles_2_matrix(endlevel_camera->orient,cam_angles);
+			reconstruct_at(endlevel_camera->orient, vm_angles_2_matrix, cam_angles);
 
 			timer -= FrameTime;
 
@@ -1022,7 +1022,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 			player_dest_angles = get_angs_to_object(station_pos, ConsoleObject->pos);
 			chase_angles(&player_angles,&player_dest_angles);
-			vm_angles_2_matrix(ConsoleObject->orient,player_angles);
+			reconstruct_at(ConsoleObject->orient, vm_angles_2_matrix, player_angles);
 
 			vm_vec_scale_add2(ConsoleObject->pos,ConsoleObject->orient.fvec,fixmul(FrameTime,cur_fly_speed));
 
@@ -1060,13 +1060,13 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 			player_dest_angles = get_angs_to_object(station_pos, ConsoleObject->pos);
 			chase_angles(&player_angles,&player_dest_angles);
-			vm_angles_2_matrix(ConsoleObject->orient,player_angles);
+			reconstruct_at(ConsoleObject->orient, vm_angles_2_matrix, player_angles);
 			vm_vec_scale_add2(ConsoleObject->pos,ConsoleObject->orient.fvec,fixmul(FrameTime,cur_fly_speed));
 
 
 			camera_desired_angles = get_angs_to_object(ConsoleObject->pos, endlevel_camera->pos);
 			mask = chase_angles(&camera_cur_angles,&camera_desired_angles);
-			vm_angles_2_matrix(endlevel_camera->orient,camera_cur_angles);
+			reconstruct_at(endlevel_camera->orient, vm_angles_2_matrix, camera_cur_angles);
 
 			if ((mask&5) == 5) {
 
@@ -1075,7 +1075,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 				Endlevel_sequence = EL_CHASING;
 
 				vm_vec_normalized_dir_quick(tvec,station_pos,ConsoleObject->pos);
-				vm_vector_to_matrix_u(ConsoleObject->orient, tvec, surface_orient.uvec);
+				reconstruct_at(ConsoleObject->orient, vm_vector_to_matrix_u, tvec, surface_orient.uvec);
 
 				desired_fly_speed *= 2;
 			}
@@ -1090,7 +1090,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 			camera_desired_angles = get_angs_to_object(ConsoleObject->pos, endlevel_camera->pos);
 			chase_angles(&camera_cur_angles,&camera_desired_angles);
 
-			vm_angles_2_matrix(endlevel_camera->orient,camera_cur_angles);
+			reconstruct_at(endlevel_camera->orient, vm_angles_2_matrix, camera_cur_angles);
 
 			d = vm_vec_dist_quick(ConsoleObject->pos,endlevel_camera->pos);
 
@@ -1099,7 +1099,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 			player_dest_angles = get_angs_to_object(station_pos, ConsoleObject->pos);
 			chase_angles(&player_angles,&player_dest_angles);
-			vm_angles_2_matrix(ConsoleObject->orient,player_angles);
+			reconstruct_at(ConsoleObject->orient, vm_angles_2_matrix, player_angles);
 
 			vm_vec_scale_add2(ConsoleObject->pos,ConsoleObject->orient.fvec,fixmul(FrameTime,cur_fly_speed));
 			vm_vec_scale_add2(endlevel_camera->pos,endlevel_camera->orient.fvec,fixmul(FrameTime,fixmul(speed_scale,cur_fly_speed)));
@@ -1193,7 +1193,7 @@ void do_endlevel_flythrough(d_level_unique_object_state &LevelUniqueObjectState,
 		vm_vec_scale_add2(obj->pos,flydata->step,FrameTime);
 		angvec_add2_scale(flydata->angles,flydata->angstep,FrameTime);
 
-		vm_angles_2_matrix(obj->orient,flydata->angles);
+		reconstruct_at(obj->orient, vm_angles_2_matrix, flydata->angles);
 	}
 
 	//check new player seg
@@ -1219,7 +1219,7 @@ void do_endlevel_flythrough(d_level_unique_object_state &LevelUniqueObjectState,
 			fix d,largest_d=-f1_0;
 			for (const auto i : MAX_SIDES_PER_SEGMENT)
 			{
-				d = vm_vec_dot(pseg.sides[i].normals[0], flydata->obj->orient.uvec);
+				d = vm_vec_build_dot(pseg.sides[i].normals[0], flydata->obj->orient.uvec);
 				if (d > largest_d) {largest_d = d; up_side=i;}
 			}
 		}
@@ -1434,7 +1434,7 @@ try_again:
 				ta.p = -i2f(pitch)/360;
 				ta.b = 0;
 
-				const auto &&tm = vm_angles_2_matrix(ta);
+				const auto &&tm{vm_angles_2_matrix(ta)};
 
 				if (var==5)
 					satellite_pos = tm.fvec;
@@ -1472,22 +1472,22 @@ try_again:
 	const auto &&exit_seg = vmsegptr(exit_segnum);
 	auto &vcvertptr = Vertices.vcptr;
 	mine_exit_point = compute_segment_center(vcvertptr, exit_seg);
-	extract_orient_from_segment(vcvertptr, mine_exit_orient, exit_seg);
+	reconstruct_at(mine_exit_orient, extract_orient_from_segment, vcvertptr, exit_seg);
 	mine_side_exit_point = compute_center_point_on_side(vcvertptr, exit_seg, exit_side);
 
 	mine_ground_exit_point = vm_vec_scale_add(mine_exit_point, mine_exit_orient.uvec, -i2f(20));
 
 	//compute orientation of surface
 	{
-		auto &&exit_orient = vm_angles_2_matrix(exit_angles);
+		auto &&exit_orient{vm_angles_2_matrix(exit_angles)};
 		vm_transpose_matrix(exit_orient);
 		vm_matrix_x_matrix(surface_orient,mine_exit_orient,exit_orient);
 
 		vms_matrix tm = vm_transposed_matrix(surface_orient);
-		const auto tv0 = vm_vec_rotate(station_pos,tm);
+		const auto tv0{vm_vec_build_rotated(station_pos, tm)};
 		station_pos = vm_vec_scale_add(mine_exit_point, tv0, STATION_DIST);
 
-		const auto tv = vm_vec_rotate(satellite_pos,tm);
+		const auto tv{vm_vec_build_rotated(satellite_pos, tm)};
 		satellite_pos = vm_vec_scale_add(mine_exit_point, tv, SATELLITE_DIST);
 
 		const auto tm2{vm_vector_to_matrix_u(tv, surface_orient.uvec)};

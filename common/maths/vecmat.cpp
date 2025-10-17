@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <math.h>           // for sqrt
 
+#include "d_construct.h"
 #include "maths.h"
 #include "vecmat.h"
 #include "dxxerror.h"
@@ -28,7 +29,8 @@ constexpr vms_vector vmd_zero_vector{};
 
 namespace {
 
-vms_vector vm_vec_divide(const vms_vector &src, const fix m)
+[[nodiscard]]
+vms_vector vm_vec_build_divide(const vms_vector &src, const fix m)
 {
 	return vms_vector{
 		.x = fixdiv({src.x}, {m}),
@@ -58,8 +60,13 @@ static void vm_vector_to_matrix_f(vms_matrix &m)
 			.z = -m.fvec.x
 		};
 		vm_vec_normalize(m.rvec);
-		m.uvec = vm_vec_cross(m.fvec, m.rvec);
+		reconstruct_at(m.uvec, vm_vec_cross, m.fvec, m.rvec);
 	}
+}
+
+static constexpr fix avg_fix(fix64 a, fix64 b)
+{
+	return (a + b) / 2;
 }
 
 }
@@ -68,14 +75,18 @@ static void vm_vector_to_matrix_f(vms_matrix &m)
 //ok for dest to equal either source, but should use vm_vec_add2() if so
 vms_vector &vm_vec_add(vms_vector &dest,const vms_vector &src0,const vms_vector &src1)
 {
-	dest = vms_vector{
+	dest = vm_vec_build_add(src0, src1);
+	return dest;
+}
+
+vms_vector vm_vec_build_add(const vms_vector &src0, const vms_vector &src1)
+{
+	return vms_vector{
 		.x = src0.x + src1.x,
 		.y = src0.y + src1.y,
 		.z = src0.z + src1.z,
 	};
-	return dest;
 }
-
 
 //subs two vectors, fills in dest, returns ptr to dest
 //ok for dest to equal either source, but should use vm_vec_sub2() if so
@@ -107,14 +118,8 @@ void vm_vec_sub2(vms_vector &dest,const vms_vector &src)
 	dest.z -= src.z;
 }
 
-static inline fix avg_fix(fix64 a, fix64 b)
-{
-	return (a + b) / 2;
-}
-
 //averages two vectors. returns ptr to dest
-//dest can equal either source
-vms_vector vm_vec_avg(const vms_vector &src0, const vms_vector &src1)
+vms_vector vm_vec_build_avg(const vms_vector &src0, const vms_vector &src1)
 {
 	return vms_vector{
 		.x = avg_fix({src0.x}, {src1.x}),
@@ -191,7 +196,7 @@ static fix vm_vec_dot3(fix x,fix y,fix z,const vms_vector &v)
 	return p >> 16;
 }
 
-fix vm_vec_dot(const vms_vector &v0,const vms_vector &v1)
+fix vm_vec_build_dot(const vms_vector &v0,const vms_vector &v1)
 {
 	return vm_vec_dot3({v0.x}, {v0.y}, {v0.z}, v1);
 }
@@ -212,12 +217,12 @@ vm_magnitude vm_vec_mag(const vms_vector &v)
 //computes the distance between two points. (does sub and mag)
 vm_distance vm_vec_dist(const vms_vector &v0,const vms_vector &v1)
 {
-	return vm_vec_mag(vm_vec_sub(v0,v1));
+	return vm_vec_mag(vm_vec_build_sub(v0, v1));
 }
 
 vm_distance_squared vm_vec_dist2(const vms_vector &v0,const vms_vector &v1)
 {
-	return build_vm_distance_squared(vm_vec_mag2(vm_vec_sub(v0,v1)));
+	return build_vm_distance_squared(vm_vec_mag2(vm_vec_build_sub(v0, v1)));
 }
 
 //computes an approximation of the magnitude of the vector
@@ -247,7 +252,7 @@ vm_magnitude vm_vec_mag_quick(const vms_vector &v)
 //uses dist = largest + next_largest*3/8 + smallest*3/16
 vm_distance vm_vec_dist_quick(const vms_vector &v0,const vms_vector &v1)
 {
-	return vm_vec_mag_quick(vm_vec_sub(v0,v1));
+	return vm_vec_mag_quick(vm_vec_build_sub(v0, v1));
 }
 
 //normalize a vector. returns mag of source vec
@@ -255,7 +260,7 @@ vm_magnitude vm_vec_copy_normalize(vms_vector &dest,const vms_vector &src)
 {
 	const auto m{vm_vec_mag(src)};
 	if (likely(m)) {
-		dest = vm_vec_divide(src, m);
+		dest = vm_vec_build_divide(src, m);
 	}
 	return m;
 }
@@ -271,7 +276,7 @@ vm_magnitude vm_vec_copy_normalize_quick(vms_vector &dest,const vms_vector &src)
 {
 	const auto m{vm_vec_mag_quick(src)};
 	if (likely(m)) {
-		dest = vm_vec_divide(src, m);
+		dest = vm_vec_build_divide(src, m);
 	}
 	return m;
 }
@@ -378,8 +383,8 @@ vms_vector vm_vec_cross(const vms_vector &src0, const vms_vector &src1)
 //computes non-normalized surface normal from three points. 
 vms_vector vm_vec_perp(const vms_vector &p0, const vms_vector &p1, const vms_vector &p2)
 {
-	auto t0{check_vec(vm_vec_sub(p1, p0))};
-	auto t1{check_vec(vm_vec_sub(p2, p1))};
+	auto t0{check_vec(vm_vec_build_sub(p1, p0))};
+	auto t1{check_vec(vm_vec_build_sub(p2, p1))};
 	return vm_vec_cross(t0, t1);
 }
 
@@ -401,14 +406,18 @@ fixang vm_vec_delta_ang(const vms_vector &v0,const vms_vector &v1,const vms_vect
 //computes the delta angle between two normalized vectors. 
 fixang vm_vec_delta_ang_norm(const vms_vector &v0,const vms_vector &v1,const vms_vector &fvec)
 {
-	fixang a{fix_acos(vm_vec_dot(v0, v1))};
-	if (vm_vec_dot(vm_vec_cross(v0, v1), fvec) < 0)
+	fixang a{fix_acos(vm_vec_build_dot(v0, v1))};
+	if (vm_vec_build_dot(vm_vec_cross(v0, v1), fvec) < 0)
 			a = -a;
 	return a;
 }
 
-static void sincos_2_matrix(vms_matrix &m, const fixang bank, const fix_sincos_result p, const fix_sincos_result h)
+namespace {
+
+[[nodiscard]]
+static vms_matrix vm_matrix_build_from_sincos(const fixang bank, const fix_sincos_result p, const fix_sincos_result h)
 {
+	vms_matrix m;
 #define DXX_S2M_DECL(V)	\
 	const auto &sin##V = V.sin;	\
 	const auto &cos##V = V.cos
@@ -432,24 +441,26 @@ static void sincos_2_matrix(vms_matrix &m, const fixang bank, const fix_sincos_r
 	const auto cbsh{fixmul(cosb, sinh)};
 	m.uvec.x = fixmul(sinp,cbsh) - sbch;		//m2
 	m.rvec.z = fixmul(sinp,sbch) - cbsh;		//m7
+	return m;
+}
+
 }
 
 //computes a matrix from a set of three angles.  returns ptr to matrix
-void vm_angles_2_matrix(vms_matrix &m,const vms_angvec &a)
+vms_matrix vm_angles_2_matrix(const vms_angvec &a)
 {
-	const auto al{a};
-	sincos_2_matrix(m, al.b, fix_sincos(al.p), fix_sincos(al.h));
+	return vm_matrix_build_from_sincos(a.b, fix_sincos(a.p), fix_sincos(a.h));
 }
 
 #if DXX_USE_EDITOR
 //computes a matrix from a forward vector and an angle
-void vm_vec_ang_2_matrix(vms_matrix &m,const vms_vector &v,fixang a)
+vms_matrix vm_vec_ang_2_matrix(const vms_vector &v, const fixang a)
 {
 	const fix sinp{-v.y};
 	const fix cosp{fix_sqrt(F1_0 - fixmul(sinp, sinp))};
 	const fix sinh{fixdiv(v.x, cosp)};
 	const fix cosh{fixdiv(v.z, cosp)};
-	sincos_2_matrix(m, a, {sinp, cosp}, {sinh, cosh});
+	return vm_matrix_build_from_sincos(a, {sinp, cosp}, {sinh, cosh});
 }
 #endif
 
@@ -458,60 +469,69 @@ void vm_vec_ang_2_matrix(vms_matrix &m,const vms_vector &v,fixang a)
 //the up vector is used.  If only the forward vector is passed, a bank of
 //zero is assumed
 //returns ptr to matrix
-void vm_vector_to_matrix(vms_matrix &m, const vms_vector &fvec)
+vms_matrix vm_vector_to_matrix(const vms_vector &fvec)
 {
+	vms_matrix m;
 	if (!vm_vec_copy_normalize(m.fvec, fvec))
 	{
 		Int3();		//forward vec should not be zero-length
-		return;
 	}
-	vm_vector_to_matrix_f(m);
+	else
+		vm_vector_to_matrix_f(m);
+	return m;
 }
 
-void vm_vector_to_matrix_r(vms_matrix &m, const vms_vector &fvec, const vms_vector &rvec)
+vms_matrix vm_vector_to_matrix_r(const vms_vector &fvec, const vms_vector &rvec)
 {
+	vms_matrix m;
 	if (!vm_vec_copy_normalize(m.fvec, fvec))
 	{
 		Int3();		//forward vec should not be zero-length
-		return;
 	}
-	if (!vm_vec_copy_normalize(m.rvec, rvec) ||
+	else if (!vm_vec_copy_normalize(m.rvec, rvec) ||
 		//normalize new perpendicular vector
-		!vm_vec_normalize(m.uvec = vm_vec_cross(m.fvec, m.rvec)))
+		(reconstruct_at(m.uvec, vm_vec_cross, m.fvec, m.rvec), !vm_vec_normalize(m.uvec)))
 	{
 		vm_vector_to_matrix_f(m);
-		return;
 	}
+	else
 	//now recompute right vector, in case it wasn't entirely perpendicular
-	m.rvec = vm_vec_cross(m.uvec, m.fvec);
+		reconstruct_at(m.rvec, vm_vec_cross, m.uvec, m.fvec);
+	return m;
 }
 
-void vm_vector_to_matrix_u(vms_matrix &m, const vms_vector &fvec, const vms_vector &uvec)
+vms_matrix vm_vector_to_matrix_u(const vms_vector &fvec, const vms_vector &uvec)
 {
+	vms_matrix m;
 	if (!vm_vec_copy_normalize(m.fvec, fvec))
 	{
 		Int3();		//forward vec should not be zero-length
-		return;
 	}
-	if (!vm_vec_copy_normalize(m.uvec, uvec) ||
+	else if (!vm_vec_copy_normalize(m.uvec, uvec) ||
 		//normalize new perpendicular vector
-		!vm_vec_normalize(m.rvec = vm_vec_cross(m.uvec, m.fvec)))
+		(reconstruct_at(m.rvec, vm_vec_cross, m.uvec, m.fvec), !vm_vec_normalize(m.rvec)))
 	{
 		vm_vector_to_matrix_f(m);
-		return;
 	}
+	else
 	//now recompute up vector, in case it wasn't entirely perpendicular
-	m.uvec = vm_vec_cross(m.fvec, m.rvec);
+		reconstruct_at(m.uvec, vm_vec_cross, m.fvec, m.rvec);
+	return m;
 }
 
+vms_vector vm_vec_build_rotated(const vms_vector &src, const vms_matrix &m)
+{
+	return {
+		.x = vm_vec_build_dot(src, m.rvec),
+		.y = vm_vec_build_dot(src, m.uvec),
+		.z = vm_vec_build_dot(src, m.fvec)
+	};
+}
 
-//rotates a vector through a matrix. returns ptr to dest vector
-//dest CANNOT equal source
+//rotates a vector through a matrix.
 void vm_vec_rotate(vms_vector &dest,const vms_vector &src,const vms_matrix &m)
 {
-	dest.x = vm_vec_dot(src,m.rvec);
-	dest.y = vm_vec_dot(src,m.uvec);
-	dest.z = vm_vec_dot(src,m.fvec);
+	dest = vm_vec_build_rotated(src, m);
 }
 
 //mulitply 2 matrices, fill in dest.  returns ptr to dest
@@ -599,7 +619,7 @@ vms_angvec vm_extract_angles_vector(const vms_vector &v)
 //distance is signed, so negative dist is on the back of the plane
 fix vm_dist_to_plane(const vms_vector &checkp,const vms_vector &norm,const vms_vector &planep)
 {
-	return vm_vec_dot(vm_vec_sub(checkp,planep),norm);
+	return vm_vec_build_dot(vm_vec_build_sub(checkp, planep), norm);
 }
 
 // convert vms_matrix to vms_quaternion
@@ -650,8 +670,9 @@ vms_quaternion vms_quaternion_from_matrix(const vms_matrix &m)
 }
 
 // convert vms_quaternion to vms_matrix
-void vms_matrix_from_quaternion(vms_matrix &m, const vms_quaternion &q)
+vms_matrix vms_matrix_from_quaternion(const vms_quaternion &q)
 {
+	vms_matrix m;
 	const fix qw2{q.w * 2};
 	const fix qx2{q.x * 2};
 	const fix qy2{q.y * 2};
@@ -680,6 +701,7 @@ void vms_matrix_from_quaternion(vms_matrix &m, const vms_quaternion &q)
 	const fix qxw{fixmul({qx2}, {qw2})};
 	m.fvec.y = fixmul(fixmul(fl2f(2.0), {qyz + qxw}), {invs});
 	m.uvec.z = fixmul(fixmul(fl2f(2.0), {qyz - qxw}), {invs});
+	return m;
 }
 
 }

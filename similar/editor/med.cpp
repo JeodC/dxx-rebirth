@@ -93,6 +93,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_levelstate.h"
 #include "d_zip.h"
 
@@ -558,7 +559,7 @@ static void move_player_2_segment_and_rotate(const vmsegptridx_t seg, const side
 	auto &sv = Side_to_verts[Curside];
 	auto &verts = Cursegp->verts;
 	const auto en = std::exchange(edgenum, next_side_vertex(edgenum));
-	vm_vector_to_matrix_u(ConsoleObject->orient, vp, vm_vec_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]])));
+	reconstruct_at(ConsoleObject->orient, vm_vector_to_matrix_u, vp, vm_vec_build_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]])));
 	obj_relink(vmobjptr, vmsegptr, vmobjptridx(ConsoleObject), seg);
 }
 
@@ -576,10 +577,9 @@ int SetPlayerFromCursegMinusOne()
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
 	auto &vmobjptridx = Objects.vmptridx;
-	std::array<g3s_point, 4> corner_p;
-	fix max,view_dist=f1_0*10;
+	fix view_dist=f1_0*10;
 	static side_relative_vertnum edgenum;
-	const auto view_vec = vm_vec_negated(Cursegp->shared_segment::sides[Curside].normals[0]);
+	const auto view_vec{vm_vec_build_negated(Cursegp->shared_segment::sides[Curside].normals[0])};
 
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
@@ -591,22 +591,27 @@ int SetPlayerFromCursegMinusOne()
 	auto &sv = Side_to_verts[Curside];
 	auto &verts = Cursegp->verts;
 	const auto en = std::exchange(edgenum, next_side_vertex(edgenum));
-	vm_vector_to_matrix_u(ConsoleObject->orient, view_vec, vm_vec_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]])));
+	reconstruct_at(ConsoleObject->orient, vm_vector_to_matrix_u, view_vec, vm_vec_build_sub(vcvertptr(verts[sv[en]]), vcvertptr(verts[sv[next_side_vertex(en, 3)]])));
 
 	gr_set_current_canvas(*Canv_editor_game);
 	g3_start_frame(*grd_curcanv);
 	g3_set_view_matrix(ConsoleObject->pos,ConsoleObject->orient,Render_zoom);
 
-	max = 0;
-	for (auto &&[corner, vert] : zip(corner_p, sv))
-	{
-		g3_rotate_point(corner, vcvertptr(verts[vert]));
-		if (labs(corner.p3_vec.x) > max) max = labs(corner.p3_vec.x);
-		if (labs(corner.p3_vec.y) > max) max = labs(corner.p3_vec.y);
-	}
+	const auto adjusted_view_dist{[&sv, &vcvertptr, &verts](const fix view_dist) -> fix {
+		std::array<g3s_point, 4> corner_p;
+		fix max{0};
+		for (auto &&[corner, vert] : zip(corner_p, sv))
+		{
+			g3_rotate_point(corner, vcvertptr(verts[vert]));
+			if (const auto absolute_x{labs(corner.p3_vec.x)}; max < absolute_x)
+				max = absolute_x;
+			if (const auto absolute_y{labs(corner.p3_vec.y)}; max < absolute_y)
+				max = absolute_y;
+		}
+		return fixmul(view_dist, fixdiv(fixdiv(max, SIDE_VIEW_FRAC), corner_p[0].p3_vec.z));
+	}(view_dist)};
 
-	view_dist = fixmul(view_dist,fixdiv(fixdiv(max,SIDE_VIEW_FRAC),corner_p[0].p3_vec.z));
-	const auto view_vec3{vm_vec_copy_scale(view_vec, view_dist)};
+	const auto view_vec3{vm_vec_copy_scale(view_vec, adjusted_view_dist)};
 	vm_vec_sub(ConsoleObject->pos,side_center,view_vec3);
 
 	//obj_relink(ConsoleObject-Objects, SEG_PTR_2_NUM(Cursegp) );

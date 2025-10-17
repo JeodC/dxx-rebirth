@@ -56,6 +56,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "console.h"
 #include "compiler-cf_assert.h"
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_range.h"
 #include "d_zip.h"
 #include "partial_range.h"
@@ -523,9 +524,11 @@ properties_init_result properties_init(d_level_shared_robot_info_state &LevelSha
 	HiresGFXAvailable = MacPig;	// for now at least
 
 	properties_init_result retval;
+	static char bitmaps_bin_basename[]{"bitmaps.bin"};
+
 	if (PCSharePig)
 		retval = properties_init_result::shareware;	// run gamedata_read_tbl in shareware mode
-	else if (GameArg.EdiNoBm || (!PHYSFS_exists("BITMAPS.TBL") && !PHYSFS_exists("BITMAPS.BIN")))
+	else if (GameArg.EdiNoBm || (!PHYSFS_exists("BITMAPS.TBL") && !PHYSFSX_exists_ignorecase(bitmaps_bin_basename)))
 	{
 		properties_read_cmp(LevelSharedRobotInfoState, Vclip, Piggy_fp);	// Note connection to above if!!!
 		range_for (auto &i, GameBitmapXlat)
@@ -1765,32 +1768,60 @@ void load_bitmap_replacements(const std::span<const char, FILENAME_LEN> level_na
 
 namespace {
 
-/* calculate table to translate d1 bitmaps to current palette,
- * return -1 on error
+/* `std::optional` is almost suitable here, but `std::optional` provides no way
+ * to mark the object as having a value and not implicitly perform
+ * value-initialization of the contained object.  There is no need to
+ * value-initialize the arrays first, so use a custom type that allows that to
+ * be skipped.
  */
-static int get_d1_colormap(palette_array_t &d1_palette, std::array<color_palette_index, 256> &colormap)
+struct d1_colormap_data
 {
-	auto palette_file = PHYSFSX_openReadBuffered(D1_PALETTE).first;
-	if (!palette_file || PHYSFS_fileLength(palette_file) != 9472)
-		return -1;
-	PHYSFSX_readBytes(palette_file, d1_palette, sizeof(d1_palette[0]) * std::size(d1_palette));
-	build_colormap_good(d1_palette, colormap);
-	// don't change transparencies:
-	colormap[254] = color_palette_index{254};
-	colormap[255] = TRANSPARENCY_COLOR;
-	return 0;
+	palette_array_t d1_palette;
+	std::array<color_palette_index, 256> colormap;
+	bool engaged{};
+};
+
+/* calculate table to translate d1 bitmaps to current palette,
+ * On error, return a d1_colormap_data with engaged==false and other members
+ * default-initialized.  Since these members have no constructor and no
+ * initializer, default-initialization degenerates to "no initialization" and
+ * they retain whatever value happened to be in memory, so they must not be
+ * accessed.
+ *
+ * On success, return a d1_colormap_data with engaged==true and other members
+ * initialized.
+ */
+[[nodiscard]]
+static d1_colormap_data build_d1_colormap_from_palette_file()
+{
+	d1_colormap_data r;
+	constexpr std::size_t expected_bytes_read{sizeof(r.d1_palette[0]) * r.d1_palette.size()};
+	if (const auto &&[file, physfserr] = PHYSFSX_openReadBuffered(D1_PALETTE); !file)
+		Warning("Failed to load Descent 1 color palette: failed to open \"" D1_PALETTE "\": \"%s\".", PHYSFS_getErrorByCode(physfserr));
+	else if (const auto size{PHYSFS_fileLength(file)}; size != 9472)
+		Warning("Failed to load Descent 1 color palette: failed to read \"" D1_PALETTE "\": expected length 9472, found length %li", static_cast<long>(size));
+	else if (const auto actual_bytes_read{PHYSFSX_readBytes(file, r.d1_palette, expected_bytes_read)}; actual_bytes_read != expected_bytes_read)
+		Warning("Failed to load Descent 1 color palette: failed to read \"" D1_PALETTE "\": expected to read %" DXX_PRI_size_type " bytes, actual read length %li", expected_bytes_read, static_cast<long>(actual_bytes_read));
+	else
+	{
+		reconstruct_at(r.colormap, build_colormap_good, r.d1_palette);
+		// don't change transparencies:
+		r.colormap[254] = color_palette_index{254};
+		r.colormap[255] = TRANSPARENCY_COLOR;
+		r.engaged = true;
+	}
+	return r;
 }
 
 #define JUST_IN_CASE 132 /* is enough for d1 pc registered */
-static void bitmap_read_d1( grs_bitmap *bitmap, /* read into this bitmap */
+static std::span<uint8_t> bitmap_read_d1(grs_bitmap *bitmap, /* read into this bitmap */
                      const NamedPHYSFS_File d1_Piggy_fp, /* read from this file */
                      int bitmap_data_start, /* specific to file */
                      const DiskBitmapHeader *const bmh, /* header info for bitmap */
-                     uint8_t **next_bitmap, /* where to write it (if 0, use malloc) */
-					 palette_array_t &d1_palette, /* what palette the bitmap has */
-					 std::array<color_palette_index, 256> &colormap) /* how to translate bitmap's colors */
+                     std::span<uint8_t> next_bitmap, /* where to write it (if points to nullptr, use malloc) */
+					 const d1_colormap_data &d1_colormap /* what palette and colormap the bitmap has */
+					 )
 {
-	int zsize;
 	uint8_t *data;
 	int width;
 
@@ -1803,21 +1834,52 @@ static void bitmap_read_d1( grs_bitmap *bitmap, /* read into this bitmap */
 	gr_set_bitmap_flags(*bitmap, bmh->flags & BM_FLAGS_TO_COPY);
 
 	PHYSFS_seek(d1_Piggy_fp, bitmap_data_start + bmh->offset);
-	if (bmh->flags & BM_FLAG_RLE) {
-		zsize = PHYSFSX_readInt(d1_Piggy_fp);
-		PHYSFSX_fseek(d1_Piggy_fp, -4, SEEK_CUR);
-	} else
-		zsize = bitmap->bm_h * bitmap->bm_w;
+	const auto is_rle{bmh->flags & BM_FLAG_RLE};
+	const uint32_t zsize{
+		is_rle
+			? PHYSFSX_readULE32(d1_Piggy_fp)
+			: (bitmap->bm_h * bitmap->bm_w)
+	};
 
-	if (next_bitmap) {
-		data = *next_bitmap;
-		*next_bitmap += zsize;
+	if (next_bitmap.data())
+	{
+		/* Advise `std::span` how much space will be written, so that a debug
+		 * version can trap here if that would exceed the available buffer.  If
+		 * `std::span` does not trap, and there is insufficient space, return
+		 * without reading the bitmap.  This is an improvement over the
+		 * previous implementation, which would write off the end of the buffer
+		 * and cause heap corruption.
+		 *
+		 * This trap and return should be unreachable, assuming an official
+		 * palette file and official bitmaps.  This error path _can_ be
+		 * triggered by corrupt input data.  Fixing that is left as an exercise
+		 * to the reader, since no one has filed a bug report about the
+		 * heap corruption bug, even though the bug appears to date to when the
+		 * D1-textures-in-D2 feature was added in 2003 with commit
+		 * 168cf918a43dce2b1cd697fbb45bea7468efbfd6 ("fix loading of d1 texture
+		 * replacements for non-animated textures"), though equivalent logic
+		 * may have been present even earlier.  Therefore, it seems no one
+		 * needs this to succeed, so converting it from corruption to a
+		 * trap+return is sufficient for now.
+		 */
+		data = next_bitmap.first(zsize).data();
+		if (next_bitmap.size() < zsize)
+			return next_bitmap;
 	} else {
 		MALLOC(data, ubyte, zsize + JUST_IN_CASE);
+		if (!data) return next_bitmap;
 	}
-	if (!data) return;
 
-	PHYSFSX_readBytes(d1_Piggy_fp, data, zsize);
+	/* If a 32-bit unsigned little endian was read from the data file above for
+	 * the initialization of `zsize`, then store it into the buffer and read
+	 * from the file into the location following that stored 32-bit value.
+	 *
+	 * If no value was read above, then begin reading at the head of the buffer.
+	 *
+	 * This effectively emulates a "peek" to initialize `zsize` above, without
+	 * requiring a separate seek here.
+	 */
+	PHYSFSX_readBytes(d1_Piggy_fp, (is_rle ? (PUT_INTEL_INT(data, zsize), data + sizeof(uint32_t)) : data), zsize);
 	gr_set_bitmap_data(*bitmap, data);
 	switch (descent1_pig_size{PHYSFS_fileLength(d1_Piggy_fp)})
 	{
@@ -1831,20 +1893,31 @@ static void bitmap_read_d1( grs_bitmap *bitmap, /* read into this bitmap */
 			swap_0_255(*bitmap);
 	}
 	if (bmh->flags & BM_FLAG_RLE)
-		rle_remap(*bitmap, colormap);
+	{
+		if (d1_colormap.engaged)
+			rle_remap(*bitmap, d1_colormap.colormap);
+		/* Otherwise, skip the remapping.  The colors will be wrong, but the
+		 * size will not change, so the bitmap will still reliably fit in the
+		 * allocated space.
+		 */
+	}
 	else
-		gr_remap_bitmap_good(*bitmap, d1_palette, TRANSPARENCY_COLOR, -1);
+	{
+		if (d1_colormap.engaged)
+			gr_remap_bitmap_good(*bitmap, d1_colormap.d1_palette, TRANSPARENCY_COLOR, -1);
+	}
+	uint32_t advance_next_bitmap{zsize};
 	if (bmh->flags & BM_FLAG_RLE) { // size of bitmap could have changed!
 		int new_size;
 		memcpy(&new_size, bitmap->bm_data, 4);
-		if (next_bitmap) {
-			*next_bitmap += new_size - zsize;
-		} else {
+		advance_next_bitmap = new_size;
+		if (!next_bitmap.data()) {
 			Assert( zsize + JUST_IN_CASE >= new_size );
 			bitmap->bm_mdata = reinterpret_cast<uint8_t *>(d_realloc(bitmap->bm_mdata, new_size));
 			Assert(bitmap->bm_data);
 		}
 	}
+	return next_bitmap.data() ? next_bitmap.subspan(advance_next_bitmap) : next_bitmap;
 }
 
 #define D1_MAX_TEXTURES 800
@@ -1985,14 +2058,11 @@ static bitmap_index d2_index_for_d1_index(short d1_index)
 
 }
 
-#define D1_BITMAPS_SIZE 300000
 void load_d1_bitmap_replacements()
 {
 	int pig_data_start, bitmap_header_start, bitmap_data_start;
 	int N_bitmaps;
 	short d1_index;
-	uint8_t * next_bitmap;
-	palette_array_t d1_palette;
 	char *p;
 
 	auto &&[d1_Piggy_fp, physfserr] = PHYSFSX_openReadBuffered(descent_pig_basename);
@@ -2004,10 +2074,6 @@ void load_d1_bitmap_replacements()
 
 	//first, free up data allocated for old bitmaps
 	free_bitmap_replacements();
-
-	std::array<color_palette_index, 256> colormap;
-	if (get_d1_colormap( d1_palette, colormap ) != 0)
-		Warning_puts("Failed to load Descent 1 color palette");
 
 	switch (descent1_pig_size{PHYSFS_fileLength(d1_Piggy_fp)})
 	{
@@ -2044,14 +2110,22 @@ void load_d1_bitmap_replacements()
 		bitmap_data_start = bitmap_header_start + header_size;
 	}
 
+	/* This size is sufficient for all official releases of Descent 1 bitmaps,
+	 * when decoded using the standard palette.
+	 *
+	 * Custom bitmap files, or custom palette files, may exhaust this space,
+	 * causing `bitmap_read_d1` to fail to read all bitmaps.
+	 */
+	static constexpr std::size_t D1_BITMAPS_SIZE{300000};
 	Bitmap_replacement_data = std::make_unique<ubyte[]>(D1_BITMAPS_SIZE);
 	if (!Bitmap_replacement_data) {
 		Warning_puts(D1_PIG_LOAD_FAILED);
 		return;
 	}
 
-	next_bitmap = Bitmap_replacement_data.get();
+	const auto d1_colormap{build_d1_colormap_from_palette_file()};
 
+	std::span<uint8_t> next_bitmap{Bitmap_replacement_data.get(), D1_BITMAPS_SIZE};
 	for (d1_index = 1; d1_index <= N_bitmaps; d1_index++ ) {
 		const auto d2_index = d2_index_for_d1_index(d1_index);
 		// only change bitmaps which are unique to d1
@@ -2060,8 +2134,7 @@ void load_d1_bitmap_replacements()
 			PHYSFS_seek(d1_Piggy_fp, bitmap_header_start + (d1_index - 1) * DISKBITMAPHEADER_D1_SIZE);
 			const auto bmh{DiskBitmapHeader_d1_read(d1_Piggy_fp)};
 
-			bitmap_read_d1( &GameBitmaps[d2_index], d1_Piggy_fp, bitmap_data_start, &bmh, &next_bitmap, d1_palette, colormap );
-			Assert(next_bitmap - Bitmap_replacement_data.get() < D1_BITMAPS_SIZE);
+			next_bitmap = bitmap_read_d1(&GameBitmaps[d2_index], d1_Piggy_fp, bitmap_data_start, &bmh, next_bitmap, d1_colormap);
 			GameBitmapOffset[d2_index] = pig_bitmap_offset::None; // don't try to read bitmap from current d2 pigfile
 			GameBitmapFlags[d2_index] = bmh.flags;
 
@@ -2098,17 +2171,12 @@ grs_bitmap *read_extra_bitmap_d1_pig(const std::span<const char> name, grs_bitma
 	{
 		int pig_data_start, bitmap_header_start, bitmap_data_start;
 		int N_bitmaps;
-		palette_array_t d1_palette;
 		auto &&[d1_Piggy_fp, physfserr] = PHYSFSX_openReadBuffered(descent_pig_basename);
 		if (!d1_Piggy_fp)
 		{
 			Warning("Failed to open " D1_PIGFILE ": %s", PHYSFS_getErrorByCode(physfserr));
 			return nullptr;
 		}
-
-		std::array<color_palette_index, 256> colormap;
-		if (get_d1_colormap( d1_palette, colormap ) != 0)
-			Warning_puts("Failed to load Descent 1 color palette");
 
 		switch (descent1_pig_size{PHYSFS_fileLength(d1_Piggy_fp)})
 		{
@@ -2142,6 +2210,8 @@ grs_bitmap *read_extra_bitmap_d1_pig(const std::span<const char> name, grs_bitma
 			bitmap_data_start = bitmap_header_start + header_size;
 		}
 
+		const auto d1_colormap{build_d1_colormap_from_palette_file()};
+
 		for (unsigned i = 1;; ++i)
 		{
 			if (i > N_bitmaps)
@@ -2152,7 +2222,7 @@ grs_bitmap *read_extra_bitmap_d1_pig(const std::span<const char> name, grs_bitma
 			const auto bmh{DiskBitmapHeader_d1_read(d1_Piggy_fp)};
 			if (!d_strnicmp(bmh.name, name.data(), std::min<std::size_t>(8u, name.size())))
 			{
-				bitmap_read_d1(&n, d1_Piggy_fp, bitmap_data_start, &bmh, 0, d1_palette, colormap);
+				bitmap_read_d1(&n, d1_Piggy_fp, bitmap_data_start, &bmh, std::span<uint8_t>{}, d1_colormap);
 				break;
 			}
 		}

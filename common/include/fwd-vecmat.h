@@ -69,7 +69,7 @@ vm_magnitude vm_vec_normalized_dir (vms_vector &dest, const vms_vector &end, con
 vm_magnitude vm_vec_normalized_dir_quick (vms_vector &dest, const vms_vector &end, const vms_vector &start);
 
 [[nodiscard]]
-fix vm_vec_dot (const vms_vector &v0, const vms_vector &v1);
+fix vm_vec_build_dot(const vms_vector &v0, const vms_vector &v1);
 
 [[nodiscard]]
 fixang vm_vec_delta_ang (const vms_vector &v0, const vms_vector &v1, const vms_vector &fvec);
@@ -77,16 +77,23 @@ fixang vm_vec_delta_ang (const vms_vector &v0, const vms_vector &v1, const vms_v
 [[nodiscard]]
 fixang vm_vec_delta_ang_norm (const vms_vector &v0, const vms_vector &v1, const vms_vector &fvec);
 
-void vm_angles_2_matrix (vms_matrix &m, const vms_angvec &a);
+[[nodiscard]]
+vms_matrix vm_angles_2_matrix(const vms_angvec &a);
 
 #if DXX_USE_EDITOR
-void vm_vec_ang_2_matrix (vms_matrix &m, const vms_vector &v, fixang a);
+[[nodiscard]]
+vms_matrix vm_vec_ang_2_matrix(const vms_vector &v, fixang a);
 #endif
 
-void vm_vector_to_matrix_r(vms_matrix &m, const vms_vector &fvec, const vms_vector &rvec);
-void vm_vector_to_matrix_u(vms_matrix &m, const vms_vector &fvec, const vms_vector &uvec);
-void vm_vector_to_matrix(vms_matrix &m, const vms_vector &fvec);
+[[nodiscard]]
+vms_matrix vm_vector_to_matrix_r(const vms_vector &fvec, const vms_vector &rvec);
+[[nodiscard]]
+vms_matrix vm_vector_to_matrix_u(const vms_vector &fvec, const vms_vector &uvec);
+[[nodiscard]]
+vms_matrix vm_vector_to_matrix(const vms_vector &fvec);
 void vm_vec_rotate (vms_vector &dest, const vms_vector &src, const vms_matrix &m);
+[[nodiscard]]
+vms_vector vm_vec_build_rotated(const vms_vector &src, const vms_matrix &m);
 void _vm_matrix_x_matrix (vms_matrix &dest, const vms_matrix &src0, const vms_matrix &src1);
 [[nodiscard]]
 vms_angvec vm_extract_angles_matrix(const vms_matrix &m);
@@ -98,6 +105,7 @@ fix vm_dist_to_plane (const vms_vector &checkp, const vms_vector &norm, const vm
 
 [[nodiscard]]
 vms_quaternion vms_quaternion_from_matrix(const vms_matrix &m);
-void vms_matrix_from_quaternion(vms_matrix &m, const vms_quaternion &q);
+[[nodiscard]]
+vms_matrix vms_matrix_from_quaternion(const vms_quaternion &q);
 
 }

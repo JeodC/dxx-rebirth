@@ -165,19 +165,19 @@ class Git(StaticSubprocess):
 	# __pcall_found_git (depending on whether $GIT is blank), but never
 	# both in the same run.
 	@classmethod
-	def __pcall_missing_git(cls,args,stderr=None,_missing_git=StaticSubprocess.CachedCall(None, None, 1)):
+	def __pcall_missing_git(cls, args: list[str], stderr=None, _missing_git=StaticSubprocess.CachedCall(None, None, 1)):
 		return _missing_git
 	@classmethod
-	def __pcall_found_git(cls,args,stderr=None,_pcall=StaticSubprocess.pcall):
+	def __pcall_found_git(cls, args: list[str], stderr=None, _pcall=StaticSubprocess.pcall):
 		return _pcall(cls.__path_git + args, stderr=stderr)
 	@classmethod
-	def pcall(cls,args,stderr=None):
+	def pcall(cls, args: list[str], stderr=None):
 		git = cls.__path_git
 		if git is None:
 			cls.__path_git = git = cls.shlex_split(os.environ.get('GIT', 'git'))
 		cls.pcall = f = cls.__pcall_found_git if git else cls.__pcall_missing_git
 		return f(args, stderr)
-	def spcall(cls,args,stderr=None):
+	def spcall(cls, args: list[str], stderr=None):
 		g = cls.pcall(args, stderr)
 		if g.returncode:
 			return None
@@ -265,7 +265,7 @@ class ConfigureTests:
 			# tuple.
 			self.__guard = guard,
 			self.__RecordedTest = collector.RecordedTest
-		def RecordedTest(self, name, desc, predicate=()):
+		def RecordedTest(self, name: str, desc: str, predicate=()):
 			# Record a test with both the guard of this GuardedCollector
 			# and any guards from the input collector objects, which may
 			# in turn be instances of GuardedCollector with predicates
@@ -352,7 +352,7 @@ class ConfigureTests:
 				except KeyError:
 					pass
 	class pkgconfig:
-		def _get_pkg_config_exec_path(context,msgprefix,pkgconfig):
+		def _get_pkg_config_exec_path(context, msgprefix: str, pkgconfig: str):
 			Display = context.Display
 			if not pkgconfig:
 				Display(f'{msgprefix}: pkg-config disabled by user settings\n')
@@ -394,10 +394,9 @@ class ConfigureTests:
 				_cache[pkgconfig] = path = _get_pkg_config_exec_path(context, message, pkgconfig)
 			return path
 		@staticmethod
-		def merge(context,message,user_settings,pkgconfig_name,display_name,
-				guess_flags,
+		def merge(context, message: str, user_settings, pkgconfig_name: str, display_name: str, guess_flags: dict,
 				__get_pkg_config_path=__get_pkg_config_path,
-				_cache={}):
+				_cache: dict = {}) -> dict:
 			Display = context.Display
 			Display(f'{message}: checking {display_name} pkg-config {pkgconfig_name}\n')
 			pkgconfig = __get_pkg_config_path(context, message, user_settings, display_name)
@@ -472,7 +471,6 @@ class ConfigureTests:
 	custom_tests = _custom_test.tests
 	comment_not_supported = '/* not supported */'
 	__python_import_struct = None
-	_cxx_conformance_cxx20 = 20
 	__cxx_std_required_features = CxxRequiredFeatures([
 		# As of this writing, <gcc-12 is already unsupported, but some
 		# platforms, such as Ubuntu 22.04, still try to use gcc-11 by default.
@@ -855,9 +853,9 @@ I%(N)s a%(N)s()
 		# Force all tests to be Link tests when LTO is enabled.
 		self.Compile = self.Link if user_settings.lto else self._Compile
 		self.custom_tests = tuple(t for t in self.custom_tests if all(predicate(user_settings) for predicate in t.predicate))
-	def _quote_macro_value(v):
+	def _quote_macro_value(v: str) -> str:
 		return v.strip().replace('\n', ' \\\n')
-	def _check_sconf_forced(self,calling_function):
+	def _check_sconf_forced(self, calling_function: str) -> tuple:
 		return self._check_forced(calling_function), self._check_expected(calling_function)
 	@staticmethod
 	def _find_calling_sconf_function():
@@ -874,7 +872,7 @@ I%(N)s a%(N)s()
 		# (calling_function=None), but no function in the call stack appears to
 		# be a checking function.
 		assert False, "SConf caller not specified and no acceptable caller in stack."
-	def _check_forced(self,name):
+	def _check_forced(self, name: str) -> str:
 		# This getattr will raise AttributeError if called for a function which
 		# is not a registered test.  Tests must be registered as an implicit
 		# test (in implicit_tests, usually by applying the @_implicit_test
@@ -884,7 +882,7 @@ I%(N)s a%(N)s()
 		# Unregistered tests are never documented and cannot be overridden by
 		# the user.
 		return getattr(self.user_settings, f'sconf_{name}')
-	def _check_expected(self,name):
+	def _check_expected(self, name: str):
 		# The remarks for _check_forced apply here too.
 		r = getattr(self.user_settings, f'expect_sconf_{name}')
 		if r is not None:
@@ -893,14 +891,14 @@ I%(N)s a%(N)s()
 			if r == self.expect_sconf_failure:
 				return 0
 		return r
-	def _check_macro(self,context,macro_name,macro_value,test,_comment_not_supported=comment_not_supported,**kwargs):
+	def _check_macro(self, context, macro_name: str, macro_value: str, test: str, _comment_not_supported: str = comment_not_supported, **kwargs):
 		self._define_macro(context, macro_name, macro_value if (
 			self.Compile(context, text=f'''
 #define {macro_name} {macro_value}
 {test}
 ''', **kwargs)
 			) else _comment_not_supported)
-	def _define_macro(self,context,macro_name,macro_value):
+	def _define_macro(self, context, macro_name: str, macro_value: str) -> None:
 		context.sconf.Define(macro_name, macro_value)
 		self.__defined_macros += f'#define {macro_name} {macro_value}\n'
 	implicit_tests.append(_implicit_test.RecordedTest('check_ccache_distcc_ld_works', "assume ccache, distcc, C++ compiler, and C++ linker work"))
@@ -961,7 +959,7 @@ help:assume C++ compiler works
 		# some tests in _check_cxx_works rely on its original value.
 		cenv['CXXCOM'] = cenv._dxx_cxxcom_no_prefix
 		self._check_cxx_conformance_level(context)
-	def _show_tool_version(self,context,tool,desc,save_tool_version=True):
+	def _show_tool_version(self, context, tool: str, desc: str, save_tool_version: bool = True):
 		# These version results are not used for anything, but are
 		# collected here so that users who post only a build log will
 		# still supply at least some useful information.
@@ -981,7 +979,7 @@ help:assume C++ compiler works
 		if save_tool_version:
 			self.__tool_versions.append((tool, v))
 		Display(f'{v!r}\n')
-	def _show_indirect_tool_version(self,context,CXX,tool,desc):
+	def _show_indirect_tool_version(self,context, CXX: str, tool: str, desc: str):
 		Display = context.Display
 		Display(f'{self.msgprefix}: checking path to {desc} ... ')
 		tool, name = ToolchainInformation.get_tool_path(context.env, tool)
@@ -1122,22 +1120,18 @@ void test_virtual_function_supported::a() {}
 					return 'C++ compiler works with blank $CXXFLAGS.  C++ compiler does not work with specified $CXXFLAGS.'
 			return 'C++ compiler does not work.'
 	implicit_tests.append(_implicit_test.RecordedTest('check_cxx20', "assume C++ compiler supports C++20"))
-	__cxx_conformance_CXXFLAGS = [None]
-	def _check_cxx_conformance_level(self,context,_levels=(
-			# List standards in descending order of preference.
-			#
-			# C++20 is required, so list it last.
-			_cxx_conformance_cxx20,
-		), _CXXFLAGS=__cxx_conformance_CXXFLAGS,
-		_successflags={'CXXFLAGS' : __cxx_conformance_CXXFLAGS}
-		):
+	def _check_cxx_conformance_level(self, context):
 		# Testing the compiler option parser only needs Compile, even when LTO
 		# is enabled.
 		Compile = self._Compile
-		for level in _levels:
+		for level in (
+			# List standards in descending order of preference.
+			#
+			# C++20 is required, so list it last.
+			20,
+		):
 			opt = f'-std=gnu++{level}'
-			_CXXFLAGS[0] = opt
-			if Compile(context, text='', msg=f'whether C++ compiler accepts {opt}', successflags=_successflags, calling_function=f'cxx{level}'):
+			if Compile(context, text='', msg=f'whether C++ compiler accepts {opt}', successflags={'CXXFLAGS': (opt,)}, calling_function=f'cxx{level}'):
 				return
 		raise SCons.Errors.StopError('C++ compiler does not accept any supported C++ -std option.')
 	def _Test(self,context,text,msg,action,main='',ext='.cpp',testflags={},successflags={},skipped=None,successmsg=None,failuremsg=None,expect_failure=False,calling_function=None,__flags_Werror = {'CXXFLAGS' : ['-Werror']}):
@@ -1426,7 +1420,7 @@ int main(int argc,char**argv)
 
 	@_custom_test
 	def _check_user_settings_tracker(self,context,_CPPDEFINES=('DXX_USE_TRACKER',)):
-		use_tracker = self.user_settings.use_tracker
+		use_tracker = self.user_settings.use_udp and self.user_settings.use_tracker
 		self._result_check_user_setting(context, use_tracker, 'UDP game tracker', cpp_defines_with_condition_value=_CPPDEFINES)
 
 	@_implicit_test
@@ -1830,7 +1824,7 @@ help:assume compiler supports __attribute__((error))
 		self._check_function_dce_attribute(context, 'error')
 		context.sconf.config_h_text += '''
 #ifndef DXX_SCONF_NO_INCLUDES
-__attribute_error("must never be called")
+dxx_compiler_attribute_error("must never be called")
 void DXX_ALWAYS_ERROR_FUNCTION(const char *);
 #endif
 '''
@@ -1839,7 +1833,7 @@ void DXX_ALWAYS_ERROR_FUNCTION(const char *);
 		f = f'''
 void a()__attribute__(({__attribute__}("a called")));
 '''
-		macro_name = f'__attribute_{attribute}(M)'
+		macro_name = f'dxx_compiler_attribute_{attribute}(M)'
 		Compile = self.Compile
 		Define = context.sconf.Define
 		if Compile(context, text=f, main='if("0"[0]==\'1\')a();', msg=f'whether compiler optimizes function __attribute__(({__attribute__}))'):
@@ -2065,80 +2059,76 @@ available.
 	@_custom_test
 	def check_attribute_always_inline(self,context):
 		"""
-help:assume compiler supports __attribute__((always_inline))
+help:assume compiler supports [[gnu::always_inline]]
 """
-		macro_name = '__attribute_always_inline()'
-		macro_value = '__attribute__((__always_inline__))'
-		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test=f'{macro_name} static inline void a(){{}}', main='a();', msg='for function __attribute__((always_inline))')
+		macro_name = 'dxx_compiler_attribute_always_inline()'
+		macro_value = '[[gnu::always_inline]]'
+		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test=f'{macro_name} static inline void a(){{}}', main='a();', msg='for C++ function attribute [[gnu::always_inline]]')
 
-	@_custom_test
+	@GuardedCollector(_custom_test, lambda user_settings: user_settings.memdebug)
 	def check_attribute_alloc_size(self,context):
 		"""
 help:assume compiler supports __attribute__((alloc_size))
 """
-		macro_name = '__attribute_alloc_size(A,...)'
+		macro_name = 'dxx_compiler_attribute_alloc_size(A,...)'
 		macro_value = '__attribute__((alloc_size(A, ## __VA_ARGS__)))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-char*a(int)__attribute_alloc_size(1);
-char*b(int,int)__attribute_alloc_size(1,2);
+char*a(int)dxx_compiler_attribute_alloc_size(1);
+char*b(int,int)dxx_compiler_attribute_alloc_size(1,2);
 """, msg='for function __attribute__((alloc_size))')
 	@_custom_test
 	def check_attribute_cold(self,context):
 		"""
-Test whether the compiler accepts gcc's function attribute
-[__attribute__((cold))][1].  Use this to annotate functions which are
+Test whether the compiler accepts the C++ function attribute
+[[gnu::cold]].  Use this to annotate functions which are
 rarely called, such as error reporting functions.
-
-[1]: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-g_t_0040code_007bcold_007d-function-attribute-3090
-
-help:assume compiler supports __attribute__((cold))
 """
-		macro_name = '__attribute_cold'
-		macro_value = '__attribute__((cold))'
+		macro_name = 'dxx_compiler_attribute_cold'
+		macro_value = '[[gnu::cold]]'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-__attribute_cold char*a(int);
-""", msg='for function __attribute__((cold))')
+dxx_compiler_attribute_cold char*a(int);
+""", msg='for C++ function attribute [[gnu::cold]]')
 	@_custom_test
 	def check_attribute_format_arg(self,context):
 		"""
 help:assume compiler supports __attribute__((format_arg))
 """
-		macro_name = '__attribute_format_arg(A)'
+		macro_name = 'dxx_compiler_attribute_format_arg(A)'
 		macro_value = '__attribute__((format_arg(A)))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-char*a(char*)__attribute_format_arg(1);
+char*a(char*)dxx_compiler_attribute_format_arg(1);
 """, msg='for function __attribute__((format_arg))')
 	@_custom_test
 	def check_attribute_format_printf(self,context):
 		"""
 help:assume compiler supports __attribute__((format(printf)))
 """
-		macro_name = '__attribute_format_printf(A,B)'
+		macro_name = 'dxx_compiler_attribute_format_printf(A,B)'
 		macro_value = '__attribute__((format(printf,A,B)))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-int a(char*,...)__attribute_format_printf(1,2);
-int b(char*)__attribute_format_printf(1,0);
+int a(char*,...)dxx_compiler_attribute_format_printf(1,2);
+int b(char*)dxx_compiler_attribute_format_printf(1,0);
 """, msg='for function __attribute__((format(printf)))')
-	@_custom_test
+	@GuardedCollector(_custom_test, lambda user_settings: user_settings.memdebug)
 	def check_attribute_malloc(self,context):
 		"""
 help:assume compiler supports __attribute__((malloc))
 """
-		macro_name = '__attribute_malloc()'
+		macro_name = 'dxx_compiler_attribute_malloc()'
 		macro_value = '__attribute__((malloc))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-int *a()__attribute_malloc();
+int *a()dxx_compiler_attribute_malloc();
 """, msg='for function __attribute__((malloc))')
 	@_custom_test
 	def check_attribute_nonnull(self,context):
 		"""
 help:assume compiler supports __attribute__((nonnull))
 """
-		macro_name = '__attribute_nonnull(...)'
+		macro_name = 'dxx_compiler_attribute_nonnull(...)'
 		macro_value = '__attribute__((nonnull __VA_ARGS__))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-int a(int*)__attribute_nonnull();
-int b(int*)__attribute_nonnull((1));
+int a(int*)dxx_compiler_attribute_nonnull();
+int b(int*)dxx_compiler_attribute_nonnull((1));
 """, msg='for function __attribute__((nonnull))')
 
 	@_custom_test
@@ -2146,10 +2136,10 @@ int b(int*)__attribute_nonnull((1));
 		"""
 help:assume compiler supports __attribute__((used))
 """
-		macro_name = '__attribute_used'
+		macro_name = 'dxx_compiler_attribute_used'
 		macro_value = '__attribute__((used))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-static void a()__attribute_used;
+static void a()dxx_compiler_attribute_used;
 static void a(){}
 """, msg='for function __attribute__((used))')
 	@_custom_test
@@ -2157,16 +2147,12 @@ static void a(){}
 		"""
 help:assume compiler supports __attribute__((unused))
 """
-		macro_name = '__attribute_unused'
+		macro_name = 'dxx_compiler_attribute_unused'
 		macro_value = '__attribute__((unused))'
 		self._check_macro(context,macro_name=macro_name,macro_value=macro_value,test="""
-__attribute_unused
+dxx_compiler_attribute_unused
 static void a(){}
 """, msg='for function __attribute__((unused))', successflags={'CXXFLAGS' : get_Werror_sequence(context.env['CXXFLAGS'], ('-Wunused',))})
-
-	@_custom_test
-	def check_attribute_warning(self,context,_check_function_dce_attribute=_check_function_dce_attribute):
-		_check_function_dce_attribute(self, context, 'warning')
 
 	@_custom_test
 	def check_cxx11_static_assert(self,context,_f='''
@@ -2387,7 +2373,7 @@ help:always wipe certain freed memory
 	def _check_size_type_format_modifier(self,context,_text_format='''
 #include <cstddef>
 #define DXX_PRI_size_type {}
-__attribute_format_printf(1, 2)
+dxx_compiler_attribute_format_printf(1, 2)
 void f(const char *, ...);
 void f(const char *, ...)
 {{
@@ -4036,7 +4022,6 @@ class DXXCommon(LazyObjectConstructor):
 			{
 				'variable': self._generic_variable,
 				'arguments': (
-					('DESTDIR', None, 'installation stage directory'),
 					('program_name', None, 'name of built program'),
 				),
 			},
@@ -5428,7 +5413,7 @@ Failed command list:
 	def _register_install(self,dxxstr,exe_node):
 		env = self.env
 		if self.user_settings.host_platform != 'darwin':
-				install_dir = f'{self.user_settings.DESTDIR or ""}{self.user_settings.BIN_DIR}'
+				install_dir = self.user_settings.BIN_DIR
 				env.Install(install_dir, exe_node)
 				env.Alias('install', install_dir)
 		else:

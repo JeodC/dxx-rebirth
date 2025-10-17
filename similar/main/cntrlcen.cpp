@@ -53,6 +53,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #include "compiler-range_for.h"
 #include "d_array.h"
+#include "d_construct.h"
+#include "d_enumerate.h"
 #include "d_levelstate.h"
 #include "partial_range.h"
 #include "d_zip.h"
@@ -77,18 +79,14 @@ namespace {
 
 static window_event_result do_countdown_frame();
 
-//	-----------------------------------------------------------------------------
-//return the position & orientation of a gun on the control center object
-static void calc_controlcen_gun_point(reactor &r, object &obj, const uint_fast32_t gun_num)
+static inline const reactor &get_reactor_definition(const std::size_t id)
 {
-	//instance gun position & orientation
-
-	auto &gun_point = obj.ctype.reactor_info.gun_pos[gun_num];
-	auto &gun_dir = obj.ctype.reactor_info.gun_dir[gun_num];
-	const auto &&m = vm_transposed_matrix(obj.orient);
-	vm_vec_rotate(gun_point, r.gun_points[gun_num], m);
-	vm_vec_add2(gun_point, obj.pos);
-	vm_vec_rotate(gun_dir, r.gun_dirs[gun_num], m);
+#if DXX_BUILD_DESCENT == 1
+	(void)id;
+	return Reactors[0];
+#elif DXX_BUILD_DESCENT == 2
+	return Reactors[id];
+#endif
 }
 
 }
@@ -99,7 +97,15 @@ void calc_controlcen_gun_point(object &obj)
 	assert(obj.render_type == render_type::RT_POLYOBJ);
 	auto &reactor = get_reactor_definition(get_reactor_id(obj));
 	for (uint_fast32_t i = reactor.n_guns; i--;)
-		calc_controlcen_gun_point(reactor, obj, i);
+	{
+		/* Set the position and direction of reactor gun number `gun_num` based
+		 * on the definition of a reactor, the current position of an object
+		 * that is of type OBJ_CNTRLCEN, and the orientation of that object.
+		 */
+		const auto &&m{vm_transposed_matrix(obj.orient)};
+		reconstruct_at(obj.ctype.reactor_info.gun_pos[i], vm_vec_build_add, obj.pos, vm_vec_build_rotated(reactor.gun_points[i], m));
+		reconstruct_at(obj.ctype.reactor_info.gun_dir[i], vm_vec_build_rotated, reactor.gun_dirs[i], m);
+	}
 }
 
 namespace {
@@ -111,36 +117,39 @@ constexpr enumerated_array<uint8_t, NDL, Difficulty_level_type> D2_Alan_pavlish_
 #endif
 
 //	-----------------------------------------------------------------------------
-//	Look at control center guns, find best one to fire at *objp.
+//	Look at control center guns, find best one to fire at the position `objpos`.
 //	Return best gun number (one whose direction dotted with vector to player is largest).
-//	If best gun has negative dot, return -1, meaning no gun is good.
-static int calc_best_gun(const unsigned num_guns, const object &objreactor, const vms_vector &objpos)
+//	If best gun has negative dot, return an empty std::optional, meaning no gun is good.
+static std::optional<std::size_t> calc_best_gun(const std::size_t num_guns, const object &objreactor, const vms_vector &objpos)
 {
-	int	i;
-	fix	best_dot;
-	int	best_gun;
-	auto &gun_pos = objreactor.ctype.reactor_info.gun_pos;
-	auto &gun_dir = objreactor.ctype.reactor_info.gun_dir;
-
-	best_dot = -F1_0*2;
-	best_gun = -1;
-
-	for (i=0; i<num_guns; i++) {
-		fix			dot;
-		const auto gun_vec = vm_vec_normalized_quick(vm_vec_sub(objpos, gun_pos[i]));
-		dot = vm_vec_dot(gun_dir[i], gun_vec);
-
-		if (dot > best_dot) {
+	constexpr std::size_t invalid_best_gun{SIZE_MAX};
+	fix	best_dot{-F1_0*2};
+	std::size_t best_gun{invalid_best_gun};
+	for (const auto &&[i, gun_dir, gun_pos] : enumerate(zip(std::span(objreactor.ctype.reactor_info.gun_dir).first(num_guns), objreactor.ctype.reactor_info.gun_pos)))
+	{
+		const auto gun_vec{vm_vec_normalized_quick(vm_vec_build_sub(objpos, gun_pos))};
+		const fix dot{vm_vec_build_dot(gun_dir, gun_vec)};
+		if (best_dot < dot)
+		{
 			best_dot = dot;
 			best_gun = i;
 		}
 	}
 
-	Assert(best_gun != -1);		// Contact Mike.  This is impossible.  Or maybe you're getting an unnormalized vector somewhere.
+	assert(best_gun != invalid_best_gun);		// Contact Mike.  This is impossible.  Or maybe you're getting an unnormalized vector somewhere.
 
 	if (best_dot < 0)
-		return -1;
+	{
+		[[unlikely]];
+		return std::nullopt;
+	}
 	else
+		/* On this path, `best_gun` must be a valid index into `gun_dir`.  If
+		 * the loop never found a good `dot`, then `best_dot` is unchanged from
+		 * its initial value, and the `if` branch will be taken.  If the loop
+		 * found any good `dot`, then `best_gun` is set to the valid index
+		 * which was declared good.
+		 */
 		return best_gun;
 }
 
@@ -334,7 +343,6 @@ void do_controlcen_destroyed_stuff(const imobjidx_t objp)
 void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx_t obj)
 {
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
-	int			best_gun_num;
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
 
@@ -372,7 +380,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 			if (std::none_of(children.begin(), children.end(), IS_CHILD))
 				return;
 
-			const auto &&[dist_to_player, vec_to_player] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(ConsoleObject->pos, obj->pos));
+			const auto &&[dist_to_player, vec_to_player] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(ConsoleObject->pos, obj->pos));
 			if (dist_to_player < F1_0*200) {
 				LevelUniqueControlCenterState.Control_center_player_been_seen = player_is_visible_from_object(Robot_info, obj, obj->pos, 0, vec_to_player);
 				LevelUniqueControlCenterState.Frametime_until_next_fire = 0;
@@ -389,7 +397,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 		if (LevelUniqueControlCenterState.Last_time_cc_vis_check + F1_0 * 5 < GameTime64 || LevelUniqueControlCenterState.Last_time_cc_vis_check > GameTime64)
 		{
 			LevelUniqueControlCenterState.Last_time_cc_vis_check = {GameTime64};
-			const auto &&[dist_to_player, vec_to_player] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(ConsoleObject->pos, obj->pos));
+			const auto &&[dist_to_player, vec_to_player] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(ConsoleObject->pos, obj->pos));
 			if (dist_to_player < F1_0*120) {
 				LevelUniqueControlCenterState.Control_center_player_been_seen = player_is_visible_from_object(Robot_info, obj, obj->pos, 0, vec_to_player);
 				if (!player_is_visible(LevelUniqueControlCenterState.Control_center_player_been_seen))
@@ -414,16 +422,12 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 	{
 		auto &player_info = plrobj.ctype.player_info;
 		const auto &player_pos = (player_info.powerup_flags & PLAYER_FLAGS_CLOAKED) ? Believed_player_pos : ConsoleObject->pos;
-		best_gun_num = calc_best_gun(
-			get_reactor_definition(get_reactor_id(obj)).n_guns,
-			obj,
-			player_pos
-		);
-
-		if (best_gun_num != -1) {
+		if (const auto opt_best_gun{calc_best_gun(get_reactor_definition(get_reactor_id(obj)).n_guns, obj, player_pos)})
+		{
+			const auto best_gun_num{*opt_best_gun};
 			fix			delta_fire_time;
 
-			auto &&[dist_to_player, vec_to_goal] = vm_vec_normalize_quick_with_magnitude(vm_vec_sub(player_pos, obj->ctype.reactor_info.gun_pos[best_gun_num]));
+			auto &&[dist_to_player, vec_to_goal] = vm_vec_normalize_quick_with_magnitude(vm_vec_build_sub(player_pos, obj->ctype.reactor_info.gun_pos[best_gun_num]));
 
 			if (dist_to_player > F1_0*300)
 			{
@@ -432,8 +436,10 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 				return;
 			}
 	
+#if DXX_USE_MULTIPLAYER
 			if (Game_mode & GM_MULTI)
 				multi_send_controlcen_fire(vec_to_goal, best_gun_num, obj);	
+#endif
 			Laser_create_new_easy(Robot_info, vec_to_goal, obj->ctype.reactor_info.gun_pos[best_gun_num], obj, weapon_id_type::CONTROLCEN_WEAPON_NUM, weapon_sound_flag::audible);
 
 			int count{0};
@@ -450,8 +456,10 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 			{
 				vm_vec_scale_add2(vec_to_goal, make_random_vector(), F1_0/scale_divisor);
 				vm_vec_normalize_quick(vec_to_goal);
+#if DXX_USE_MULTIPLAYER
 				if (Game_mode & GM_MULTI)
 					multi_send_controlcen_fire(vec_to_goal, best_gun_num, obj);
+#endif
 				Laser_create_new_easy(Robot_info, vec_to_goal, obj->ctype.reactor_info.gun_pos[best_gun_num], obj, weapon_id_type::CONTROLCEN_WEAPON_NUM, count == 0 ? weapon_sound_flag::audible : weapon_sound_flag::silent);
 				count++;
 			}
@@ -569,7 +577,8 @@ void reactor_read_n(const NamedPHYSFS_File fp, std::ranges::subrange<reactor *> 
 	range_for (auto &i, r)
 	{
 		i.model_num = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
-		i.n_guns = PHYSFSX_readInt(fp);
+		const std::size_t n_guns{PHYSFSX_readULE32(fp)};
+		i.n_guns = std::min(n_guns, MAX_CONTROLCEN_GUNS);
 		range_for (auto &j, i.gun_points)
 			PHYSFSX_readVector(fp, j);
 		range_for (auto &j, i.gun_dirs)
@@ -599,13 +608,13 @@ v1_control_center_triggers::v1_control_center_triggers(const control_center_trig
 /*
  * reads n control_center_triggers structs from a PHYSFS_File and swaps if specified
  */
-void control_center_triggers_read(control_center_triggers &cct, const NamedPHYSFS_File fp)
+control_center_triggers control_center_triggers_read(const NamedPHYSFS_File fp)
 {
 	const v1_control_center_triggers v1cct{fp};
-	cct = {};
 	const std::size_t num_links{v1cct.num_links};
+	control_center_triggers cct{};
 	if (unlikely(!num_links))
-		return;
+		return cct;
 	/* num_links is derived from level data, which may be invalid.
 	 */
 	constexpr std::size_t maximum_allowed_links{std::size(v1cct.seg)};
@@ -652,6 +661,7 @@ void control_center_triggers_read(control_center_triggers &cct, const NamedPHYSF
 		++ valid_num_links;
 	}
 	cct.num_links = valid_num_links;
+	return cct;
 }
 
 void control_center_triggers_write(const control_center_triggers &cct, PHYSFS_File *fp)

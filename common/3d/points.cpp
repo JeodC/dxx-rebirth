@@ -16,8 +16,6 @@
 
 namespace dcx {
 
-namespace {
-
 clipping_code build_g3_clipping_code_from_viewer_relative_position(const vms_vector &viewer_relative_position)
 {
 	clipping_code cc{};
@@ -39,8 +37,6 @@ clipping_code build_g3_clipping_code_from_viewer_relative_position(const vms_vec
 	return cc;
 }
 
-}
-
 clipping_code g3_code_point(g3s_point &p)
 {
 	return p.p3_codes = build_g3_clipping_code_from_viewer_relative_position(p.p3_vec);
@@ -49,7 +45,7 @@ clipping_code g3_code_point(g3s_point &p)
 //rotates a point. returns codes.  does not check if already rotated
 clipping_code g3_rotate_point(g3s_point &dest,const vms_vector &src)
 {
-	vm_vec_rotate(dest.p3_vec, vm_vec_sub(src, View_position), View_matrix);
+	vm_vec_rotate(dest.p3_vec, vm_vec_build_sub(src, View_position), View_matrix);
 	dest.p3_flags = {};	//no projected
 	return g3_code_point(dest);
 }
@@ -96,6 +92,59 @@ std::optional<int32_t> checkmuldiv(const fix a, const fix b, const fix c)
 	}
 }
 
+g3_projected_point g3_projected_point::build(const g3_rotated_point &rp)
+{
+	g3_projected_point result;
+	result.p3_codes = build_g3_clipping_code_from_viewer_relative_position(rp.p3_vec);
+	if ((result.p3_codes & clipping_code::behind) != clipping_code::None)
+		/* If the point is behind the viewer, then skip computing any details
+		 * about its position.  It is invisible, so its exact position does not
+		 * matter.
+		 *
+		 * This saves the time that would be spent initializing them, and has
+		 * the useful side effect that the values are left uninitialized, which
+		 * may cause debugging tools to report any inappropriate accesses.
+		 */
+		return result;
+	const auto pz{rp.p3_vec.z};
+	if (const auto otx{checkmuldiv(rp.p3_vec.x, Canv_w2, pz)}, oty{checkmuldiv(rp.p3_vec.y, Canv_h2, pz)}; otx && oty)
+	{
+		result.p3_sx = Canv_w2 + *otx;
+		result.p3_sy = Canv_h2 - *oty;
+		result.p3_flags = projection_flag::projected;
+	}
+	else
+		result.p3_flags = projection_flag::overflow;
+	return result;
+}
+
+g3_rotated_point::g3_rotated_point(const g3_instance_context &viewer, const vms_vector &absolute_position) :
+	p3_vec{vm_vec_build_rotated(vm_vec_build_sub(absolute_position, viewer.position), viewer.matrix)}
+{
+}
+
+g3_projected_point::g3_projected_point(const g3_instance_context &viewer, const vms_vector &absolute_position) :
+	g3_projected_point{g3_rotated_point{viewer, absolute_position}}
+{
+}
+
+g3_projected_point::g3_projected_point(const g3_rotated_point &p) :
+	g3_projected_point{build(p)}
+{
+}
+
+g3s_point::g3s_point(const g3_rotated_point &p) :
+	g3_rotated_point{p},
+	g3_projected_point{p}
+{
+}
+
+g3s_point::g3s_point(const g3_instance_context &viewer, const vms_vector &absolute_position) :
+	g3_rotated_point{viewer, absolute_position},
+	g3_projected_point{static_cast<g3_rotated_point &>(*this)}
+{
+}
+
 //projects a point
 void g3_project_point(g3s_point &p)
 {
@@ -137,8 +186,7 @@ void g3_project_point(g3s_point &p)
 //from a 2d point, compute the vector through that point
 vms_vector g3_point_2_vec(short sx,short sy)
 {
-	vms_vector v;
-	vm_vec_rotate(v, vm_vec_normalized(
+	return vm_vec_build_rotated(vm_vec_normalized(
 			vms_vector{
 				.x =  fixmuldiv(fixdiv((sx << 16) - Canv_w2, Canv_w2), Matrix_scale.z, Matrix_scale.x),
 				.y = -fixmuldiv(fixdiv((sy << 16) - Canv_h2, Canv_h2), Matrix_scale.z, Matrix_scale.y),
@@ -146,16 +194,15 @@ vms_vector g3_point_2_vec(short sx,short sy)
 			}
 			),
 		vm_transposed_matrix(Unscaled_matrix));
-	return v;
 }
 #endif
 
 vms_vector g3_rotate_delta_vec(const vms_vector &src)
 {
-	return vm_vec_rotate(src, View_matrix);
+	return vm_vec_build_rotated(src, View_matrix);
 }
 
-void g3_add_delta_vec(g3s_point &dest,const g3s_point &src,const vms_vector &deltav)
+void g3_add_delta_vec(g3s_point &dest, const g3_rotated_point &src, const vms_vector &deltav)
 {
 	vm_vec_add(dest.p3_vec,src.p3_vec,deltav);
 	dest.p3_flags = {};		//not projected

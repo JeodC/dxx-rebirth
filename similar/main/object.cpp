@@ -76,6 +76,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 
 #include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_range.h"
 #include "d_levelstate.h"
 #include "d_underlying_value.h"
@@ -264,27 +265,18 @@ void draw_object_blob(GameBitmaps_array &GameBitmaps, const object_base &Viewer,
 //draw an object that is a texture-mapped rod
 void draw_object_tmap_rod(grs_canvas &canvas, const d_level_unique_light_state *const LevelUniqueLightState, const vcobjptridx_t obj, const bitmap_index bitmapi)
 {
-	g3s_lrgb light;
 	PIGGY_PAGE_IN(bitmapi);
 
 	auto &bitmap = GameBitmaps[bitmapi];
 
 	const auto delta{vm_vec_copy_scale(obj->orient.uvec, obj->size)};
 
-	const auto top_v = vm_vec_add(obj->pos,delta);
+	const auto top_v = vm_vec_build_add(obj->pos, delta);
 
 	const auto top_p = g3_rotate_point(top_v);
-	const auto bot_p{g3_rotate_point(vm_vec_sub(obj->pos, delta))};
+	const auto bot_p{g3_rotate_point(vm_vec_build_sub(obj->pos, delta))};
 
-	if (LevelUniqueLightState)
-	{
-		light = compute_object_light(*LevelUniqueLightState, obj);
-	}
-	else
-	{
-		light.r = light.g = light.b = f1_0;
-	}
-	g3_draw_rod_tmap(canvas, bitmap, bot_p, obj->size, top_p, obj->size, light, draw_tmap);
+	g3_draw_rod_tmap(canvas, bitmap, bot_p, obj->size, top_p, obj->size, (LevelUniqueLightState ? compute_object_light(*LevelUniqueLightState, obj) : g3s_lrgb{F1_0, F1_0, F1_0}), draw_tmap);
 }
 
 //used for robot engine glow
@@ -1454,7 +1446,7 @@ static void set_camera_pos(vms_vector &camera_pos, const vcobjptridx_t objp)
 		//	Camera is too close to player object, so move it away.
 		fvi_info		hit_data;
 
-		auto player_camera_vec{vm_vec_sub(camera_pos, objp->pos)};
+		auto player_camera_vec{vm_vec_build_sub(camera_pos, objp->pos)};
 		if (player_camera_vec == vms_vector{})
 			player_camera_vec.x += F1_0/16;
 
@@ -1466,9 +1458,9 @@ static void set_camera_pos(vms_vector &camera_pos, const vcobjptridx_t objp)
 			vm_vec_normalize_quick(player_camera_vec);
 			vm_vec_scale(player_camera_vec, Camera_to_player_dist_goal);
 
-			const auto closer_p1 = vm_vec_add(objp->pos, player_camera_vec);		//	This is the actual point we want to put the camera at.
+			const auto closer_p1 = vm_vec_build_add(objp->pos, player_camera_vec);		//	This is the actual point we want to put the camera at.
 			vm_vec_scale(player_camera_vec, far_scale);						//	...but find a point 50% further away...
-			const auto local_p1 = vm_vec_add(objp->pos, player_camera_vec);		//	...so we won't have to do as many cuts.
+			const auto local_p1 = vm_vec_build_add(objp->pos, player_camera_vec);		//	...so we won't have to do as many cuts.
 
 			hit_type = find_vector_intersection(fvi_query{
 				objp->pos,
@@ -1483,7 +1475,7 @@ static void set_camera_pos(vms_vector &camera_pos, const vcobjptridx_t objp)
 			{
 				camera_pos = closer_p1;
 			} else {
-				make_random_vector(player_camera_vec);
+				reconstruct_at(player_camera_vec, make_random_vector);
 				far_scale = 3*F1_0/2;
 			}
 		}
@@ -1528,8 +1520,8 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 		// the following line uncommented by WraithX, 4-12-00
 		if (time_dead < DEATH_SEQUENCE_EXPLODE_TIME + F1_0 * 2)
 		{
-			const auto fvec{vm_vec_sub(ConsoleObject->pos, Dead_player_camera->pos)};
-			vm_vector_to_matrix(Dead_player_camera->orient, fvec);
+			const auto fvec{vm_vec_build_sub(ConsoleObject->pos, Dead_player_camera->pos)};
+			reconstruct_at(Dead_player_camera->orient, vm_vector_to_matrix, fvec);
 			Dead_player_camera->mtype.phys_info = ConsoleObject->mtype.phys_info;
 
 			// the following "if" added by WraithX to get rid of camera "wiggle"
@@ -1772,7 +1764,7 @@ static void spin_object(object_base &obj)
 	rotangs.h = fixmul(obj.mtype.spin_rate.y, frametime);
 	rotangs.b = fixmul(obj.mtype.spin_rate.z, frametime);
 
-	const auto &&rotmat = vm_angles_2_matrix(rotangs);
+	const auto &&rotmat{vm_angles_2_matrix(rotangs)};
 	obj.orient = vm_matrix_x_matrix(obj.orient, rotmat);
 	check_and_fix_matrix(obj.orient);
 }

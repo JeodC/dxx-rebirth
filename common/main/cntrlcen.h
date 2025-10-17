@@ -63,7 +63,8 @@ extern control_center_triggers ControlCenterTriggers;
 /*
  * reads 1 control_center_triggers struct from a PHYSFS_File
  */
-void control_center_triggers_read(control_center_triggers &cct, NamedPHYSFS_File fp);
+[[nodiscard]]
+control_center_triggers control_center_triggers_read(NamedPHYSFS_File fp);
 void control_center_triggers_write(const control_center_triggers &cct, PHYSFS_File *fp);
 
 }
@@ -77,7 +78,7 @@ struct reactor {
 #if DXX_BUILD_DESCENT == 2
 	polygon_model_index model_num;
 #endif
-	int n_guns;
+	uint8_t n_guns;
 	/* Location of the gun on the reactor model */
 	std::array<vms_vector, MAX_CONTROLCEN_GUNS> gun_points;
 	/* Orientation of the gun on the reactor model */
@@ -85,11 +86,11 @@ struct reactor {
 };
 
 // fills in arrays gun_points & gun_dirs, returns the number of guns read
-void read_model_guns(const char *filename, reactor &);
+[[nodiscard]]
+reactor read_model_guns(const char *filename);
 
 #if DXX_BUILD_DESCENT == 1
 constexpr std::integral_constant<unsigned, 1> MAX_REACTORS{};
-constexpr std::integral_constant<unsigned, 1> Num_reactors{};
 #elif DXX_BUILD_DESCENT == 2
 constexpr std::integral_constant<unsigned, 7> MAX_REACTORS{};
 #define DEFAULT_CONTROL_CENTER_EXPLOSION_TIME 30    // Note: Usually uses Alan_pavlish_reactor_times, but can be overridden in editor.
@@ -118,16 +119,6 @@ static inline polygon_model_index get_reactor_model_number(const uint8_t id)
 	return polygon_model_index{id};
 #elif DXX_BUILD_DESCENT == 2
 	return Reactors[id].model_num;
-#endif
-}
-
-static inline reactor &get_reactor_definition(int id)
-{
-#if DXX_BUILD_DESCENT == 1
-	(void)id;
-	return Reactors[0];
-#elif DXX_BUILD_DESCENT == 2
-	return Reactors[id];
 #endif
 }
 

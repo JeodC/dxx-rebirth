@@ -332,7 +332,6 @@ extern void delete_curve();
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
-void med_extract_matrix_from_segment(const shared_segment &sp, vms_matrix &rotmat);
 
 //	Assign default u,v coordinates to all sides of a segment.
 //	This routine should only be used for segments which are not connected to anything else,
@@ -424,7 +423,7 @@ segnum_t get_free_segment_number(segment_array &);
 
 //      Editor status message.
 void editor_status_fmt(const char *) = delete;
-extern void editor_status_fmt(const char *format, ... ) __attribute_format_printf(1, 2);
+extern void editor_status_fmt(const char *format, ... ) dxx_compiler_attribute_format_printf(1, 2);
 
 // Variables in editor.c that the k*.c files need
 
@@ -471,6 +470,9 @@ extern	int	Degenerate_segment_found;
 namespace dcx {
 
 #ifdef DXX_BUILD_DESCENT
+[[nodiscard]]
+vms_matrix med_extract_matrix_from_segment(const shared_segment &sp);
+
 //	Returns true if vertex vi is contained in exactly one segment, else returns false.
 int is_free_vertex(const fvcsegptr &vcsegptr, vertnum_t vi);
 #endif
@@ -498,6 +500,12 @@ extern void set_editor_time_of_day();
 extern int undo(void);
 extern std::array<const char *, 10> undo_status;
 
+#ifdef DXX_BUILD_DESCENT
+[[nodiscard]]
+vms_vector med_extract_right_vector_from_segment_side(const shared_segment &sp, sidenum_t sidenum);
+[[nodiscard]]
+vms_vector med_extract_up_vector_from_segment_side(const shared_segment &sp, sidenum_t sidenum);
+#endif
 }
 
 //	group.c
@@ -546,9 +554,6 @@ namespace dsx {
 //    From eobject.c
 int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_polygon_model_state &LevelSharedPolygonModelState, const d_robot_info_array &Robot_info, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, vmsegptridx_t segp, const vms_vector &object_pos, short object_type, uint8_t object_id);
 
-// from ksegsize.c
-void med_extract_up_vector_from_segment_side(const shared_segment &sp, sidenum_t sidenum, vms_vector &vp);
-void med_extract_right_vector_from_segment_side(const shared_segment &sp, sidenum_t sidenum, vms_vector &vp);
 }
 #endif
 

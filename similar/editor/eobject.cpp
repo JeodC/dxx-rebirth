@@ -52,7 +52,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "gameseg.h"
 #include "cntrlcen.h"
 
-#include "compiler-range_for.h"
+#include "d_construct.h"
 #include "d_levelstate.h"
 
 #define	OBJ_SCALE		(F1_0/2)
@@ -109,9 +109,7 @@ namespace dsx {
 //	------------------------------------------------------------------------------------
 int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_polygon_model_state &LevelSharedPolygonModelState, const d_robot_info_array &Robot_info, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const vmsegptridx_t segp, const vms_vector &object_pos, short object_type, const uint8_t object_id)
 {
-	vms_matrix seg_matrix;
-
-	med_extract_matrix_from_segment(segp, seg_matrix);
+	auto seg_matrix{med_extract_matrix_from_segment(segp)};
 
 	imobjptridx_t objnum = object_none;
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
@@ -550,7 +548,7 @@ static int ObjectMovePos(const vmobjptridx_t obj, vms_vector &&vec, int scale)
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vmobjptr = Objects.vmptr;
 	vm_vec_normalize(vec);
-	const auto &&newpos = vm_vec_add(obj->pos, vm_vec_scale(vec, scale));
+	const auto &&newpos = vm_vec_build_add(obj->pos, vm_vec_scale(vec, scale));
 	auto &vcvertptr = Vertices.vcptr;
 	if (!verify_object_seg(vmobjptr, Segments, vcvertptr, obj, newpos))
 		obj->pos = newpos;
@@ -650,9 +648,8 @@ static int rotate_object(const vmobjptridx_t obj, int p, int b, int h)
 	ang.b = b;
 	ang.h = h;
 
-	const auto rotmat = vm_angles_2_matrix(ang);
+	const auto &&rotmat{vm_angles_2_matrix(ang)};
 	obj->orient = vm_matrix_x_matrix(obj->orient, rotmat);
-//   vm_angles_2_matrix(&obj->orient, &ang);
 
 	Update_flags |= UF_WORLD_CHANGED;
 
@@ -661,7 +658,7 @@ static int rotate_object(const vmobjptridx_t obj, int p, int b, int h)
 
 static void reset_object(const vmobjptridx_t obj)
 {
-	med_extract_matrix_from_segment(vcsegptr(obj->segnum), obj->orient);
+	reconstruct_at(obj->orient, med_extract_matrix_from_segment, *vcsegptr(obj->segnum));
 }
 
 int ObjectResetObject()
@@ -867,7 +864,7 @@ int	ObjectMoveNearer(void)
 
 //	move_object_to_mouse_click_delta(-4*F1_0);		//	Move four units closer to eye
 
-	const auto &&result = vm_vec_normalized(vm_vec_sub(vcobjptr(Cur_object_index)->pos, Viewer->pos));
+	const auto &&result = vm_vec_normalized(vm_vec_build_sub(vcobjptr(Cur_object_index)->pos, Viewer->pos));
 	move_object_to_vector(result, -4*F1_0);
 
 	return 1;	
@@ -884,7 +881,7 @@ int	ObjectMoveFurther(void)
 
 //	move_object_to_mouse_click_delta(+4*F1_0);		//	Move four units further from eye
 
-	const auto &&result = vm_vec_normalized(vm_vec_sub(vcobjptr(Cur_object_index)->pos, Viewer->pos));
+	const auto &&result = vm_vec_normalized(vm_vec_build_sub(vcobjptr(Cur_object_index)->pos, Viewer->pos));
 	move_object_to_vector(result, 4*F1_0);
 
 	return 1;	

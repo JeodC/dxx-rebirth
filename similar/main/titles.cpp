@@ -58,12 +58,12 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "movie.h"
 #include "physfsrwops.h"
 #endif
+#include "mission.h"
 #include "mouse.h"
 #include "console.h"
 #include "args.h"
 #include "strutil.h"
 
-#include "compiler-range_for.h"
 #include "partial_range.h"
 #include <memory>
 

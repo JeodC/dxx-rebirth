@@ -37,6 +37,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "d_array.h"
 
 namespace dcx {
+
 struct segmasks
 {
    short facemask;     //which faces sphere pokes through (12 bits)
@@ -50,14 +51,41 @@ struct segment_depth_array_t : public enumerated_array<uint8_t, MAX_SEGMENTS, se
 
 struct side_vertnum_list_t : std::array<vertnum_t, 4> {};
 
+enum class vertex_array_side_type : bool
+{
+	quad,
+	triangle,
+};
+
+#if DXX_BUILD_DESCENT == 2 || DXX_USE_EDITOR
+#define DXX_internal_feature_lighting_hack	1
+enum class lighting_hack : bool
+{
+	normal,
+	ignore_out_of_mine_location,
+};
+#else
+#define DXX_internal_feature_lighting_hack	0
+#endif
+
 struct vertnum_array_list_t : std::array<vertnum_t, 6> {};
-struct vertex_array_list_t : std::array<segment_relative_vertnum, 6> {};
+struct vertex_array_list_t : std::array<segment_relative_vertnum, 6>
+{
+	vertex_array_side_type side_type;
+};
+
 struct vertex_vertnum_pair
 {
 	vertnum_t vertex;
 	side_relative_vertnum vertnum;
 };
 using vertex_vertnum_array_list = std::array<vertex_vertnum_pair, 6>;
+
+struct abs_vertex_list_result
+{
+	vertex_array_side_type num_faces;
+	vertnum_array_list_t vertex_list;
+};
 
 #ifdef DXX_BUILD_DESCENT
 [[nodiscard]]
@@ -70,23 +98,10 @@ vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const shared_segm
 vms_vector compute_segment_center(fvcvertptr &vcvertptr, const shared_segment &sp);
 
 // Fill in array with four absolute point numbers for a given side
-void get_side_verts(side_vertnum_list_t &vertlist, const shared_segment &seg, sidenum_t sidenum);
-static inline side_vertnum_list_t get_side_verts(const shared_segment &segnum, const sidenum_t sidenum)
-{
-	side_vertnum_list_t r;
-	return get_side_verts(r, segnum, sidenum), r;
-}
+side_vertnum_list_t get_side_verts(const shared_segment &segnum, sidenum_t sidenum);
 #endif
 
 enum class wall_is_doorway_mask : uint8_t;
-
-}
-
-#ifdef DXX_BUILD_DESCENT
-namespace dsx {
-#if DXX_BUILD_DESCENT == 2 || DXX_USE_EDITOR
-extern int	Doing_lighting_hack_flag;
-#endif
 
 #if DXX_USE_EDITOR
 //      Create all vertex lists (1 or 2) for faces on a side.
@@ -97,34 +112,11 @@ extern int	Doing_lighting_hack_flag;
 //      If there are two faces, they both have three vertices, so face #0 is stored in vertices 0,1,2,
 //      face #1 is stored in vertices 3,4,5.
 // Note: these are not absolute vertex numbers, but are relative to the segment
-// Note:  for triagulated sides, the middle vertex of each trianle is the one NOT
+// Note:  for triangulated sides, the middle vertex of each trianle is the one NOT
 //   adjacent on the diagonal edge
-uint_fast32_t create_all_vertex_lists(vertex_array_list_t &vertices, const shared_segment &seg, const shared_side &sidep, sidenum_t sidenum);
 [[nodiscard]]
-static inline std::pair<uint_fast32_t, vertex_array_list_t> create_all_vertex_lists(const shared_segment &segnum, const shared_side &sidep, const sidenum_t sidenum)
-{
-	vertex_array_list_t r;
-	const auto &&n = create_all_vertex_lists(r, segnum, sidep, sidenum);
-	return {n, r};
-}
+vertex_array_list_t create_all_vertex_lists(const shared_segment &segnum, const shared_side &sidep, const sidenum_t sidenum);
 #endif
-
-//like create_all_vertex_lists(), but generate absolute point numbers
-uint_fast32_t create_abs_vertex_lists(vertnum_array_list_t &vertices, const shared_segment &segnum, const shared_side &sidep, sidenum_t sidenum);
-
-[[nodiscard]]
-static inline std::pair<uint_fast32_t, vertnum_array_list_t> create_abs_vertex_lists(const shared_segment &segnum, const shared_side &sidep, const sidenum_t sidenum)
-{
-	vertnum_array_list_t r;
-	const auto &&n = create_abs_vertex_lists(r, segnum, sidep, sidenum);
-	return {n, r};
-}
-
-[[nodiscard]]
-static inline std::pair<uint_fast32_t, vertnum_array_list_t> create_abs_vertex_lists(const shared_segment &segp, const sidenum_t sidenum)
-{
-	return create_abs_vertex_lists(segp, segp.sides[sidenum], sidenum);
-}
 
 // -----------------------------------------------------------------------------------
 // Like create all vertex lists, but returns the vertnums (relative to
@@ -132,24 +124,73 @@ static inline std::pair<uint_fast32_t, vertnum_array_list_t> create_abs_vertex_l
 //      If there is one face, it has 4 vertices.
 //      If there are two faces, they both have three vertices, so face #0 is stored in vertices 0,1,2,
 //      face #1 is stored in vertices 3,4,5.
-void create_all_vertnum_lists(vertex_vertnum_array_list &vertnums, const shared_segment &seg, const shared_side &sidep, sidenum_t sidenum);
 [[nodiscard]]
-static inline vertex_vertnum_array_list create_all_vertnum_lists(const shared_segment &segnum, const shared_side &sidep, const sidenum_t sidenum)
-{
-	vertex_vertnum_array_list r;
-	return create_all_vertnum_lists(r, segnum, sidep, sidenum), r;
-}
+vertex_vertnum_array_list create_all_vertnum_lists(const shared_segment &seg, const shared_side &sidep, sidenum_t sidenum);
+
+//like create_all_vertex_lists(), but generate absolute point numbers
+[[nodiscard]]
+abs_vertex_list_result create_abs_vertex_lists(const shared_segment &segnum, const shared_side &sidep, sidenum_t sidenum);
+
+//create a matrix that describes the orientation of the given segment
+[[nodiscard]]
+vms_matrix extract_orient_from_segment(fvcvertptr &vcvertptr, const shared_segment &seg);
+
+#if DXX_USE_EDITOR
+//      Extract the forward vector from segment *sp, return it by value.
+//      The forward vector is defined to be the vector from the center of the front face of the segment
+// to the center of the back face of the segment.
+[[nodiscard]]
+vms_vector extract_forward_vector_from_segment(fvcvertptr &, const shared_segment &sp);
+
+//      Extract the right vector from segment *sp, return it by value.
+//      The forward vector is defined to be the vector from the center of the left face of the segment
+// to the center of the right face of the segment.
+[[nodiscard]]
+vms_vector extract_right_vector_from_segment(fvcvertptr &, const shared_segment &sp);
+
+//      Extract the up vector from segment *sp, return it by value.
+//      The forward vector is defined to be the vector from the center of the bottom face of the segment
+// to the center of the top face of the segment.
+[[nodiscard]]
+vms_vector extract_up_vector_from_segment(fvcvertptr &, const shared_segment &sp);
+#endif
+
+void validate_segment_all(d_level_shared_segment_state &);
+
+#if DXX_USE_EDITOR
+//      In segment.c
+//      Make a just-modified segment valid.
+//              check all sides to see how many faces they each should have (0,1,2)
+//              create new vector normals
+void validate_segment(fvcvertptr &vcvertptr, vmsegptridx_t sp);
+
+void create_walls_on_side(fvcvertptr &, shared_segment &sp, sidenum_t sidenum);
+
+void validate_segment_side(fvcvertptr &, vmsegptridx_t sp, sidenum_t sidenum);
+#endif
+
+[[nodiscard]]
+vms_vector pick_random_point_in_seg(fvcvertptr &vcvertptr, const shared_segment &sp, std::minstd_rand r);
+
 }
 
+#ifdef DXX_BUILD_DESCENT
 namespace dcx {
 //      Given a side, return the number of faces
 bool get_side_is_quad(const shared_side &sidep);
-}
 
-namespace dsx {
 //returns 3 different bitmasks with info telling if this sphere is in
 //this segment.  See segmasks structure for info on fields
 segmasks get_seg_masks(fvcvertptr &, const vms_vector &checkp, const shared_segment &segnum, fix rad);
+int check_segment_connections();
+
+}
+
+namespace dsx {
+
+#if DXX_internal_feature_lighting_hack
+extern lighting_hack Doing_lighting_hack_flag;
+#endif
 
 //this macro returns true if the segnum for an object is correct
 #define check_obj_seg(vcvertptr, obj) (get_seg_masks(vcvertptr, (obj)->pos, vcsegptr((obj)->segnum), 0).centermask == 0)
@@ -170,46 +211,6 @@ icsegptridx_t find_point_seg(const d_level_shared_segment_state &, const vms_vec
 //      Return the distance.
 vm_distance find_connected_distance(const vms_vector &p0, vcsegptridx_t seg0, const vms_vector &p1, vcsegptridx_t seg1, int max_depth, wall_is_doorway_mask wid_flag);
 
-//create a matrix that describes the orientation of the given segment
-void extract_orient_from_segment(fvcvertptr &vcvertptr, vms_matrix &m, const shared_segment &seg);
-
-void validate_segment_all(d_level_shared_segment_state &);
-
-#if DXX_USE_EDITOR
-//      In segment.c
-//      Make a just-modified segment valid.
-//              check all sides to see how many faces they each should have (0,1,2)
-//              create new vector normals
-void validate_segment(fvcvertptr &vcvertptr, vmsegptridx_t sp);
-
-//      Extract the forward vector from segment *sp, return it by value.
-//      The forward vector is defined to be the vector from the center of the front face of the segment
-// to the center of the back face of the segment.
-[[nodiscard]]
-vms_vector extract_forward_vector_from_segment(fvcvertptr &, const shared_segment &sp);
-
-//      Extract the right vector from segment *sp, return it by value.
-//      The forward vector is defined to be the vector from the center of the left face of the segment
-// to the center of the right face of the segment.
-[[nodiscard]]
-vms_vector extract_right_vector_from_segment(fvcvertptr &, const shared_segment &sp);
-
-//      Extract the up vector from segment *sp, return it by value.
-//      The forward vector is defined to be the vector from the center of the bottom face of the segment
-// to the center of the top face of the segment.
-[[nodiscard]]
-vms_vector extract_up_vector_from_segment(fvcvertptr &, const shared_segment &sp);
-
-void create_walls_on_side(fvcvertptr &, shared_segment &sp, sidenum_t sidenum);
-
-void validate_segment_side(fvcvertptr &, vmsegptridx_t sp, sidenum_t sidenum);
-#endif
-
-[[nodiscard]]
-vms_vector pick_random_point_in_seg(fvcvertptr &vcvertptr, const shared_segment &sp, std::minstd_rand r);
-
-int check_segment_connections(void);
-unsigned set_segment_depths(vcsegidx_t start_seg, const std::array<uint8_t, MAX_SEGMENTS> *limit, segment_depth_array_t &depths);
 #if DXX_BUILD_DESCENT == 1
 static inline void flush_fcd_cache() {}
 #elif DXX_BUILD_DESCENT == 2

@@ -83,21 +83,6 @@ using std::max;
 
 namespace {
 
-static constexpr float PAL2Tr(const color_palette_index c)
-{
-	return PAL2T(c).r / 63.0f;
-}
-
-static constexpr float PAL2Tg(const color_palette_index c)
-{
-	return PAL2T(c).g / 63.0f;
-}
-
-static constexpr float PAL2Tb(const color_palette_index c)
-{
-	return PAL2T(c).b / 63.0f;
-}
-
 template <unsigned G>
 struct enable_ogl_client_state
 {
@@ -158,7 +143,7 @@ static int ogl_texture_list_cur;
 /* some function prototypes */
 
 #define GL_TEXTURE0_ARB 0x84C0
-static int ogl_loadtexture(const palette_array_t &, const uint8_t *data, int dxo, int dyo, ogl_texture &tex, int bm_flags, int data_format, opengl_texture_filter texfilt, bool texanis, bool edgepad) __attribute_nonnull();
+static int ogl_loadtexture(const palette_array_t &, const uint8_t *data, int dxo, int dyo, ogl_texture &tex, int bm_flags, int data_format, opengl_texture_filter texfilt, bool texanis, bool edgepad) dxx_compiler_attribute_nonnull();
 static void ogl_freetexture(ogl_texture &gltexture);
 
 static void ogl_loadbmtexture(grs_bitmap &bm, bool edgepad)
@@ -564,7 +549,7 @@ void ogl_cache_level_textures(void)
 
 namespace dcx {
 
-void g3_draw_line(const g3_draw_line_context &context, const g3s_point &p0, const g3s_point &p1)
+void g3_draw_line(const g3_draw_line_context &context, const g3_draw_line_point &p0, const g3_draw_line_point &p1)
 {
 	ogl_client_states<int, GL_VERTEX_ARRAY, GL_COLOR_ARRAY> cs;
 	OGL_DISABLE(TEXTURE_2D);
@@ -578,6 +563,8 @@ void g3_draw_line(const g3_draw_line_context &context, const g3s_point &p0, cons
 	glDrawArrays(GL_LINES, 0, 2);
 }
 
+namespace {
+
 static void ogl_drawcircle(const unsigned nsides, const unsigned type, GLfloat *const vertices)
 {
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -588,7 +575,7 @@ static void ogl_drawcircle(const unsigned nsides, const unsigned type, GLfloat *
 
 static std::unique_ptr<GLfloat[]> circle_array_init(const unsigned nsides)
 {
-	auto vertices = std::make_unique<GLfloat[]>(nsides * 2);
+	auto vertices = std::make_unique_for_overwrite<GLfloat[]>(nsides * 2);
 	for (unsigned i = 0; i < nsides; i++)
 	{
 		const float ang = 2.0 * M_PI * i / nsides;
@@ -600,7 +587,7 @@ static std::unique_ptr<GLfloat[]> circle_array_init(const unsigned nsides)
 
 static std::unique_ptr<GLfloat[]> circle_array_init_2(const unsigned nsides, const float xsc, const float xo, const float ysc, const float yo)
 {
-	auto vertices = std::make_unique<GLfloat[]>(nsides * 2);
+	auto vertices = std::make_unique_for_overwrite<GLfloat[]>(nsides * 2);
 	for (unsigned i = 0; i < nsides; i++)
 	{
 		const float ang = 2.0 * M_PI * i / nsides;
@@ -610,14 +597,17 @@ static std::unique_ptr<GLfloat[]> circle_array_init_2(const unsigned nsides, con
 	return vertices;
 }
 
+}
+
 void ogl_draw_vertex_reticle(grs_canvas &canvas, int cross, int primary, int secondary, int color, int alpha, int size_offs)
 {
 	int size=270+(size_offs*20);
 	float scale = (static_cast<float>(SWIDTH)/SHEIGHT);
+	auto &&rgb{PAL2T(color)};
 	const std::array<float, 4> ret_rgba{{
-		PAL2Tr(color),
-		PAL2Tg(color),
-		PAL2Tb(color),
+		rgb.r / 63.0f,
+		rgb.g / 63.0f,
+		rgb.b / 63.0f,
 		float{1.0f - (static_cast<float>(alpha) / (static_cast<float>(GR_FADE_LEVELS)))}
 	}}, ret_dark_rgba{{
 		ret_rgba[0] / 2,
@@ -787,7 +777,7 @@ void ogl_draw_vertex_reticle(grs_canvas &canvas, int cross, int primary, int sec
 /*
  * Stars on heaven in exit sequence, automap objects
  */
-void g3_draw_sphere(grs_canvas &canvas, cg3s_point &pnt, fix rad, const uint8_t c)
+void g3_draw_sphere(grs_canvas &canvas, const g3_draw_sphere_point &pnt, fix rad, const uint8_t c)
 {
 	int i;
 	const float scale = (static_cast<float>(canvas.cv_bitmap.bm_w) / canvas.cv_bitmap.bm_h);
@@ -868,7 +858,7 @@ int gr_disk(grs_canvas &canvas, const fix x, const fix y, const fix r, const uin
 /*
  * Draw flat-shaded Polygon (Lasers, Drone-arms, Driller-ears)
  */
-void _g3_draw_poly(grs_canvas &canvas, const std::span<cg3s_point *const> pointlist, const uint8_t palette_color_index)
+void _g3_draw_poly(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const> pointlist, const uint8_t palette_color_index)
 {
 	if (pointlist.size() > MAX_POINTS_PER_POLY)
 		return;
@@ -878,9 +868,10 @@ void _g3_draw_poly(grs_canvas &canvas, const std::span<cg3s_point *const> pointl
 	r_polyc++;
 	ogl_client_states<int, GL_VERTEX_ARRAY, GL_COLOR_ARRAY> cs;
 	OGL_DISABLE(TEXTURE_2D);
-	const auto color_r{PAL2Tr(palette_color_index)};
-	const auto color_g{PAL2Tg(palette_color_index)};
-	const auto color_b{PAL2Tb(palette_color_index)};
+	auto &&rgb{PAL2T(palette_color_index)};
+	const auto color_r{rgb.r / 63.0f};
+	const auto color_g{rgb.g / 63.0f};
+	const auto color_b{rgb.b / 63.0f};
 
 	const float color_a = (canvas.cv_fade_level >= GR_FADE_OFF)
 		? 1.0
@@ -911,7 +902,7 @@ void _g3_draw_poly(grs_canvas &canvas, const std::span<cg3s_point *const> pointl
 /*
  * Everything texturemapped (walls, robots, ship)
  */ 
-void _g3_draw_tmap(grs_canvas &canvas, const std::span<cg3s_point *const> pointlist, const g3s_uvl *const uvl_list, const g3s_lrgb *const light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
+void _g3_draw_tmap(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const> pointlist, const g3s_uvl *const uvl_list, const g3s_lrgb *const light_rgb, grs_bitmap &bm, const tmap_drawer_type tmap_drawer_ptr)
 {
 	GLfloat color_alpha = 1.0;
 
@@ -987,7 +978,7 @@ void _g3_draw_tmap(grs_canvas &canvas, const std::span<cg3s_point *const> pointl
 /*
  * Everything texturemapped with secondary texture (walls with secondary texture)
  */
-void _g3_draw_tmap_2(grs_canvas &canvas, const std::span<const g3s_point *const> pointlist, const std::span<const g3s_uvl, 4> uvl_list, const std::span<const g3s_lrgb, 4> light_rgb, grs_bitmap &bmbot, grs_bitmap &bm, const texture2_rotation_low orient, const tmap_drawer_type tmap_drawer_ptr)
+void _g3_draw_tmap_2(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const> pointlist, const std::span<const g3s_uvl, 4> uvl_list, const std::span<const g3s_lrgb, 4> light_rgb, grs_bitmap &bmbot, grs_bitmap &bm, const texture2_rotation_low orient, const tmap_drawer_type tmap_drawer_ptr)
 {
 	_g3_draw_tmap(canvas, pointlist, uvl_list.data(), light_rgb.data(), bmbot, tmap_drawer_ptr);//draw the bottom texture first.. could be optimized with multitexturing..
 	ogl_client_states<int, GL_VERTEX_ARRAY, GL_COLOR_ARRAY, GL_TEXTURE_COORD_ARRAY> cs;
@@ -1100,7 +1091,7 @@ void g3_draw_bitmap(grs_canvas &canvas, const vms_vector &pos, const fix iwidth,
 	std::array<fvertex_t, point_count> vertices;
 	std::array<fcolor_t, point_count> color_array;
 	std::array<ftexcoord_t, point_count> texcoord_array;
-	const auto &&rpv{vm_vec_rotate(vm_vec_sub(pos, View_position), View_matrix)};
+	const auto &&rpv{vm_vec_build_rotated(vm_vec_build_sub(pos, View_position), View_matrix)};
 	const auto bmglu = bm.gltexture->u;
 	const auto bmglv = bm.gltexture->v;
 	const auto alpha = canvas.cv_fade_level >= GR_FADE_OFF ? 1.0 : (1.0 - static_cast<float>(canvas.cv_fade_level) / (static_cast<float>(GR_FADE_LEVELS) - 1.0));

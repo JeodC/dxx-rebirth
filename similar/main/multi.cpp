@@ -1742,8 +1742,9 @@ static void multi_do_message(const playernum_t pnum, const multiplayer_rspan<mul
 	multi_sending_message[pnum] = msgsend_state::none;
 }
 
-static void multi_do_position(fvmobjptridx &vmobjptridx, const playernum_t pnum, const multiplayer_rspan<multiplayer_command_t::MULTI_POSITION> buf)
+static void multi_do_position(object_array &Objects, const playernum_t pnum, const multiplayer_rspan<multiplayer_command_t::MULTI_POSITION> buf)
 {
+	auto &vmobjptridx{Objects.vmptridx};
 	const auto &&obj = vmobjptridx(vcplayerptr(pnum)->objnum);
         int count{1};
 
@@ -1765,7 +1766,7 @@ static void multi_do_position(fvmobjptridx &vmobjptridx, const playernum_t pnum,
 	count += 12;
 	qpp.rotvel = multi_get_vector(buf.subspan<9 + 12 + 2 + 12, 12>());
 	count += 12;
-	extract_quaternionpos(obj, qpp);
+	extract_quaternionpos(Objects.vmptr, vmsegptr, obj, qpp);
 
 	if (obj->movement_source == object::movement_type::physics)
 		set_thrust_from_velocity(obj);
@@ -3366,7 +3367,7 @@ void update_item_state::process_powerup(const d_vclip_array &Vclip, fvmsegptridx
 	{
 		assert(o.movement_source == object::movement_type::None);
 		assert(o.render_type == render_type::RT_POWERUP);
-		const auto &&no = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(id), segp, vm_vec_avg(o.pos, vcvertptr(seg_verts[static_cast<segment_relative_vertnum>(i % seg_verts.size())])), &vmd_identity_matrix, o.size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
+		const auto &&no = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(id), segp, vm_vec_build_avg(o.pos, vcvertptr(seg_verts[static_cast<segment_relative_vertnum>(i % seg_verts.size())])), &vmd_identity_matrix, o.size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
 		if (no == object_none)
 			return;
 		m_modified.set(no);
@@ -3955,6 +3956,25 @@ struct multi_guided_info
 
 DEFINE_MULTIPLAYER_SERIAL_MESSAGE(multiplayer_command_t::MULTI_GUIDED, multi_guided_info, g, (g.pnum, g.release, g.sp));
 
+[[nodiscard]]
+shortpos create_shortpos_little(const d_level_shared_segment_state &LevelSharedSegmentState, const object_base &objp)
+{
+	auto spp{create_shortpos_native(LevelSharedSegmentState, objp)};
+// swap the short values for the big-endian machines.
+
+	if constexpr (words_bigendian)
+	{
+		spp.xo = INTEL_SHORT(spp.xo);
+		spp.yo = INTEL_SHORT(spp.yo);
+		spp.zo = INTEL_SHORT(spp.zo);
+		spp.segment = segnum_t{INTEL_SHORT(underlying_value(spp.segment))};
+		spp.velx = INTEL_SHORT(spp.velx);
+		spp.vely = INTEL_SHORT(spp.vely);
+		spp.velz = INTEL_SHORT(spp.velz);
+	}
+	return spp;
+}
+
 }
 
 void multi_send_guided_info(const object_base &miss, const char done)
@@ -3962,7 +3982,7 @@ void multi_send_guided_info(const object_base &miss, const char done)
 	multi_guided_info gi;
 	gi.pnum = static_cast<uint8_t>(Player_num);
 	gi.release = done;
-	create_shortpos_little(LevelSharedSegmentState, gi.sp, miss);
+	gi.sp = create_shortpos_little(LevelSharedSegmentState, miss);
 	multi_serialize_write(multiplayer_data_priority::_0, gi);
 }
 
@@ -3985,7 +4005,7 @@ static void multi_do_guided(d_level_unique_object_state &LevelUniqueObjectState,
 	if (gimobj == nullptr)
 		return;
 	const vmobjptridx_t guided_missile = gimobj;
-	extract_shortpos_little(guided_missile, &b.sp);
+	multi_object_warp_to_shortpos(guided_missile, b.sp);
 	update_object_seg(vmobjptr, LevelSharedSegmentState, LevelUniqueSegmentState, guided_missile);
 }
 
@@ -5814,7 +5834,7 @@ static void multi_process_data(const d_level_shared_robot_info_state &LevelShare
 	switch (type)
 	{
 		case multiplayer_command_t::MULTI_POSITION:
-			multi_do_position(vmobjptridx, pnum, multi_subspan_first<multiplayer_command_t::MULTI_POSITION>(data));
+			multi_do_position(Objects, pnum, multi_subspan_first<multiplayer_command_t::MULTI_POSITION>(data));
 			break;
 		case multiplayer_command_t::MULTI_REAPPEAR:
 			multi_do_reappear(pnum, multi_subspan_first<multiplayer_command_t::MULTI_REAPPEAR>(data));

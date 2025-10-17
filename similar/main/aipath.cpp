@@ -106,7 +106,7 @@ static uint_fast32_t insert_center_points(segment_array &segments, point_seg *ps
 			connect_side = sidenum_t::WLEFT;
 		auto &vcvertptr = Vertices.vcptr;
 		const auto center_point{compute_center_point_on_side(vcvertptr, seg1, connect_side)};
-		auto new_point{vm_vec_sub(psegs[i-1].point, center_point)};
+		auto new_point{vm_vec_build_sub(psegs[i-1].point, center_point)};
 		new_point.x /= 16;
 		new_point.y /= 16;
 		new_point.z /= 16;
@@ -130,9 +130,9 @@ static uint_fast32_t insert_center_points(segment_array &segments, point_seg *ps
 	//	MK, OPTIMIZE!  Can get away with about half the math since every vector gets computed twice.
 	for (uint_fast32_t i = 1; i < count - 1; i += 2)
 	{
-		const auto temp1{vm_vec_sub(psegs[i].point, psegs[i - 1].point)};
-		const auto temp2{vm_vec_sub(psegs[i + 1].point, psegs[i].point)};
-		const auto dot{vm_vec_dot(temp1, temp2)};
+		const auto temp1{vm_vec_build_sub(psegs[i].point, psegs[i - 1].point)};
+		const auto temp2{vm_vec_build_sub(psegs[i + 1].point, psegs[i].point)};
+		const auto dot{vm_vec_build_dot(temp1, temp2)};
 		if (dot * 9/8 > fixmul(vm_vec_mag(temp1), vm_vec_mag(temp2)))
 			psegs[i].segnum = segment_none;
 	}
@@ -169,9 +169,9 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 		segnum = psegs[i].segnum;
 
 		//	I don't think we can use quick version here and this is _very_ rarely called. --MK, 07/03/95
-		const auto a = vm_vec_normalized_quick(vm_vec_sub(psegs[i].point, psegs[i-1].point));
-		const auto b = vm_vec_normalized_quick(vm_vec_sub(psegs[i+1].point, psegs[i].point));
-		if (abs(vm_vec_dot(a, b)) > 3*F1_0/4 ) {
+		const auto a = vm_vec_normalized_quick(vm_vec_build_sub(psegs[i].point, psegs[i-1].point));
+		const auto b = vm_vec_normalized_quick(vm_vec_build_sub(psegs[i+1].point, psegs[i].point));
+		if (abs(vm_vec_build_dot(a, b)) > 3*F1_0/4 ) {
 			if (abs(a.z) < F1_0/2) {
 				if (rand_flag != create_path_random_flag::nonrandom)
 				{
@@ -199,7 +199,7 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 			}
 		} else {
 			const auto d{vm_vec_cross(a, b)};
-			e = vm_vec_cross(vm_vec_sub(psegs[i + 1].point, psegs[i - 1].point), d);
+			e = vm_vec_cross(vm_vec_build_sub(psegs[i + 1].point, psegs[i - 1].point), d);
 			vm_vec_normalize_quick(e);
 		}
 
@@ -1297,11 +1297,11 @@ void ai_path_set_orient_and_vel(const d_robot_info_array &Robot_info, object &ob
 		)
 		max_speed = max_speed*3/2;
 
-	auto norm_vec_to_goal = vm_vec_normalized_quick(vm_vec_sub(goal_point, cur_pos));
+	auto norm_vec_to_goal = vm_vec_normalized_quick(vm_vec_build_sub(goal_point, cur_pos));
 	auto norm_cur_vel = vm_vec_normalized_quick(cur_vel);
 	const auto norm_fvec = vm_vec_normalized_quick(objp.orient.fvec);
 
-	dot = vm_vec_dot(norm_vec_to_goal, norm_fvec);
+	dot = vm_vec_build_dot(norm_vec_to_goal, norm_fvec);
 
 	//	If very close to facing opposite desired vector, perturb vector
 	if (dot < -15*F1_0/16) {
@@ -1507,7 +1507,7 @@ void attempt_to_resume_path(const d_robot_info_array &Robot_info, const vmobjptr
 #if DXX_USE_EDITOR
 namespace {
 
-__attribute_used
+dxx_compiler_attribute_used
 static void test_create_path_many(fvmobjptridx &vmobjptridx, const d_level_shared_segment_state &LevelSharedSegmentState, const unsigned long seed)
 {
 	auto &SSegments = LevelSharedSegmentState.get_segments();
@@ -1523,7 +1523,7 @@ static void test_create_path_many(fvmobjptridx &vmobjptridx, const d_level_share
 	}
 }
 
-__attribute_used
+dxx_compiler_attribute_used
 static void test_create_path(fvmobjptridx &vmobjptridx)
 {
 	std::array<point_seg, 200> point_segs;
@@ -1532,7 +1532,7 @@ static void test_create_path(fvmobjptridx &vmobjptridx)
 }
 
 //	For all segments in mine, create paths to all segments in mine, print results.
-__attribute_used
+dxx_compiler_attribute_used
 static void test_create_all_paths(fvmobjptridx &vmobjptridx, fvcsegptridx &vcsegptridx)
 {
 	Point_segs_free_ptr = Point_segs.begin();
@@ -1570,11 +1570,11 @@ static void player_path_set_orient_and_vel(object &objp, const vms_vector &goal_
 
 	const fix max_speed = F1_0*50;
 
-	const auto norm_vec_to_goal = vm_vec_normalized_quick(vm_vec_sub(goal_point, cur_pos));
+	const auto norm_vec_to_goal = vm_vec_normalized_quick(vm_vec_build_sub(goal_point, cur_pos));
 	auto norm_cur_vel = vm_vec_normalized_quick(cur_vel);
 	const auto &&norm_fvec = vm_vec_normalized_quick(objp.orient.fvec);
 
-	dot = vm_vec_dot(norm_vec_to_goal, norm_fvec);
+	dot = vm_vec_build_dot(norm_vec_to_goal, norm_fvec);
 
 	//	If very close to facing opposite desired vector, perturb vector
 	if (dot < -15*F1_0/16) {

@@ -194,22 +194,18 @@ static inline void vm_vec_negate(vms_vector &v)
 }
 
 [[nodiscard]]
-static inline vms_vector vm_vec_negated(vms_vector v)
+static inline vms_vector vm_vec_build_negated(vms_vector v)
 {
 	return vm_vec_negate(v), v;
 }
 
 //Functions in library
 
-//adds two vectors, fills in dest, returns ptr to dest
-//ok for dest to equal either source, but should use vm_vec_add2() if so
+/* Return the sum of two vectors.  If one vector should be destructively
+ * modified, use `vm_vec_add2` instead, which will update one vector in place.
+ */
 [[nodiscard]]
-static inline vms_vector vm_vec_add (const vms_vector &src0, const vms_vector &src1)
-{
-	vms_vector dest;
-	return vm_vec_add(dest, src0, src1), dest;
-}
-
+vms_vector vm_vec_build_add(const vms_vector &src0, const vms_vector &src1);
 
 //subs two vectors, fills in dest, returns ptr to dest
 //ok for dest to equal either source, but should use vm_vec_sub2() if so
@@ -225,7 +221,7 @@ static inline vms_vector &vm_vec_sub(vms_vector &dest, const vms_vector &src0, c
 }
 
 [[nodiscard]]
-static inline vms_vector vm_vec_sub (const vms_vector &src0, const vms_vector &src1)
+static inline vms_vector vm_vec_build_sub(const vms_vector &src0, const vms_vector &src1)
 {
 	vms_vector dest;
 	return vm_vec_sub(dest, src0, src1), dest;
@@ -233,7 +229,7 @@ static inline vms_vector vm_vec_sub (const vms_vector &src0, const vms_vector &s
 
 //averages two vectors. returns average
 [[nodiscard]]
-vms_vector vm_vec_avg(const vms_vector &src0, const vms_vector &src1);
+vms_vector vm_vec_build_avg(const vms_vector &src0, const vms_vector &src1);
 
 //scales a vector.  returns scaled result
 [[nodiscard]]
@@ -271,41 +267,6 @@ vms_vector vm_vec_normal(const vms_vector &p0, const vms_vector &p1, const vms_v
 
 [[nodiscard]]
 vms_vector vm_vec_perp (const vms_vector &p0, const vms_vector &p1, const vms_vector &p2);
-
-[[nodiscard]]
-static inline vms_matrix vm_angles_2_matrix (const vms_angvec &a)
-{
-	vms_matrix m;
-	return vm_angles_2_matrix(m, a), m;
-}
-
-[[nodiscard]]
-static inline vms_matrix vm_vector_to_matrix(const vms_vector &fvec)
-{
-	vms_matrix m;
-	return vm_vector_to_matrix(m, fvec), m;
-}
-
-[[nodiscard]]
-static inline vms_matrix vm_vector_to_matrix_r(const vms_vector &fvec, const vms_vector &rvec)
-{
-	vms_matrix m;
-	return vm_vector_to_matrix_r(m, fvec, rvec), m;
-}
-
-[[nodiscard]]
-static inline vms_matrix vm_vector_to_matrix_u(const vms_vector &fvec, const vms_vector &uvec)
-{
-	vms_matrix m;
-	return vm_vector_to_matrix_u(m, fvec, uvec), m;
-}
-
-[[nodiscard]]
-static inline vms_vector vm_vec_rotate (const vms_vector &src, const vms_matrix &m)
-{
-	vms_vector dest;
-	return vm_vec_rotate(dest, src, m), dest;
-}
 
 //transpose a matrix in place. returns ptr to matrix
 static inline void vm_transpose_matrix(vms_matrix &m)

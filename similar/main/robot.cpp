@@ -70,7 +70,7 @@ void calc_gun_point(const robot_info &r, vms_vector &gun_point, const object_bas
 	for (unsigned mn = r.gun_submodels[gun_num]; mn != 0; mn = pm.submodel_parents[mn])
 	{
 		const auto &&m = vm_transposed_matrix(vm_angles_2_matrix(anim_angles[mn]));
-		const auto tpnt = vm_vec_rotate(pnt,m);
+		const auto tpnt{vm_vec_build_rotated(pnt, m)};
 
 		vm_vec_add(pnt, tpnt, pm.submodel_offsets[mn]);
 	}
@@ -94,7 +94,7 @@ std::ranges::subrange<const jointpos *> robot_get_anim_state(const d_robot_info_
 
 #ifndef NDEBUG
 //for test, set a robot to a specific state
-__attribute_used
+dxx_compiler_attribute_used
 static void set_robot_state(object_base &obj, const robot_animation_state state)
 {
 	auto &Robot_joints = LevelSharedRobotJointState.Robot_joints;
@@ -123,16 +123,15 @@ static void set_robot_state(object_base &obj, const robot_animation_state state)
 
 //set the animation angles for this robot.  Gun fields of robot info must
 //be filled in.
-void robot_set_angles(robot_info &r, polymodel &pm, enumerated_array<std::array<vms_angvec, MAX_SUBMODELS>, N_ANIM_STATES, robot_animation_state> &angs)
+void robot_set_angles(robot_info &r, const polymodel &pm, const enumerated_array<std::array<vms_angvec, MAX_SUBMODELS>, N_ANIM_STATES, robot_animation_state> &angs)
 {
 	auto &Robot_joints = LevelSharedRobotJointState.Robot_joints;
 	std::array<robot_gun_animation_index, MAX_SUBMODELS> gun_nums;			//which gun each submodel is part of
 	gun_nums[0] = robot_gun_animation_index::None;		//body never animates, at least for now
-	{
-		auto &&gr = partial_range(gun_nums, 1u, pm.n_models);
-		//assume part of body...
-		std::fill(gr.begin(), gr.end(), robot_gun_animation_index{r.n_guns});
-	}
+	/* Mark all other positions as part of the body initially.  These markings
+	 * may be overridden in the loop below.
+	 */
+	std::ranges::fill(partial_range(gun_nums, 1u, pm.n_models), robot_gun_animation_index{r.n_guns});
 
 	for (const std::size_t bound{std::min(gun_nums.size(), pm.submodel_parents.size())}; auto [g, entry_m] : enumerate(partial_const_range(r.gun_submodels, r.n_guns)))
 	{

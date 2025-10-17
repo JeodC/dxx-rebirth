@@ -1134,7 +1134,7 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 	//	Determine whether player is moving forward.  If not, don't say negative
 	//	messages because he probably didn't intentionally hit the door.
 	if (obj.type == OBJ_PLAYER)
-		show_message = (vm_vec_dot(obj.orient.fvec, obj.mtype.phys_info.velocity) > 0);
+		show_message = (vm_vec_build_dot(obj.orient.fvec, obj.mtype.phys_info.velocity) > 0);
 #if DXX_BUILD_DESCENT == 2
 	else if (obj.type == OBJ_ROBOT)
 		show_message = 0;
@@ -1551,7 +1551,7 @@ class blast_nearby_glass_context
 {
 	using TmapInfo_array = d_level_unique_tmap_info_state::TmapInfo_array;
 	const object &obj;
-	const fix damage;
+	const fix half_damage;
 	const d_eclip_array &Effects;
 	const GameBitmaps_array &GameBitmaps;
 	const Textures_array &Textures;
@@ -1563,7 +1563,7 @@ class blast_nearby_glass_context
 	unsigned can_blast(texture2_value tmap_num2) const;
 public:
 	blast_nearby_glass_context(const object &obj, const fix damage, const d_eclip_array &Effects, const GameBitmaps_array &GameBitmaps, const Textures_array &Textures, const TmapInfo_array &TmapInfo, const d_vclip_array &Vclip, fvcvertptr &vcvertptr, fvcwallptr &vcwallptr) :
-		obj(obj), damage(damage), Effects(Effects), GameBitmaps(GameBitmaps),
+		obj{obj}, half_damage{damage / 2}, Effects{Effects}, GameBitmaps{GameBitmaps},
 		Textures(Textures), TmapInfo(TmapInfo), Vclip(Vclip),
 		vcvertptr(vcvertptr), vcwallptr(vcwallptr), visited{}
 	{
@@ -1596,22 +1596,29 @@ void blast_nearby_glass_context::process_segment(const vmsegptridx_t segp, const
 	const auto &objp = obj;
 	for (const auto &&[sidenum, uside] : enumerate(segp->unique_segment::sides))
 	{
-		fix			dist;
-
 		//	Process only walls which have glass.
 		if (const auto tmap_num2 = uside.tmap_num2; tmap_num2 != texture2_value::None)
 		{
 			if (can_blast(tmap_num2))
 			{
 				const auto pnt{compute_center_point_on_side(vcvertptr, segp, sidenum)};
-				dist = vm_vec_dist_quick(pnt, objp.pos);
-				if (dist < damage/2) {
-					dist = find_connected_distance(pnt, segp, objp.pos, segp.absolute_sibling(objp.segnum), MAX_BLAST_GLASS_DEPTH, wall_is_doorway_mask::rendpast);
-					if ((dist > 0) && (dist < damage/2))
-					{
+				if (!(vm_vec_dist_quick(pnt, objp.pos) < half_damage))
+					/* If the distance in abstract space is too great, then the
+					 * connected distance will also be too great, so skip
+					 * measuring connected distance.
+					 */
+					continue;
+				/* The distance in abstract space is close enough, so check the
+				 * connected distance.  This allows closed doors and other
+				 * solid barriers to stop the blast propagation, since such
+				 * barriers will either return that the distance is unreachable
+				 * or, if a detour through a nearby open passage exists, return
+				 * the distance of that detour.
+				 */
+				if (const auto dist{find_connected_distance(pnt, segp, objp.pos, segp.absolute_sibling(objp.segnum), MAX_BLAST_GLASS_DEPTH, wall_is_doorway_mask::rendpast)}; dist > 0 && dist < half_damage)
+				{
 						assert(objp.type == OBJ_WEAPON);
-						check_effect_blowup(LevelSharedSegmentState.DestructibleLights, Vclip, segp, static_cast<sidenum_t>(sidenum), pnt, objp.ctype.laser_info, 1, 0);
-					}
+						check_effect_blowup(LevelSharedSegmentState.DestructibleLights, Vclip, segp, sidenum, pnt, objp.ctype.laser_info, 1, 0);
 				}
 			}
 		}

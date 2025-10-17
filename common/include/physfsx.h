@@ -47,7 +47,7 @@
 namespace dcx {
 
 template <typename V>
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline PHYSFS_sint64 PHYSFSX_check_readBytes(PHYSFS_File *const file, V *const buffer, const PHYSFS_uint64 len)
 {
 	static_assert(std::is_standard_layout<V>::value && std::is_trivial<V>::value, "non-POD value read");
@@ -59,7 +59,7 @@ static inline PHYSFS_sint64 PHYSFSX_check_readBytes(PHYSFS_File *const file, V *
 }
 
 template <typename V, std::size_t N>
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline PHYSFS_sint64 PHYSFSX_check_readBytes(PHYSFS_File *const file, std::array<V, N> &buffer, const PHYSFS_uint64 len)
 {
 	static_assert(std::is_standard_layout<V>::value && std::is_trivial<V>::value, "C++ array of non-POD elements read");
@@ -71,14 +71,14 @@ static inline PHYSFS_sint64 PHYSFSX_check_readBytes(PHYSFS_File *const file, std
 }
 
 template <typename V, typename D>
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline PHYSFS_sint64 PHYSFSX_check_readBytes(PHYSFS_File *const file, const std::unique_ptr<V, D> &v, const PHYSFS_uint64 len)
 {
 	return {PHYSFSX_check_readBytes(file, v.get(), {len})};
 }
 
 template <typename V>
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline PHYSFS_sint64 PHYSFSX_check_writeBytes(PHYSFS_File *file, const V *const buffer, const PHYSFS_uint64 len)
 {
 	static_assert(std::is_standard_layout<V>::value && std::is_trivial<V>::value, "non-POD value written");
@@ -90,7 +90,7 @@ static inline PHYSFS_sint64 PHYSFSX_check_writeBytes(PHYSFS_File *file, const V 
 }
 
 template <typename V, std::size_t N>
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline PHYSFS_sint64 PHYSFSX_check_writeBytes(PHYSFS_File *file, const std::array<V, N> &buffer, const PHYSFS_uint64 len)
 {
 	static_assert(std::is_standard_layout<V>::value && std::is_trivial<V>::value, "C++ array of non-POD elements written");
@@ -102,7 +102,7 @@ static inline PHYSFS_sint64 PHYSFSX_check_writeBytes(PHYSFS_File *file, const st
 }
 
 template <typename T, typename D>
-__attribute_always_inline()
+dxx_compiler_attribute_always_inline()
 static inline PHYSFS_sint64 PHYSFSX_check_writeBytes(PHYSFS_File *file, const std::unique_ptr<T, D> &p, const PHYSFS_uint64 len)
 {
 	return {PHYSFSX_check_writeBytes(file, p.get(), len)};
@@ -264,14 +264,14 @@ class PHYSFSX_fgets_t
 public:
 	template <std::size_t n>
 		[[nodiscard]]
-		__attribute_nonnull()
+		dxx_compiler_attribute_nonnull()
 		auto operator()(PHYSFSX_gets_line_t<n> &buf, PHYSFS_File *const fp, const std::size_t offset = 0) const
 		{
 			return get(buf.next(), offset, fp);
 		}
 	template <std::size_t n>
 		[[nodiscard]]
-		__attribute_nonnull()
+		dxx_compiler_attribute_nonnull()
 		auto operator()(ntstring<n> &buf, PHYSFS_File *const fp, const std::size_t offset = 0) const
 		{
 			auto r = get(std::span(buf), offset, fp);
@@ -300,7 +300,7 @@ constexpr PHYSFSX_fgets_t PHYSFSX_fgets{};
 
 int PHYSFSX_printf(PHYSFS_File *file, const char *format) = delete;
 
-__attribute_format_printf(2, 3)
+dxx_compiler_attribute_format_printf(2, 3)
 static inline int PHYSFSX_printf(PHYSFS_File *file, const char *format, ...)
 {
 	char buffer[1024];
@@ -337,7 +337,7 @@ struct NamedPHYSFS_File
 };
 
 [[noreturn]]
-__attribute_cold
+dxx_compiler_attribute_cold
 void PHYSFSX_read_helper_report_error(const char *filename, unsigned line, const char *func, NamedPHYSFS_File file);
 
 template <typename T, auto F>
@@ -463,7 +463,7 @@ public:
 typedef char file_extension_t[5];
 
 [[nodiscard]]
-__attribute_nonnull()
+dxx_compiler_attribute_nonnull()
 const file_extension_t *PHYSFSX_checkMatchingExtension(const char *filename, const std::ranges::subrange<const file_extension_t *> range);
 
 enum class physfs_search_path : bool
