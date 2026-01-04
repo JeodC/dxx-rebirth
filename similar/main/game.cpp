@@ -1781,10 +1781,10 @@ window_event_result game_window::event_handler(const d_event &event)
 				start_time();
 
 			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+			{
 				digi_resume_digi_sounds();
-
-			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 				palette_restore();
+			}
 			
 			reset_cockpit();
 			break;
@@ -1794,10 +1794,10 @@ window_event_result game_window::event_handler(const d_event &event)
 				stop_time();
 
 			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+			{
 				digi_pause_digi_sounds();
-
-			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 				full_palette_save();
+			}
 
 			event_toggle_focus(0);
 			key_toggle_repeat(1);
