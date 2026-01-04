@@ -80,6 +80,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "automap.h"
 #include "event.h"
 #include "d_array.h"
+#include "d_bit_enum.h"
 #include "d_enumerate.h"
 #include "d_levelstate.h"
 #include "d_range.h"
@@ -92,6 +93,22 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define array_snprintf(array,fmt,arg1,...)	std::snprintf(array.data(), array.size(), fmt, arg1, ## __VA_ARGS__)
 
 constexpr std::integral_constant<int8_t, -1> owner_none{};
+
+namespace dcx {
+
+template <>
+inline constexpr bool enable_bit_enum_and<netflag_flag, netflag_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_or<netflag_flag, netflag_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_bitnot<netflag_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_or<netgrant_flag, netgrant_flag>{true};
+
+}
 
 namespace dsx {
 
@@ -108,26 +125,6 @@ static void multi_add_lifetime_killed();
 #if !(!defined(RELEASE) && DXX_BUILD_DESCENT == 2)
 static void multi_add_lifetime_kills(int count);
 #endif
-
-static constexpr netflag_flag operator~(const netflag_flag a)
-{
-	return static_cast<netflag_flag>(~static_cast<uint32_t>(a));
-}
-
-static constexpr netflag_flag operator|(const netflag_flag a, const netflag_flag b)
-{
-	return static_cast<netflag_flag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-}
-
-static constexpr netflag_flag operator&(const netflag_flag a, const netflag_flag b)
-{
-	return static_cast<netflag_flag>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-}
-
-static constexpr netgrant_flag operator|(const netgrant_flag a, const netgrant_flag b)
-{
-	return static_cast<netgrant_flag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-}
 
 }
 
