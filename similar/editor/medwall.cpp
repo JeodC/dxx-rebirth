@@ -522,9 +522,9 @@ window_event_result wall_dialog::callback_handler(const d_event &event)
 			auto &current_wall = w.get_checked_reference();
 			const auto wall_flags = current_wall.flags;
 			const auto wall_keys = current_wall.keys;
-			ui_checkbox_check(doorFlag[0].get(), wall_flags & wall_flag::door_locked);
-			ui_checkbox_check(doorFlag[1].get(), wall_flags & wall_flag::door_auto);
-			ui_checkbox_check(doorFlag[2].get(), wall_flags & wall_flag::illusion_off);
+			ui_checkbox_check(doorFlag[0].get(), +(wall_flags & wall_flag::door_locked));
+			ui_checkbox_check(doorFlag[1].get(), +(wall_flags & wall_flag::door_auto));
+			ui_checkbox_check(doorFlag[2].get(), +(wall_flags & wall_flag::illusion_off));
 
 			ui_radio_set_value(*keyFlag[0], wall_keys & wall_key::none);
 			ui_radio_set_value(*keyFlag[1], wall_keys & wall_key::blue);
@@ -703,7 +703,7 @@ int wall_restore_all()
 	auto &vmwallptr = Walls.vmptr;
 	for (auto &w : vmwallptr)
 	{
-		if (w.flags & wall_flag::blasted)
+		if (+(w.flags & wall_flag::blasted))
 		{
 			w.hps = WALL_HPS;
 		}

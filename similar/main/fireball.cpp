@@ -344,7 +344,7 @@ void connected_segment_raw_distances::builder::visit_segment(const vcsegidx_t cu
 			auto &w{*vcwallptr(wall_num)};
 			if (w.type == WALL_CLOSED)
 				continue;
-			if (w.type == WALL_DOOR && (w.flags & wall_flag::door_locked))
+			if (w.type == WALL_DOOR && +(w.flags & wall_flag::door_locked))
 				continue;
 		}
 		visit_segment(child_segnum, current_depth + 1);
@@ -1574,7 +1574,7 @@ void do_explosion_sequence(const d_robot_info_array &Robot_info, object &obj)
 //explode the given wall
 void explode_wall(fvcvertptr &vcvertptr, const vcsegptridx_t segnum, const sidenum_t sidenum, wall &w)
 {
-	if (w.flags & wall_flag::exploding)
+	if (+(w.flags & wall_flag::exploding))
 		/* Already exploding */
 		return;
 	w.explode_time_elapsed = 0;
@@ -1621,18 +1621,18 @@ unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
 			auto &w2{*vmwallptr(cwall_num)};
 			assert(&w1 != &w2);
 			w2.flags |= wall_flag::blasted;
-			assert((w1.flags & wall_flag::exploding) || (w2.flags & wall_flag::exploding));
-			if (w1_explode_time_elapsed >= EXPL_WALL_TIME && w2.flags & wall_flag::exploding)
+			assert(+(w1.flags & wall_flag::exploding) || !!(w2.flags & wall_flag::exploding));
+			if (w1_explode_time_elapsed >= EXPL_WALL_TIME && +(w2.flags & wall_flag::exploding))
 			{
 				w2.flags &= ~wall_flag::exploding;
 				++ walls_updated;
 			}
 		}
 		else
-			assert(w1.flags & wall_flag::exploding);
+			assert(+(w1.flags & wall_flag::exploding));
 
 		w1.flags |= wall_flag::blasted;
-		if (w1_explode_time_elapsed >= EXPL_WALL_TIME && w1.flags & wall_flag::exploding)
+		if (w1_explode_time_elapsed >= EXPL_WALL_TIME && +(w1.flags & wall_flag::exploding))
 		{
 			w1.flags &= ~wall_flag::exploding;
 			++ walls_updated;

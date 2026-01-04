@@ -31,6 +31,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "fwd-object.h"
 #include "pack.h"
 #include "switch.h"
+#include "d_bit_enum.h"
 #include "d_underlying_value.h"
 
 namespace dcx {
@@ -144,7 +145,9 @@ enum class wall_flag : uint8_t
 	/* endif */
 };
 
-enum class wall_flags : uint8_t;
+enum class wall_flags : uint8_t
+{
+};
 
 enum class wall_state : uint8_t
 {
@@ -159,30 +162,20 @@ enum class wall_state : uint8_t
 	/* endif */
 };
 
-static constexpr auto &operator|=(wall_flags &wall, const wall_flag f)
-{
-	return wall = static_cast<wall_flags>(underlying_value(wall) | underlying_value(f));
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<wall_flag>{true};
 
-static constexpr auto &operator&=(wall_flags &wall, const wall_flag f)
-{
-	return wall = static_cast<wall_flags>(underlying_value(wall) & underlying_value(f));
-}
+template <>
+inline constexpr bool enable_bit_enum_boolnot<wall_flags>{true};
 
-static constexpr auto operator~(const wall_flag f)
-{
-	return static_cast<wall_flag>(~underlying_value(f));
-}
+template <>
+inline constexpr bool enable_bit_enum_and<wall_flags, wall_flag>{true};
 
-static constexpr auto operator&(const wall_flags wall, const wall_flag f)
-{
-	return underlying_value(wall) & underlying_value(f);
-}
+template <>
+inline constexpr bool enable_bit_enum_or<wall_flags, wall_flag>{true};
 
-static constexpr auto operator|(const wall_flag f1, const wall_flag f2)
-{
-	return static_cast<wall_flag>(underlying_value(f1) | underlying_value(f2));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<wall_flag, wall_flag>{true};
 
 }
 

@@ -1989,7 +1989,7 @@ int ai_door_is_openable(
 	if (robptr->companion)
 	{
 		const auto wt{wall.type};
-		if (wall.flags & wall_flag::buddy_proof) {
+		if (+(wall.flags & wall_flag::buddy_proof)) {
 			if (wt == WALL_DOOR && wall.state == wall_state::closed)
 				return 0;
 			else if (wt == WALL_CLOSED)
@@ -2024,7 +2024,7 @@ int ai_door_is_openable(
 			if (wt == WALL_CLOSED)
 				return 0;
 			if (wt == WALL_DOOR) {
-				if ((wall.flags & wall_flag::door_locked) && (wall.state == wall_state::closed))
+				if (+(wall.flags & wall_flag::door_locked) && (wall.state == wall_state::closed))
 					return 0;
 			}
 		}
@@ -2095,7 +2095,7 @@ static std::optional<sidenum_t> openable_doors_in_segment(fvcwallptr &vcwallptr,
 				continue;
 			if (w.state != wall_state::closed)
 				continue;
-			if (w.flags & wall_flag::door_locked)
+			if (+(w.flags & wall_flag::door_locked))
 				continue;
 #if DXX_BUILD_DESCENT == 2
 			if (WallAnims[w.clip_num].flags & WCF_HIDDEN)
