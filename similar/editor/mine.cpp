@@ -518,7 +518,7 @@ static void write_children(const shared_segment &seg, const sidemask_t bit_mask,
 {
 	for (const auto &&[bit, child] : enumerate(seg.children))
 	{
-		if (bit_mask & build_sidemask(bit))
+		if (+(bit_mask & build_sidemask(bit)))
 			PHYSFS_writeSLE16(SaveFile, child);
 	}
 }
@@ -531,7 +531,7 @@ static void write_verts(const shared_segment &seg, PHYSFS_File *const SaveFile)
 
 static void write_special(const shared_segment &seg, const sidemask_t bit_mask, PHYSFS_File *const SaveFile)
 {
-	if (bit_mask & build_sidemask(MAX_SIDES_PER_SEGMENT))
+	if (+(bit_mask & build_sidemask(MAX_SIDES_PER_SEGMENT)))
 	{
 		PHYSFSX_writeU8(SaveFile, underlying_value(seg.special));
 		PHYSFSX_writeU8(SaveFile, underlying_value(seg.matcen_num));
@@ -640,7 +640,7 @@ int save_mine_data_compiled(PHYSFS_File *SaveFile)
 
 		for (const auto &&[sidenum, side] : enumerate(seg.s.sides))
 		{
-			if (bit_mask & build_sidemask(sidenum))
+			if (+(bit_mask & build_sidemask(sidenum)))
 				PHYSFSX_writeU8(SaveFile, underlying_value(side.wall_num));
 		}
 		}

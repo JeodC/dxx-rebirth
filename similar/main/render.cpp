@@ -1205,7 +1205,7 @@ static void build_object_lists(object_array &Objects, fvcsegptr &vcsegptr, const
 						for (const auto sn : MAX_SIDES_PER_SEGMENT)
 						{
 							const auto sf = build_sidemask(sn);
-							if (sidemask & sf)
+							if (+(sidemask & sf))
 							{
 #if DXX_BUILD_DESCENT == 1
 								const cscusegment &&seg = vcsegptr(obj->segnum);

@@ -2224,7 +2224,7 @@ static void slide_textures(void)
 		{
 			for (const auto sidenum : MAX_SIDES_PER_SEGMENT)
 			{
-				if (slide_seg & build_sidemask(sidenum))
+				if (+(slide_seg & build_sidemask(sidenum)))
 				{
 					auto &side = useg.sides[sidenum];
 					const auto texture1_index{get_texture_index(side.tmap_num)};

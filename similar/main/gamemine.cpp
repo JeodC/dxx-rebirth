@@ -419,7 +419,7 @@ static void read_children(shared_segment &segp, const sidemask_t bit_mask, const
 {
 	for (const auto bit : MAX_SIDES_PER_SEGMENT)
 	{
-		if (bit_mask & build_sidemask(bit))
+		if (+(bit_mask & build_sidemask(bit)))
 		{
 			const segnum_t child_segment{PHYSFSX_readULE16(LoadFile)};
 			segp.children[bit] = unlikely(child_segment == segment_exit)
@@ -444,7 +444,7 @@ static void read_verts(shared_segment &segp, const NamedPHYSFS_File LoadFile)
 
 static void read_special(shared_segment &segp, const sidemask_t bit_mask, const NamedPHYSFS_File LoadFile)
 {
-	if (bit_mask & build_sidemask(MAX_SIDES_PER_SEGMENT))
+	if (+(bit_mask & build_sidemask(MAX_SIDES_PER_SEGMENT)))
 	{
 		// Read ubyte	Segments[segnum].special
 		segp.special = build_segment_special_from_untrusted(PHYSFSX_readByte(LoadFile));
@@ -572,7 +572,7 @@ int load_mine_data_compiled(const NamedPHYSFS_File LoadFile, const char *const G
 		for (const auto sidenum : MAX_SIDES_PER_SEGMENT)
 		{
 			auto &sside = segp.s.sides[sidenum];
-			if (wall_mask & build_sidemask(sidenum))
+			if (+(wall_mask & build_sidemask(sidenum)))
 			{
 				const uint8_t byte_wallnum = PHYSFSX_readByte(LoadFile);
 				if ( byte_wallnum == 255 )

@@ -716,7 +716,7 @@ static unsigned check_poke(fvcvertptr &vcvertptr, const object_base &obj, const 
 	//note: don't let objects with zero size block door
 	if (!obj.size)
 		return 0;
-	return get_seg_masks(vcvertptr, obj.pos, seg, obj.size).sidemask & build_sidemask(side);		//pokes through side!
+	return +(get_seg_masks(vcvertptr, obj.pos, seg, obj.size).sidemask & build_sidemask(side));		//pokes through side!
 }
 
 }

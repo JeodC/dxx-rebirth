@@ -267,7 +267,7 @@ static unsigned generate_extra_starts_by_copying(object_array &Objects, valptrid
 			auto &old_player_ref = *Players.vcptr(old_player_idx);
 			const auto &&old_player_ptridx = Objects.vcptridx(old_player_ref.objnum);
 			auto &old_player_obj = *old_player_ptridx;
-			if (player_init_segment_capacity_flag[old_player_idx] & build_sidemask(side))
+			if (+(player_init_segment_capacity_flag[old_player_idx] & build_sidemask(side)))
 			{
 				auto &&segp = Segments.vmptridx(old_player_obj.segnum);
 				/* Copy the start exactly.  The next loop in the caller will
