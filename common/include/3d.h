@@ -94,30 +94,17 @@ enum class projection_flag : uint8_t
 #endif
 };
 
-static constexpr uint8_t operator&(const projection_flag a, const projection_flag b)
-{
-	return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
-}
+template <>
+inline constexpr bool enable_bit_enum_and<projection_flag, projection_flag>{true};
 
-static constexpr projection_flag &operator&=(projection_flag &a, const projection_flag b)
-{
-	return a = static_cast<projection_flag>(a & b);
-}
+template <>
+inline constexpr bool enable_bit_enum_or<projection_flag, projection_flag>{true};
 
-static constexpr projection_flag operator|(const projection_flag a, const projection_flag b)
-{
-	return static_cast<projection_flag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<projection_flag>{true};
 
-static constexpr projection_flag &operator|=(projection_flag &a, const projection_flag b)
-{
-	return a = (a | b);
-}
-
-static constexpr projection_flag operator~(const projection_flag a)
-{
-	return static_cast<projection_flag>(~static_cast<uint8_t>(a));
-}
+template <>
+inline constexpr bool enable_bit_enum_boolnot<projection_flag>{true};
 
 struct g3_instance_context
 {

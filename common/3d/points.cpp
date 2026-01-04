@@ -149,7 +149,7 @@ g3s_point::g3s_point(const g3_instance_context &viewer, const vms_vector &absolu
 void g3_project_point(g3s_point &p)
 {
 #ifndef __powerc
-	if ((p.p3_flags & projection_flag::projected) || (p.p3_codes & clipping_code::behind) != clipping_code::None)
+	if (+(p.p3_flags & projection_flag::projected) || (p.p3_codes & clipping_code::behind) != clipping_code::None)
 		return;
 
 	const auto pz = p.p3_vec.z;
