@@ -1492,11 +1492,6 @@ imobjptridx_t spit_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 	new_velocity.y += (d_rand() - 16384) * SPIT_SPEED * 2;
 	new_velocity.z += (d_rand() - 16384) * SPIT_SPEED * 2;
 
-	// Give keys zero velocity so they can be tracked better in multi
-
-	if ((Game_mode & GM_MULTI) && id >= powerup_type_t::POW_KEY_BLUE && id <= powerup_type_t::POW_KEY_GOLD)
-		new_velocity = {};
-
 	//there's a piece of code which lets the player pick up a powerup if
 	//the distance between him and the powerup is less than 2 time their
 	//combined radii.  So we need to create powerups pretty far out from
