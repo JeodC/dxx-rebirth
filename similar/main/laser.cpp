@@ -735,7 +735,8 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 		if (weapon_type == weapon_id_type::FUSION_ID) {
 			int	fusion_scale;
 #if DXX_BUILD_DESCENT == 1
-			if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+			const auto is_multiplayer_non_cooperative{(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)};
+			if (is_multiplayer_non_cooperative)
 				fusion_scale = 2;
 			else
 #endif
@@ -752,7 +753,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 
 #if DXX_BUILD_DESCENT == 1
 			//	Fusion damage was boosted by mk on 3/27 (for reg 1.1 release), but we only want it to apply to single player games.
-			if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+			if (is_multiplayer_non_cooperative)
 				obj->ctype.laser_info.multiplier /= 2;
 #endif
 		}
