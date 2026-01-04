@@ -368,6 +368,11 @@ struct vclip_info_rw
 struct polyobj_info : prohibit_void_ptr<polyobj_info>
 {
 	polygon_model_index model_num{};// which polygon model
+	/* If `alt_textures - 1` is a valid index into `multi_player_textures`,
+	 * then it is used to obtain an alternate texture.  Otherwise, the standard
+	 * texture is used.
+	 */
+	uint8_t alt_textures{0};
 	std::array<vms_angvec, MAX_SUBMODELS> anim_angles{}; // angles for each subobject
 	uint16_t subobj_flags{0};       // specify which subobjs to draw
 	/* If this is not texture_index{UINT16_MAX}, then use this texture on all faces.
@@ -376,7 +381,6 @@ struct polyobj_info : prohibit_void_ptr<polyobj_info>
 	 * so the 0 here should have no effect on properly loaded objects.
 	 */
 	texture_index tmap_override{0};
-	int alt_textures{0};       // if not -1, use these textures instead
 };
 
 struct polyobj_info_rw
