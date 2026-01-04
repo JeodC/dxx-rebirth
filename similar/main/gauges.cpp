@@ -3804,21 +3804,24 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 		gr_set_fontcolor(canvas, BM_XRGB(0, 31, 0), -1);
 			auto &game_font = *GAME_FONT;
 			const auto &&line_spacing = LINE_SPACING(game_font, game_font);
-			if (PlayerCfg.CockpitMode[1] == cockpit_mode_t::full_screen)
+			const auto is_multiplayer{Game_mode & GM_MULTI};
+			switch (PlayerCfg.CockpitMode[1])
 			{
-				y -= (Game_mode & GM_MULTI)
-					? line_spacing * 10
-					: line_spacing * 6;
-			}
-			else if (PlayerCfg.CockpitMode[1] == cockpit_mode_t::status_bar)
-			{
-				y -= (Game_mode & GM_MULTI)
-					? line_spacing * 6
-					: line_spacing * 1;
-			} else {
-				y -= (Game_mode & GM_MULTI)
-					? line_spacing * 7
-					: line_spacing * 2;
+				case cockpit_mode_t::full_screen:
+					y -= is_multiplayer
+						? line_spacing * 10
+						: line_spacing * 6;
+					break;
+				case cockpit_mode_t::status_bar:
+					y -= is_multiplayer
+						? line_spacing * 6
+						: line_spacing;
+					break;
+				default:
+					y -= is_multiplayer
+						? line_spacing * 7
+						: line_spacing * 2;
+					break;
 			}
 
 			gr_printf(canvas, game_font, x, y, "%s %2d%%", TXT_CRUISE, f2i(cruise_speed));
