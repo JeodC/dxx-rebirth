@@ -198,7 +198,7 @@ void multi_strip_robots(const int playernum)
 	auto &vmobjptridx = Objects.vmptridx;
 	// Grab all robots away from a player 
 	// (player died or exited the game)
-	if (Game_mode & GM_MULTI_ROBOTS) {
+	if (+(Game_mode & GM_MULTI_ROBOTS)) {
 	
 		if (playernum == Player_num)
 		{
@@ -937,7 +937,7 @@ int multi_explode_robot_sub(const d_robot_info_array &Robot_info, const vmobjptr
 	}
 
 	// Drop non-random KEY powerups locally only!
-	if (objrobot.contains.count > 0 && objrobot.contains.type == contained_object_type::powerup && (Game_mode & GM_MULTI_COOP) && objrobot.contains.id.powerup >= powerup_type_t::POW_KEY_BLUE && objrobot.contains.id.powerup <= powerup_type_t::POW_KEY_GOLD)
+	if (objrobot.contains.count > 0 && objrobot.contains.type == contained_object_type::powerup && +(Game_mode & GM_MULTI_COOP) && objrobot.contains.id.powerup >= powerup_type_t::POW_KEY_BLUE && objrobot.contains.id.powerup <= powerup_type_t::POW_KEY_GOLD)
 	{
 		object_create_robot_egg(Robot_info, objrobot);
 	}

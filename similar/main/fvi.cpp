@@ -580,7 +580,7 @@ static vm_distance_squared check_vector_to_object(const d_robot_info_array *cons
 	//if obj is player, and bumping into other player or a weapon of another coop player, reduce radius
 	else if (obj.type == OBJ_PLAYER &&
 		 	(otherobj.type == OBJ_PLAYER ||
-	 		((Game_mode & GM_MULTI_COOP) && otherobj.type == OBJ_WEAPON && otherobj.ctype.laser_info.parent_type == OBJ_PLAYER)))
+	 		(+(Game_mode & GM_MULTI_COOP) && otherobj.type == OBJ_WEAPON && otherobj.ctype.laser_info.parent_type == OBJ_PLAYER)))
 		size = size/2;
 
 	return check_vector_to_sphere_1(intp, p0, p1, obj.pos, size+rad);
@@ -855,7 +855,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 			//if obj is player, and bumping into other player or a weapon of another coop player, reduce radius
 			else if (fq.thisobjnum->type == OBJ_PLAYER &&
 					((objnum->type == OBJ_PLAYER) ||
-					((Game_mode&GM_MULTI_COOP) &&  objnum->type == OBJ_WEAPON && objnum->ctype.laser_info.parent_type == OBJ_PLAYER)))
+					(+(Game_mode & GM_MULTI_COOP) && objnum->type == OBJ_WEAPON && objnum->ctype.laser_info.parent_type == OBJ_PLAYER)))
 				fudged_rad = rad/2;	//(rad*3)/4;
 
 			vms_vector hit_point;

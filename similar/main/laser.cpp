@@ -735,7 +735,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 		if (weapon_type == weapon_id_type::FUSION_ID) {
 			int	fusion_scale;
 #if DXX_BUILD_DESCENT == 1
-			const auto is_multiplayer_non_cooperative{(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)};
+			const auto is_multiplayer_non_cooperative{+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)};
 			if (is_multiplayer_non_cooperative)
 				fusion_scale = 2;
 			else
@@ -1049,7 +1049,7 @@ static int object_is_trackable(const imobjptridx_t objp, const vmobjptridx_t tra
 {
 	if (objp == object_none)
 		return 0;
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 		return 0;
 	//	Don't track player if he's cloaked.
 	if ((objp == get_local_player().objnum) && (objp->ctype.player_info.powerup_flags & PLAYER_FLAGS_CLOAKED))
@@ -1090,10 +1090,10 @@ static int object_is_trackable(const imobjptridx_t objp, const vmobjptridx_t tra
 //	--------------------------------------------------------------------------------------------
 static imobjptridx_t call_find_homing_object_complete(const vms_vector &curpos, const vmobjptridx_t tracker)
 {
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		if (tracker->ctype.laser_info.parent_type == OBJ_PLAYER) {
 			//	It's fired by a player, so if robots present, track robot, else track player.
-			if (Game_mode & GM_MULTI_COOP)
+			if (+(Game_mode & GM_MULTI_COOP))
 				return find_homing_object_complete( curpos, tracker, OBJ_ROBOT, -1);
 			else
 				return find_homing_object_complete( curpos, tracker, OBJ_PLAYER, OBJ_ROBOT);
@@ -1203,7 +1203,7 @@ imobjptridx_t find_homing_object_complete(const vms_vector &curpos, const vmobjp
 			if (curobjp->ctype.player_info.powerup_flags & PLAYER_FLAGS_CLOAKED)
 				continue;
 			// Don't track teammates in team games
-			if (Game_mode & GM_TEAM)
+			if (+(Game_mode & GM_TEAM))
 			{
 				const auto &&objparent = vcobjptr(tracker->ctype.laser_info.parent_num);
 				if (objparent->type == OBJ_PLAYER && multi_get_team_from_player(Netgame, get_player_id(curobjp)) == multi_get_team_from_player(Netgame, get_player_id(objparent)))
@@ -1299,14 +1299,14 @@ static imobjptridx_t track_track_goal(fvcobjptr &vcobjptr, const imobjptridx_t t
 		{
 			if (track_goal == object_none)
 			{
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
-					if (Game_mode & GM_MULTI_COOP)
+					if (+(Game_mode & GM_MULTI_COOP))
 						goal_type = OBJ_ROBOT, goal2_type = -1;
 					else
 					{
 						goal_type = OBJ_PLAYER;
-						goal2_type = (Game_mode & GM_MULTI_ROBOTS)
+						goal2_type = +(Game_mode & GM_MULTI_ROBOTS)
 							? OBJ_ROBOT	//	Not cooperative, if robots, track either robot or player
 							: -1;		//	Not cooperative and no robots, track only a player
 					}
@@ -1446,9 +1446,9 @@ static imobjptridx_t Laser_player_fire_spread_delay(const d_robot_info_array &Ro
 			if (PlayerCfg.MissileViewEnabled != MissileViewMode::EnabledSelfAndAllies)
 				return false;
                         {
-                                if (Game_mode & GM_MULTI_COOP)
+			if (+(Game_mode & GM_MULTI_COOP))
                                         return true;
-                                if (Game_mode & GM_TEAM)
+			if (+(Game_mode & GM_TEAM))
 					return multi_get_team_from_player(Netgame, Player_num) == multi_get_team_from_player(Netgame, obj_id);
                         }
 			return false;
@@ -1530,7 +1530,7 @@ void Flare_create(const vmobjptridx_t obj)
 			auto_select_primary_weapon(player_info);
 #endif
 
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_fire(plrobj.orient, FLARE_ADJUST, laser_level::_1	/* unused */, 0, object_none, object_none);
 	}
 
@@ -1828,7 +1828,7 @@ void do_laser_firing_player(object &plrobj)
 	const auto energy_used{
 #if DXX_BUILD_DESCENT == 2
 	//	MK, 01/26/96, Helix use 2x energy in multiplayer.  bitmaps.tbl parm should have been reduced for single player.
-		(weapon_index == weapon_id_type::HELIX_ID && (Game_mode & GM_MULTI))
+		(weapon_index == weapon_id_type::HELIX_ID && +(Game_mode & GM_MULTI))
 		? base_energy_used * 2
 		:
 #endif
@@ -2076,7 +2076,7 @@ int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index_t weapon_num,
 
 	// Set values to be recognized during comunication phase, if we are the
 	//  one shooting
-	if ((Game_mode & GM_MULTI) && objp == get_local_player().objnum)
+	if (+(Game_mode & GM_MULTI) && objp == get_local_player().objnum)
 		multi_send_fire(objp->orient, underlying_value(weapon_num), level, flags, Network_laser_track, object_none);
 	return 1;
 }
@@ -2160,7 +2160,7 @@ static void create_smart_children(object_array &Objects, const vmobjptridx_t obj
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 #endif
 	{
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			d_srand(8321L);
 
 		range_for (const auto &&curobjp, vcobjptridx)
@@ -2169,9 +2169,9 @@ static void create_smart_children(object_array &Objects, const vmobjptridx_t obj
 			{
 				if (curobjp->type == OBJ_PLAYER)
 				{
-					if (parent.type == OBJ_PLAYER && (Game_mode & GM_MULTI_COOP))
+					if (parent.type == OBJ_PLAYER && +(Game_mode & GM_MULTI_COOP))
 						continue;
-					if ((Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, get_player_id(curobjp)) == multi_get_team_from_player(Netgame, get_player_id(vcobjptr(parent.num))))
+					if (+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, get_player_id(curobjp)) == multi_get_team_from_player(Netgame, get_player_id(vcobjptr(parent.num))))
 						continue;
 					if (curobjp->ctype.player_info.powerup_flags & PLAYER_FLAGS_CLOAKED)
 						continue;
@@ -2276,7 +2276,7 @@ void create_robot_smart_children(const vmobjptridx_t objp, const uint_fast32_t n
 void release_local_guided_missile(d_level_unique_object_state &LevelUniqueObjectState, const playernum_t player_num, object &missile)
 {
 	Missile_viewer = &missile;
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_guided_info(missile, 1);
 	if (Newdemo_state == ND_STATE_RECORDING)
 		newdemo_record_guided_end();
@@ -2363,7 +2363,7 @@ void do_missile_firing(const secondary_weapon_index_t weapon, const vmobjptridx_
 			phys_apply_rot(plrobj, rotation_vec);
 		}
 
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			const object &obj = *objnum;
 			multi_send_fire(plrobj.orient, underlying_value(weapon) + MISSILE_ADJUST, laser_level::_1	/* unused */, gun_flag, obj.ctype.laser_info.track_goal, weapon_index_is_player_bomb(weapon) ? objnum : object_none);

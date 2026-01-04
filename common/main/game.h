@@ -377,11 +377,11 @@ constexpr test_game_mode_d2x_flag game_mode_hoard{};
 #elif DXX_BUILD_DESCENT == 2
 static inline uint16_t game_mode_capture_flag(const game_mode_flags mode)
 {
-	return mode & GM_CAPTURE;
+	return +(mode & GM_CAPTURE);
 }
 static inline uint16_t game_mode_hoard(const game_mode_flags mode)
 {
-	return mode & GM_HOARD;
+	return +(mode & GM_HOARD);
 }
 
 //Flickering light system

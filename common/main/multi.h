@@ -925,7 +925,7 @@ static inline team_number multi_get_team_from_player(const netgame_info &Netgame
 
 static inline player_ship_color get_player_or_team_color(const netgame_info &Netgame, const game_mode_flags Game_mode, const playernum_t pnum)
 {
-	return Game_mode & GM_TEAM
+	return +(Game_mode & GM_TEAM)
 		? get_team_color(multi_get_team_from_player(Netgame, pnum))
 		: get_player_color(pnum);
 }

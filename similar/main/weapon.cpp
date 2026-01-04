@@ -1360,7 +1360,7 @@ static bool seismic_disturbance_active()
 	if (rval) {
 		LevelUniqueSeismicState.Seismic_disturbance_end_time = GameTime64 + level_shake_duration;
 		start_seismic_sound();
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_seismic(level_shake_duration);
 	}
 	return rval;
@@ -1499,7 +1499,7 @@ imobjptridx_t spit_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 
 	const auto new_pos{vm_vec_scale_add(spitter.pos, spitter.orient.fvec, spitter.size)};
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		if (Net_create_loc >= MAX_NET_CREATE_OBJECTS)
 		{
@@ -1532,7 +1532,7 @@ imobjptridx_t spit_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 		case powerup_type_t::POW_SHIELD_BOOST:
 		case powerup_type_t::POW_ENERGY:
 			obj.lifeleft = (d_rand() + F1_0*3) * 64;		//	Lives for 3 to 3.5 binary minutes (a binary minute is 64 seconds)
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				obj.lifeleft /= 2;
 			break;
 		default:
@@ -1549,7 +1549,7 @@ void DropCurrentWeapon (player_info &player_info)
 
 	powerup_type_t drop_type;
 	const auto &Primary_weapon{player_info.Primary_weapon};
-	const auto GrantedItems{(Game_mode & GM_MULTI) ? Netgame.SpawnGrantedItems : netgrant_flag::None};
+	const auto GrantedItems{+(Game_mode & GM_MULTI) ? Netgame.SpawnGrantedItems : netgrant_flag::None};
 	auto weapon_name{PRIMARY_WEAPON_NAMES(Primary_weapon)};
 	if (Primary_weapon == primary_weapon_index_t::LASER_INDEX)
 	{
@@ -1629,7 +1629,7 @@ void DropCurrentWeapon (player_info &player_info)
 	}
 #endif
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_drop_weapon(objnum,seed);
 
 	if (Primary_weapon == primary_weapon_index_t::LASER_INDEX)
@@ -1759,7 +1759,7 @@ void DropSecondaryWeapon (player_info &player_info)
 	digi_play_sample(sound_effect::SOUND_DROP_WEAPON, F1_0);
 #endif
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_drop_weapon(objnum,seed);
 
 	secondary_ammo -= sub_ammo;

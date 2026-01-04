@@ -231,7 +231,7 @@ static void kmatrix_redraw(grs_canvas &canvas, kmatrix_window *const km)
 	show_fullscr(canvas, km->background);
 	const auto &&fspacy = FSPACY();
 	
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 	{
 		kmatrix_redraw_coop(canvas, vcobjptr, fspacy);
 	}

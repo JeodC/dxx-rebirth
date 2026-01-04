@@ -172,7 +172,7 @@ using kill_name_storage = std::array<char, (CALLSIGN_LEN * 2) + 4>;
 static const char *prepare_kill_name(fvcplayerptr &vcplayerptr, const game_mode_flags Game_mode, const netgame_info &Netgame, const vcplayeridx_t pnum, kill_name_storage &buf)
 {
 	const char *const callsign = vcplayerptr(pnum)->callsign;
-	if (Game_mode & GM_TEAM)
+	if (+(Game_mode & GM_TEAM))
 	{
 		const auto r = std::data(buf);
 		snprintf(r, std::size(buf), "%s (%s)", callsign, Netgame.team_name[multi_get_team_from_player(Netgame, pnum)].operator const char *());
@@ -580,7 +580,7 @@ kmatrix_result multi_endlevel_score()
 	player_connection_status old_connect{};
 
 	// Save connect state and change to new connect state
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		auto &plr = get_local_player();
 		old_connect = plr.connected;
@@ -594,7 +594,7 @@ kmatrix_result multi_endlevel_score()
 
 	// Restore connect state
 
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		get_local_player().connected = old_connect;
 	}
@@ -617,7 +617,7 @@ kmatrix_result multi_endlevel_score()
 	 * version would make one pass if in a cooperative game, then make
 	 * an unconditional pass to try to clear PLAYER_FLAGS_FLAG.
 	 */
-	const auto clear_flags = (Game_mode & GM_MULTI_COOP)
+	const auto clear_flags{+(Game_mode & GM_MULTI_COOP)
 		// Reset keys
 		? ~player_flags(PLAYER_FLAGS_BLUE_KEY | PLAYER_FLAGS_GOLD_KEY | PLAYER_FLAGS_RED_KEY)
 		:
@@ -631,7 +631,7 @@ kmatrix_result multi_endlevel_score()
 		// Clear capture flag
 		~player_flags(PLAYER_FLAGS_FLAG)
 #endif
-		;
+	};
 	range_for (auto &i, partial_const_range(Players, Netgame.max_numplayers))
 	{
 		auto &obj = *vmobjptr(i.objnum);
@@ -750,7 +750,7 @@ void multi_sort_kill_list()
 		if (o == object_none)
 			return -1;
 		auto &player_info = vcobjptr(o)->ctype.player_info;
-		if (game_mode & GM_MULTI_COOP)
+		if (+(game_mode & GM_MULTI_COOP))
 			return {player_info.mission.score};
 		const auto net_kills_total{player_info.net_kills_total};
 #if DXX_BUILD_DESCENT == 2
@@ -859,7 +859,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	const auto killer_type = killer->type;
 	if (killer_type == OBJ_CNTRLCEN)
 	{
-		if (Game_mode & GM_TEAM)
+		if (+(Game_mode & GM_TEAM))
 			-- team_kills[multi_get_team_from_player(Netgame, killed_pnum)];
 		++ killed.ctype.player_info.net_killed_total;
 		-- killed.ctype.player_info.net_kills_total;
@@ -920,7 +920,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	{
 		if (!game_mode_hoard(Game_mode))
 		{
-			if (Game_mode & GM_TEAM)
+			if (+(Game_mode & GM_TEAM))
 			{
 				team_kills[multi_get_team_from_player(Netgame, killed_pnum)] -= 1;
 			}
@@ -941,7 +941,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 			HUD_init_message(HM_MULTI, "%s %s", killed_name, TXT_SUICIDE);
 
 		/* Bounty mode needs some lovin' */
-		if( Game_mode & GM_BOUNTY && killed_pnum == Bounty_target && multi_i_am_master() )
+		if (+(Game_mode & GM_BOUNTY) && killed_pnum == Bounty_target && multi_i_am_master() )
 		{
 			update_bounty_target();
 		}
@@ -958,7 +958,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 		team_number killed_team{}, killer_team{};
 		DXX_MAKE_VAR_UNDEFINED(killed_team);
 		DXX_MAKE_VAR_UNDEFINED(killer_team);
-		const auto is_team_game = Game_mode & GM_TEAM;
+		const auto is_team_game{+(Game_mode & GM_TEAM)};
 		if (is_team_game)
 		{
 			killed_team = multi_get_team_from_player(Netgame, killed_pnum);
@@ -974,7 +974,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 				killer->ctype.player_info.net_kills_total += adjust;
 				killer->ctype.player_info.KillGoalCount += adjust;
 			}
-			else if( Game_mode & GM_BOUNTY )
+			else if (+(Game_mode & GM_BOUNTY))
 			{
 				/* Did the target die?  Did the target get a kill? */
 				if( killed_pnum == Bounty_target || killer_pnum == Bounty_target )
@@ -1001,7 +1001,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 		++ killed.ctype.player_info.net_killed_total;
 		const char *name0, *name1;
 		if (killer_pnum == Player_num) {
-			if (Game_mode & GM_MULTI_COOP)
+			if (+(Game_mode & GM_MULTI_COOP))
 			{
 				auto &player_info = get_local_plrobj().ctype.player_info;
 				const auto local_player_score = player_info.mission.score;
@@ -1025,7 +1025,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	if (Netgame.KillGoal>0)
 	{
 		const auto TheGoal = Netgame.KillGoal * 5;
-		if (((Game_mode & GM_TEAM)
+		if ((+(Game_mode & GM_TEAM)
 				? team_kills[multi_get_team_from_player(Netgame, killer_pnum)]
 				: killer->ctype.player_info.KillGoalCount
 			) >= TheGoal)
@@ -1067,7 +1067,7 @@ window_event_result multi_do_frame()
 		return window_event_result::ignored;
 	}
 
-	if ((Game_mode & GM_NETWORK) && Netgame.PlayTimeAllowed.count() && lasttime != ThisLevelTime)
+	if (+(Game_mode & GM_NETWORK) && Netgame.PlayTimeAllowed.count() && lasttime != ThisLevelTime)
 	{
 		for (unsigned i = 0; i < N_players; ++i)
 			if (vcplayerptr(i)->connected != player_connection_status::disconnected)
@@ -1106,7 +1106,7 @@ window_event_result multi_do_frame()
 
 	multi_send_message(); // Send any waiting messages
 
-	if (Game_mode & GM_MULTI_ROBOTS)
+	if (+(Game_mode & GM_MULTI_ROBOTS))
 	{
 		multi_check_robot_timeout();
 	}
@@ -1189,7 +1189,7 @@ namespace {
 
 void multi_show_player_list()
 {
-	if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_COOP))
+	if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_COOP))
 		return;
 
 	if (Show_kill_list != show_kill_list_mode::None)
@@ -1247,7 +1247,7 @@ static void multi_message_feedback(void)
 	if (!(!(colon = strstr(Network_message.data(), ": ")) || colon == Network_message.data() || colon - Network_message.data() > CALLSIGN_LEN))
 	{
 		std::size_t feedlen = snprintf(feedback_result, sizeof(feedback_result), "%s ", TXT_MESSAGE_SENT_TO);
-		if (Game_mode & GM_TEAM)
+		if (+(Game_mode & GM_TEAM))
 		{
 			if (const auto o = Netgame.team_name.valid_index(Network_message[0u] - '1'))
 			{
@@ -1334,7 +1334,7 @@ void multi_send_macro(const int fkey)
 
 void multi_send_message_start()
 {
-	if (Game_mode&GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		multi_sending_message[Player_num] = msgsend_state::typing;
 		multi_send_msgsend_state(msgsend_state::typing);
 		multi_message_index = 0;
@@ -1388,7 +1388,7 @@ static void multi_send_message_end(const d_robot_info_array &Robot_info, fvmobjp
 	}
 	else if (!d_strnicmp(Network_message.data(), "/move: "))
 	{
-		if ((Game_mode & GM_NETWORK) && (Game_mode & GM_TEAM))
+		if (+(Game_mode & GM_NETWORK) && +(Game_mode & GM_TEAM))
 		{
 			if (!multi_i_am_master())
 			{
@@ -1443,7 +1443,7 @@ static void multi_send_message_end(const d_robot_info_array &Robot_info, fvmobjp
 		}
 	}
 
-	else if (!d_strnicmp(Network_message.data(), "/kick: ") && (Game_mode & GM_NETWORK))
+	else if (!d_strnicmp(Network_message.data(), "/kick: ") && +(Game_mode & GM_NETWORK))
 	{
 		if (!multi_i_am_master())
 		{
@@ -1513,7 +1513,7 @@ static void multi_send_message_end(const d_robot_info_array &Robot_info, fvmobjp
 				return;
 			}
 	}
-	else if (!d_stricmp (Network_message.data(), "/killreactor") && (Game_mode & GM_NETWORK) && !LevelUniqueControlCenterState.Control_center_destroyed)
+	else if (!d_stricmp (Network_message.data(), "/killreactor") && +(Game_mode & GM_NETWORK) && !LevelUniqueControlCenterState.Control_center_destroyed)
 	{
 		if (!multi_i_am_master())
 			HUD_init_message(HM_MULTI, "Only %s can kill the reactor this way!", static_cast<const char *>(Players[multi_who_is_master()].callsign));
@@ -1719,7 +1719,7 @@ static void multi_do_message(const playernum_t pnum, const multiplayer_rspan<mul
 		 * then show it.  Otherwise, hide it.
 		 */
 		if ( (!d_strnicmp(static_cast<const char *>(get_local_player().callsign), buf+loc, colon-(buf+loc))) ||
-			((Game_mode & GM_TEAM) && ({
+			(+(Game_mode & GM_TEAM) && ({
 				const auto local_player_team = multi_get_team_from_player(Netgame, Player_num);
 				(buf + loc + 1 == colon && ({
 					/* The length is correct, so this might or might not be a team number. */
@@ -1946,7 +1946,7 @@ static void multi_do_kill_client(object_array &Objects, const playernum_t pnum, 
 
 	multi_compute_kill(LevelSharedRobotInfoState.Robot_info, Objects.imptridx(killer), Objects.vmptridx(killed));
 
-	if (Game_mode & GM_BOUNTY) // update in case if needed... we could attach this to this packet but... meh...
+	if (+(Game_mode & GM_BOUNTY)) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
 }
 
@@ -1994,7 +1994,7 @@ static void multi_do_escape(fvmobjptridx &vmobjptridx, const playernum_t pnum, c
 		connected = player_connection_status::escape_tunnel;
 	}
 	HUD_init_message(HM_MULTI, "%s %s", static_cast<const char *>(plr.callsign), txt);
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 		plr.connected = connected;
 	create_player_appearance_effect(Vclip, objnum);
 	multi_make_player_ghost(buf[1]);
@@ -2058,7 +2058,7 @@ void multi_disconnect_player(const playernum_t pnum)
 			newdemo_record_multi_disconnect(pnum);
 
 		// Bounty target left - select a new one
-		if( Game_mode & GM_BOUNTY && pnum == Bounty_target && multi_i_am_master() )
+		if(+(Game_mode & GM_BOUNTY) && pnum == Bounty_target && multi_i_am_master())
 		{
 			update_bounty_target();
 			/* Send this new data */
@@ -2476,10 +2476,10 @@ static void multi_reset_object_texture(object_base &objp)
                 return;
 
 	const auto player_id = get_player_id(objp);
-	const auto id = (Game_mode & GM_TEAM)
+	const auto id{+(Game_mode & GM_TEAM)
 		? static_cast<unsigned>(multi_get_team_from_player(Netgame, player_id))
-		: player_id;
-
+		: player_id
+	};
 	auto &pobj_info = objp.rtype.pobj_info;
 	pobj_info.alt_textures = id;
 	if (id)
@@ -2675,7 +2675,7 @@ void multi_send_endlevel_start()
 #endif
 
 	multi_send_data(buf, multiplayer_data_priority::_2);
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		get_local_player().connected = player_connection_status::escape_tunnel;
 		multi::dispatch->send_endlevel_packet();
@@ -2869,7 +2869,7 @@ void multi_send_kill(const vmobjptridx_t objnum)
 
 	multi_strip_robots(Player_num);
 
-	if (Game_mode & GM_BOUNTY && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
+	if (+(Game_mode & GM_BOUNTY) && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
 }
 
@@ -3045,7 +3045,7 @@ static void multi_digi_play_sample(const sound_effect soundnum, const fix max_vo
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptridx = Objects.vcptridx;
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_play_sound(soundnum, max_volume, once);
 	digi_link_sound_to_object(soundnum, vcobjptridx(Viewer), 0, max_volume, once);
 }
@@ -3066,7 +3066,7 @@ namespace dsx {
 
 void multi_digi_link_sound_to_pos(const sound_effect soundnum, const vcsegptridx_t segnum, const sidenum_t sidenum, const vms_vector &pos, const int forever, const fix max_volume)
 {
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_play_sound(soundnum, max_volume, sound_stack::allow_stacking);
 	digi_link_sound_to_pos(soundnum, segnum, sidenum, pos, forever, max_volume);
 }
@@ -3095,7 +3095,7 @@ void multi_send_score()
 	// synced.
 	int count{0};
 
-	if (Game_mode & GM_MULTI_COOP) {
+	if (+(Game_mode & GM_MULTI_COOP)) {
 		multi_sort_kill_list();
 		count += 1;
 		multi_command<multiplayer_command_t::MULTI_SCORE> multibuf;
@@ -3759,7 +3759,7 @@ void multi_update_objects_for_non_cooperative()
 		const auto obj_type = objp->type;
 		if (obj_type == OBJ_PLAYER || obj_type == OBJ_GHOST)
 			continue;
-		else if (obj_type == OBJ_ROBOT && (game_mode & GM_MULTI_ROBOTS))
+		else if (obj_type == OBJ_ROBOT && +(game_mode & GM_MULTI_ROBOTS))
 			continue;
 		else if (obj_type == OBJ_POWERUP)
 		{
@@ -4415,7 +4415,7 @@ void multi_do_orb_bonus(const playernum_t pnum, const multiplayer_rspan<multipla
 	if (pnum==Player_num)
 		digi_start_sound_queued (sound_effect::SOUND_HUD_YOU_GOT_GOAL,F1_0*2);
 	else
-		digi_play_sample((Game_mode & GM_TEAM)
+		digi_play_sample(+(Game_mode & GM_TEAM)
 			? (multi_get_team_from_player(Netgame, pnum) == team_number::blue
 				? sound_effect::SOUND_HUD_BLUE_GOT_GOAL
 				: sound_effect::SOUND_HUD_RED_GOT_GOAL
@@ -4510,7 +4510,7 @@ static void multi_do_got_orb (const playernum_t pnum)
 	auto &vmobjptr = Objects.vmptr;
 	assert(game_mode_hoard(Game_mode));
 
-	digi_play_sample((Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == multi_get_team_from_player(Netgame, Player_num)
+	digi_play_sample(+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == multi_get_team_from_player(Netgame, Player_num)
 		? sound_effect::SOUND_FRIEND_GOT_ORB
 		: sound_effect::SOUND_OPPONENT_GOT_ORB, F1_0*2);
 
@@ -4828,7 +4828,7 @@ void multi_add_lifetime_killed ()
 	// This function adds a "killed" to lifetime stats of this player, and possibly
 	// gives a demotion.  If so, it will tell everyone else
 
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 		return;
 
 	multi_adjust_lifetime_ranking(PlayerCfg.NetlifeKilled, 1);
@@ -4880,9 +4880,9 @@ int multi_maybe_disable_friendly_fire(const object_base *const killer)
 		return 0;
 	if (killer->type != OBJ_PLAYER) // not a player -> harm me!
 		return 0;
-	if (auto is_coop = Game_mode & GM_MULTI_COOP) // coop mode -> don't harm me!
+	if (const auto is_coop{+(Game_mode & GM_MULTI_COOP)}) // coop mode -> don't harm me!
 		return is_coop;
-	else if (Game_mode & GM_TEAM) // team mode - find out if killer is in my team
+	else if (+(Game_mode & GM_TEAM)) // team mode - find out if killer is in my team
 	{
 		if (multi_get_team_from_player(Netgame, Player_num) == multi_get_team_from_player(Netgame, get_player_id(*killer))) // in my team -> don't harm me!
 			return 1;
@@ -5182,7 +5182,7 @@ void multi_send_gmode_update()
 {
 	if (!multi_i_am_master())
 		return;
-	if (!(Game_mode & GM_TEAM || Game_mode & GM_BOUNTY)) // expand if necessary
+	if (!(+(Game_mode & GM_TEAM) || +(Game_mode & GM_BOUNTY))) // expand if necessary
 		return;
 	multi_command<multiplayer_command_t::MULTI_GMODE_UPDATE> multibuf;
 	multibuf[1] = Netgame.team_vector;
@@ -5197,7 +5197,7 @@ static void multi_do_gmode_update(const multiplayer_rspan<multiplayer_command_t:
 	auto &vmobjptr = Objects.vmptr;
 	if (multi_i_am_master())
 		return;
-	if (Game_mode & GM_TEAM)
+	if (+(Game_mode & GM_TEAM))
 	{
 		if (buf[1] != Netgame.team_vector)
 		{
@@ -5208,7 +5208,7 @@ static void multi_do_gmode_update(const multiplayer_rspan<multiplayer_command_t:
 			reset_cockpit();
 		}
 	}
-	if (Game_mode & GM_BOUNTY)
+	if (+(Game_mode & GM_BOUNTY))
 	{
 		Bounty_target = buf[2]; // accept silently - message about change we SHOULD have gotten due to kill computation
 	}
@@ -5314,7 +5314,7 @@ static void MultiLevelInv_CountLevelPowerups()
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptridx = Objects.vmptridx;
-        if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_COOP))
+        if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_COOP))
                 return;
         MultiLevelInv.Current = {};
 
@@ -5445,7 +5445,7 @@ static void MultiLevelInv_CountPlayerInventory()
 						powerup_flags.process(PLAYER_FLAGS_AMMO_RACK, powerup_type_t::POW_AMMO_RACK);
 						powerup_flags.process(PLAYER_FLAGS_AFTERBURNER, powerup_type_t::POW_AFTERBURNER);
 						powerup_flags.process(PLAYER_FLAGS_HEADLIGHT, powerup_type_t::POW_HEADLIGHT);
-                        if ((Game_mode & GM_CAPTURE) && (player_info.powerup_flags & PLAYER_FLAGS_FLAG))
+                        if (+(Game_mode & GM_CAPTURE) && (player_info.powerup_flags & PLAYER_FLAGS_FLAG))
                         {
 							++Current[(multi_get_team_from_player(Netgame, i) == team_number::blue) ? powerup_type_t::POW_FLAG_RED : powerup_type_t::POW_FLAG_BLUE];
                         }
@@ -5465,7 +5465,7 @@ static void MultiLevelInv_CountPlayerInventory()
 #endif
                 }
 #if DXX_BUILD_DESCENT == 2
-                if (Game_mode & GM_MULTI_ROBOTS) // Add (possible) thief inventory
+                if (+(Game_mode & GM_MULTI_ROBOTS)) // Add (possible) thief inventory
                 {
                         range_for (auto &i, LevelUniqueObjectState.ThiefState.Stolen_items)
                         {
@@ -5502,7 +5502,7 @@ namespace dsx {
 bool MultiLevelInv_AllowSpawn(powerup_type_t powerup_type)
 {
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
-	if ((Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed || Network_status != network_state::playing)
+	if (+(Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed || Network_status != network_state::playing)
                 return 0;
 
         int req_amount{1}; // required amount of item to drop a powerup.
@@ -5529,7 +5529,7 @@ namespace {
 void MultiLevelInv_Repopulate(fix frequency)
 {
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
-	if (!multi_i_am_master() || (Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed)
+	if (!multi_i_am_master() || +(Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed)
                 return;
 
 	MultiLevelInv_Recount(); // recount current items

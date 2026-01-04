@@ -145,7 +145,7 @@ static void show_framerate(grs_canvas &canvas)
 					break;
 				case HudType::Alternate1:
 					line_displacement = line_spacing * 6;
-					if (Game_mode & GM_MULTI)
+					if (+(Game_mode & GM_MULTI))
 						line_displacement -= line_spacing * 4;
 					break;
 				case HudType::Alternate2:
@@ -230,7 +230,7 @@ static void show_netplayerinfo(grs_canvas &canvas)
 	// player information (name, kills, ping, game efficiency)
 	y += line_spacing * 2;
 	gr_string(canvas, game_font, x, y, "player");
-	gr_string(canvas, game_font, x + fspacx8 * 7, y, ((Game_mode & GM_MULTI_COOP)
+	gr_string(canvas, game_font, x + fspacx8 * 7, y, (+(Game_mode & GM_MULTI_COOP)
 		? "score"
 		: (gr_string(canvas, game_font, x + fspacx8 * 12, y, "deaths"), "kills")
 	));
@@ -253,10 +253,10 @@ static void show_netplayerinfo(grs_canvas &canvas)
 		{
 			auto &plrobj = *vcobjptr(plr.objnum);
 			auto &player_info = plrobj.ctype.player_info;
-			auto v = ((Game_mode & GM_MULTI_COOP)
+			auto v{(+(Game_mode & GM_MULTI_COOP)
 				? player_info.mission.score
 				: (gr_printf(canvas, game_font, x + fspacx8 * 12, y,"%-6d", player_info.net_killed_total), player_info.net_kills_total)
-			);
+			)};
 			gr_printf(canvas, game_font, x + fspacx8 * 7, y, "%-6d", v);
 		}
 
@@ -268,7 +268,7 @@ static void show_netplayerinfo(grs_canvas &canvas)
 	y += (line_spacing * 2) + (line_spacing * (MAX_PLAYERS - N_players));
 
 	// printf team scores
-	if (Game_mode & GM_TEAM)
+	if (+(Game_mode & GM_TEAM))
 	{
 		gr_set_fontcolor(canvas, 255, -1);
 		gr_string(canvas, game_font, x, y, "team");
@@ -400,7 +400,7 @@ static void render_countdown_gauge(grs_canvas &canvas)
 			{
 				if (!(Game_mode & GM_MULTI))
 					return;
-				if (Game_mode & GM_MULTI_ROBOTS)
+				if (+(Game_mode & GM_MULTI_ROBOTS))
 					return;
 			}
 		}
@@ -587,11 +587,11 @@ static bool choose_missile_viewer()
 				continue;
 			if (!better_match(other_player_missile, o))
 				continue;
-			else if (game_mode & GM_MULTI_COOP)
+			else if (+(game_mode & GM_MULTI_COOP))
 			{
 				/* Always allow missiles of other players */
 			}
-			else if (game_mode & GM_TEAM)
+			else if (+(game_mode & GM_TEAM))
 			{
 				/* Allow missiles from same team */
 				if (multi_get_team_from_player(Netgame, Player_num) != multi_get_team_from_player(Netgame, get_player_id(vcobjptr(o.ctype.laser_info.parent_num))))
@@ -734,7 +734,7 @@ static void show_one_extra_view(grs_canvas &canvas, const gauge_inset_window_vie
 
 	         RenderingType=255; // don't handle coop stuff			
 				
-				if (player < Players.size() && vcplayerptr(player)->connected != player_connection_status::disconnected && ((Game_mode & GM_MULTI_COOP) || ((Game_mode & GM_TEAM) && (multi_get_team_from_player(Netgame, player) == multi_get_team_from_player(Netgame, Player_num)))))
+				if (player < Players.size() && vcplayerptr(player)->connected != player_connection_status::disconnected && (+(Game_mode & GM_MULTI_COOP) || (+(Game_mode & GM_TEAM) && (multi_get_team_from_player(Netgame, player) == multi_get_team_from_player(Netgame, Player_num)))))
 				{
 					auto &p = *vcplayerptr(player);
 					do_cockpit_window_view(canvas, w, *vcobjptr(p.objnum), 0, weapon_box_user::coop, p.callsign);
@@ -887,7 +887,7 @@ void game_render_frame_mono(const d_robot_info_array &Robot_info, const control_
 	show_extra_views(*grd_curcanv);		//missile view, buddy bot, etc.
 #endif
 
-	if (netplayerinfo_on && Game_mode & GM_MULTI)
+	if (netplayerinfo_on && +(Game_mode & GM_MULTI))
 	{
 		gr_set_default_canvas();
 		show_netplayerinfo(*grd_curcanv);

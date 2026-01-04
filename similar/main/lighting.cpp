@@ -573,7 +573,7 @@ void toggle_headlight_active(object &player)
 	auto &player_info = player.ctype.player_info;
 	if (player_info.powerup_flags & PLAYER_FLAGS_HEADLIGHT) {
 		player_info.powerup_flags ^= PLAYER_FLAGS_HEADLIGHT_ON;
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_flags(player.id);
 	}
 }

@@ -311,7 +311,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
 	auto result = window_event_result::ignored;
 
-	if ((Game_mode & GM_MULTI) && vcplayerptr(pnum)->connected != player_connection_status::playing) // as a host we may want to handle triggers for our clients. to do that properly we must check wether we (host) or client is actually playing.
+	if (+(Game_mode & GM_MULTI) && vcplayerptr(pnum)->connected != player_connection_status::playing) // as a host we may want to handle triggers for our clients. to do that properly we must check wether we (host) or client is actually playing.
 		return window_event_result::handled;
 	auto &Triggers = LevelUniqueWallSubsystemState.Triggers;
 	auto &vmtrgptr = Triggers.vmptr;
@@ -340,9 +340,9 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 			if (Newdemo_state == ND_STATE_RECORDING)		// stop demo recording
 				Newdemo_state = ND_STATE_PAUSED;
 
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_endlevel_start(multi_endlevel_type::secret);
-			if (Game_mode & GM_NETWORK)
+			if (+(Game_mode & GM_NETWORK))
 				multi::dispatch->do_protocol_frame(1, 1);
 			result = std::max(PlayerFinishedLevel(next_level_request_secret_flag::use_secret), result);
 			LevelUniqueControlCenterState.Control_center_destroyed = 0;
@@ -363,7 +363,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 	}
 
 	if (trigger.flags & TRIGGER_MATCEN) {
-		if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS))
+		if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_ROBOTS))
 			do_matcen(trigger);
 	}
 
@@ -428,7 +428,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 				break;
 			}
 
-			if (Game_mode & GM_MULTI) {
+			if (+(Game_mode & GM_MULTI)) {
 				HUD_init_message_literal(HM_DEFAULT, "Secret Level Teleporter disabled in multiplayer!");
 				digi_play_sample( sound_effect::SOUND_BAD_SELECTION, F1_0 );
 				break;
@@ -493,7 +493,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 			break;
 
 		case trigger_action::matcen:
-			if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS))
+			if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_ROBOTS))
 				do_matcen(trigger);
 			break;
 
@@ -531,7 +531,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 // Checks for a trigger whenever an object hits a trigger side.
 window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side, object &plrobj, const vcobjptridx_t objnum, int shot)
 {
-	if ((Game_mode & GM_MULTI) && (get_local_player().connected != player_connection_status::playing)) // as a host we may want to handle triggers for our clients. so this function may be called when we are not playing.
+	if (+(Game_mode & GM_MULTI) && (get_local_player().connected != player_connection_status::playing)) // as a host we may want to handle triggers for our clients. so this function may be called when we are not playing.
 		return window_event_result::ignored;
 
 #if DXX_BUILD_DESCENT == 1
@@ -565,7 +565,7 @@ window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side,
 				return result;
 		}
 
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_trigger(trigger_num);
 	}
 

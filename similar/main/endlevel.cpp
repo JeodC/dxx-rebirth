@@ -529,7 +529,7 @@ static movie_play_status start_endlevel_movie()
 
 	save_pal = gr_palette;
 
-	const auto r = PlayMovie({}, movie_name, (Game_mode & GM_MULTI) ? play_movie_warn_missing::verbose : play_movie_warn_missing::urgent);
+	const auto r{PlayMovie({}, movie_name, +(Game_mode & GM_MULTI) ? play_movie_warn_missing::verbose : play_movie_warn_missing::urgent)};
 	if (Newdemo_state == ND_STATE_PLAYBACK) {
 		set_screen_mode(SCREEN_GAME);
 		gr_palette = save_pal;
@@ -694,7 +694,7 @@ window_event_result start_endlevel_sequence()
 
 	get_local_plrobj().ctype.player_info.homing_object_dist = -F1_0; // Turn off homing sound.
 
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		multi_send_endlevel_start(multi_endlevel_type::normal);
 		multi::dispatch->do_protocol_frame(1, 1);
 	}
@@ -745,7 +745,7 @@ window_event_result start_endlevel_sequence()
 		PlayerUniqueEndlevelState.transition_segnum = get_tunnel_transition_segment(tunnel_length, console_seg, exit_console_side);
 	}
 
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		multi_send_endlevel_start(multi_endlevel_type::normal);
 		multi::dispatch->do_protocol_frame(1, 1);
 	}

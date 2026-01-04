@@ -498,7 +498,7 @@ static void do_game_pause()
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptr = Objects.vcptr;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		netplayerinfo_on= !netplayerinfo_on;
 		return;
@@ -640,7 +640,7 @@ static window_event_result HandleDemoKey(int key)
 		case KEY_F4:	Newdemo_show_percentage = !Newdemo_show_percentage; break;
 		KEY_MAC(case KEY_COMMAND+KEY_7:)
 		case KEY_F7:
-			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % ((Newdemo_game_mode & GM_TEAM) ? 4 : 3));
+			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % (+(Newdemo_game_mode & GM_TEAM) ? 4 : 3));
 			break;
 		case KEY_ESC:
 			if (CGameArg.SysAutoDemo)
@@ -741,7 +741,7 @@ static int select_next_window_function(const gauge_inset_window_view w)
 			[[fallthrough]];
 		case cockpit_3d_view::Coop:
 			Marker_viewer_num[w] = game_marker_index::None;
-			if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_TEAM)) {
+			if (+(Game_mode & GM_MULTI_COOP) || +(Game_mode & GM_TEAM)) {
 				PlayerCfg.Cockpit3DView[w] = cockpit_3d_view::Coop;
 				for (;;)
 				{
@@ -756,7 +756,7 @@ static int select_next_window_function(const gauge_inset_window_view w)
 					if (vcplayerptr(cvp)->connected != player_connection_status::playing)
 						continue;
 
-					if (Game_mode & GM_MULTI_COOP)
+					if (+(Game_mode & GM_MULTI_COOP))
 						break;
 					else if (multi_get_team_from_player(Netgame, cvp) == multi_get_team_from_player(Netgame, Player_num))
 						break;
@@ -767,7 +767,7 @@ static int select_next_window_function(const gauge_inset_window_view w)
 			[[fallthrough]];
 		case cockpit_3d_view::Marker:
 		case_marker:;
-			if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view) {	//anarchy only
+			if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view) {	//anarchy only
 				PlayerCfg.Cockpit3DView[w] = cockpit_3d_view::Marker;
 				auto &mvn = Marker_viewer_num[w];
 				const auto gmi0 = convert_player_marker_index_to_game_marker_index(Game_mode, Netgame.max_numplayers, Player_num, player_marker_index::_0);
@@ -799,7 +799,7 @@ static window_event_result HandleSystemKey(int key)
 		{
 			case KEY_ESC:
 			{
-				const bool allow_saveload = !(Game_mode & GM_MULTI) || ((Game_mode & GM_MULTI_COOP) && Player_num == 0);
+				const bool allow_saveload{!(Game_mode & GM_MULTI) || (+(Game_mode & GM_MULTI_COOP) && Player_num == 0)};
 				const auto choice = nm_messagebox_str(menu_title{nullptr}, allow_saveload ? nm_messagebox_tie("Abort Game", TXT_OPTIONS_, "Save Game...", TXT_LOAD_GAME) : nm_messagebox_tie("Abort Game", TXT_OPTIONS_), menu_subtitle{"Game Menu"});
 				switch(choice)
 				{
@@ -832,7 +832,7 @@ static window_event_result HandleSystemKey(int key)
 	{
                 KEY_MAC( case KEY_COMMAND+KEY_PAUSE+KEY_SHIFTED: )
                 case KEY_PAUSE+KEY_SHIFTED:
-                        if (Game_mode & GM_MULTI)
+                        if (+(Game_mode & GM_MULTI))
                                 show_netgame_info(Netgame);
                         break;
 		KEY_MAC( case KEY_COMMAND+KEY_P: )
@@ -860,7 +860,7 @@ static window_event_result HandleSystemKey(int key)
 #endif
 
 		KEY_MAC(case KEY_COMMAND+KEY_1:)
-		case KEY_F1:				if (Game_mode & GM_MULTI) show_netgame_help(); else show_help();	break;
+		case KEY_F1: if (+(Game_mode & GM_MULTI)) show_netgame_help(); else show_help(); break;
 
 		KEY_MAC(case KEY_COMMAND+KEY_2:)
 		case KEY_F2:
@@ -893,8 +893,8 @@ static window_event_result HandleSystemKey(int key)
 
 		KEY_MAC(case KEY_COMMAND+KEY_7:)
 		case KEY_F7:
-			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % ((Game_mode & GM_TEAM) ? 4 : 3));
-			if (Game_mode & GM_MULTI)
+			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % (+(Game_mode & GM_TEAM) ? 4 : 3));
+			if (+(Game_mode & GM_MULTI))
 				multi_sort_kill_list();
 			break;
 
@@ -963,12 +963,12 @@ static window_event_result HandleSystemKey(int key)
 		KEY_MAC(case KEY_COMMAND+KEY_SHIFTED+KEY_O:)
 		KEY_MAC(case KEY_COMMAND+KEY_ALTED+KEY_3:)
 		case KEY_ALTED+KEY_F3:
-			if (!((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
+			if (!(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
 				state_restore_all(1, secret_restore::none, nullptr, blind_save::no);
 			break;
 		KEY_MAC(case KEY_COMMAND+KEY_O:)
 		case KEY_ALTED+KEY_SHIFTED+KEY_F3:
-			if (!((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
+			if (!(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
 				state_restore_all(1, secret_restore::none, nullptr, blind_save::yes);
 			break;
 
@@ -1073,7 +1073,7 @@ static window_event_result HandleGameKey(int key, control_info &Controls)
 			{
 				auto &BuddyState = LevelUniqueObjectState.BuddyState;
 #if DXX_USE_MULTIPLAYER
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					if (!check_warn_local_player_can_control_guidebot(Objects.vcptr, BuddyState, Netgame))
 						return window_event_result::handled;
@@ -1117,7 +1117,7 @@ static window_event_result HandleGameKey(int key, control_info &Controls)
 			}
 			return window_event_result::handled;
 		case KEY_ALTED + KEY_1:
-			if (Netgame.RefusePlayers && WaitForRefuseAnswer && (Game_mode & GM_TEAM))
+			if (Netgame.RefusePlayers && WaitForRefuseAnswer && +(Game_mode & GM_TEAM))
 				{
 					RefuseThisPlayer=1;
 					HUD_init_message_literal(HM_MULTI, "Player accepted!");
@@ -1126,7 +1126,7 @@ static window_event_result HandleGameKey(int key, control_info &Controls)
 				}
 			return window_event_result::handled;
 		case KEY_ALTED + KEY_2:
-			if (Netgame.RefusePlayers && WaitForRefuseAnswer && (Game_mode & GM_TEAM))
+			if (Netgame.RefusePlayers && WaitForRefuseAnswer && +(Game_mode & GM_TEAM))
 				{
 					RefuseThisPlayer=1;
 					HUD_init_message_literal(HM_MULTI, "Player accepted!");
@@ -1411,7 +1411,7 @@ static window_event_result HandleTestKey(const d_level_shared_robot_info_state &
 			auto &pl_flags = player_info.powerup_flags;
 			pl_flags ^= PLAYER_FLAGS_CLOAKED;
 			if (pl_flags & PLAYER_FLAGS_CLOAKED) {
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_cloak();
 				ai_do_cloak_stuff();
 				player_info.cloak_time = {GameTime64};
@@ -1698,7 +1698,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 	auto &vmobjptr = Objects.vmptr;
 	auto &vmobjptridx = Objects.vmptridx;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		return window_event_result::ignored;
 
 	static std::array<char, CHEAT_MAX_LEN> cheat_buffer;
@@ -2039,7 +2039,7 @@ public:
 		this->menu_bit_wrapper_t::operator=(n);
 		if (n)
 		{
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_cloak();
 			ai_do_cloak_stuff();
 			get().cloak_time = {GameTime64};
@@ -2167,7 +2167,7 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 		exploding_flag=0;
 	}
 	if (Player_dead_state != player_dead_state::no &&
-		!((Game_mode & GM_MULTI) &&
+		!(+(Game_mode & GM_MULTI) &&
 			(multi_sending_message[Player_num] != msgsend_state::none || multi_defining_message != multi_macro_message_index::None)
 		)
 	)
@@ -2185,13 +2185,13 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 			return MarkerInputMessage(key, Controls);
 		}
 #endif
-		if ( (Game_mode & GM_MULTI) && (multi_sending_message[Player_num] != msgsend_state::none || multi_defining_message != multi_macro_message_index::None) )
+		if (+(Game_mode & GM_MULTI) && (multi_sending_message[Player_num] != msgsend_state::none || multi_defining_message != multi_macro_message_index::None) )
 		{
 			return multi_message_input_sub(LevelSharedRobotInfoState.Robot_info, key, Controls);
 		}
 
 #ifndef RELEASE
-		if ((key&KEY_DEBUGGED)&&(Game_mode&GM_MULTI))   {
+		if ((key & KEY_DEBUGGED) && +(Game_mode & GM_MULTI)) {
 			Network_message_reciever = 100;		// Send to everyone...
 			snprintf(Network_message.data(), Network_message.size(), "%s %s", TXT_I_AM_A, TXT_CHEATER);
 		}
@@ -2246,7 +2246,7 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 		if ( Controls.state.automap )
 		{
 			Controls.state.automap = 0;
-			if (Player_is_dead != player_dead_state::no || !((Game_mode & GM_MULTI) && LevelUniqueControlCenterState.Control_center_destroyed && LevelUniqueControlCenterState.Countdown_seconds_left < 10))
+			if (Player_is_dead != player_dead_state::no || !(+(Game_mode & GM_MULTI) && LevelUniqueControlCenterState.Control_center_destroyed && LevelUniqueControlCenterState.Countdown_seconds_left < 10))
 			{
 				do_automap();
 				return window_event_result::handled;

@@ -1068,7 +1068,7 @@ static unsigned allow_uncapped_turning()
 		return PlayerCfg.MouselookFlags & MouselookMode::Singleplayer;
 	return PlayerCfg.MouselookFlags &
 		Netgame.MouselookFlags &
-		((game_mode & GM_MULTI_COOP)
+		(+(game_mode & GM_MULTI_COOP)
 		? MouselookMode::MPCoop
 		: MouselookMode::MPAnarchy);
 }
@@ -1082,7 +1082,7 @@ static unsigned release_pitch_lock()
 
 	return PlayerCfg.PitchLockFlags &
 		Netgame.PitchLockFlags &
-		((game_mode & GM_MULTI_COOP) ? MouselookMode::MPCoop : MouselookMode::MPAnarchy);
+		(+(game_mode & GM_MULTI_COOP) ? MouselookMode::MPCoop : MouselookMode::MPAnarchy);
 }
 
 }

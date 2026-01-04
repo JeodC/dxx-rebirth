@@ -963,7 +963,7 @@ static void hud_show_score(grs_canvas &canvas, const player_info &player_info, c
 
 	const char *label;
 	int value;
-	if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+	if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
 	{
 		label = TXT_KILLS;
 		value = player_info.net_kills_total;
@@ -1021,7 +1021,7 @@ static void hud_show_score_added(grs_canvas &canvas, const game_mode_flags Game_
 {
 	int	color;
 
-	if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+	if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
 		return;
 
 	if (score_display == 0)
@@ -2047,7 +2047,7 @@ static void common_add_points_to_score(const int points, int &score, const game_
 	const auto prev_score{score};
 	score += points;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		/* In single player, fall through and check whether an extra
 		 * life has been earned.  In multiplayer, extra lives cannot be
 		 * earned, so return.
@@ -2072,14 +2072,14 @@ namespace dsx {
 
 void add_points_to_score(player_info &player_info, const unsigned points, const game_mode_flags Game_mode)
 {
-	if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+	if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
 		return;
 	score_time += f1_0*2;
 	score_display += points;
 	if (score_time > f1_0*4) score_time = f1_0*4;
 
 	common_add_points_to_score(points, player_info.mission.score, Game_mode);
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 		multi_send_score();
 }
 
@@ -3461,7 +3461,7 @@ static void hud_show_kill_list(fvcobjptr &vcobjptr, grs_canvas &canvas, const ga
 
 	x1 = fspacx43;
 
-	const auto is_multiplayer_cooperative = Game_mode & GM_MULTI_COOP;
+	const auto is_multiplayer_cooperative{+(Game_mode & GM_MULTI_COOP)};
 	if (is_multiplayer_cooperative)
 		x1 = fspacx(31);
 
@@ -3536,7 +3536,7 @@ static void hud_show_kill_list(fvcobjptr &vcobjptr, grs_canvas &canvas, const ga
 
 		if (Show_kill_list == show_kill_list_mode::team_kills)
 			name = Netgame.team_name[(team_number{i})];
-		else if ((Game_mode & GM_BOUNTY) && player_num == Bounty_target && (GameTime64 & 0x10000))
+		else if (+(Game_mode & GM_BOUNTY) && player_num == Bounty_target && (GameTime64 & 0x10000))
 		{
 			name = "[TARGET]";
 		}
@@ -3646,13 +3646,13 @@ void show_HUD_names(const d_robot_info_array &Robot_info, grs_canvas &canvas, co
 
 		const auto &&objp = vcobjptridx(objnum);
 		const auto &pl_flags = objp->ctype.player_info.powerup_flags;
-		const auto is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && multi_get_team_from_player(Netgame, pnum) == multi_get_team_from_player(Netgame, Player_num)));
+		const auto is_friend{(+(Game_mode & GM_MULTI_COOP) || (+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == multi_get_team_from_player(Netgame, Player_num)))};
 		const auto show_friend_name{Show_reticle_name};
 		const auto is_cloaked = pl_flags & PLAYER_FLAGS_CLOAKED;
 		const auto show_enemy_name = Show_reticle_name && Netgame.ShowEnemyNames && !is_cloaked;
 		const auto show_name = is_friend ? show_friend_name : show_enemy_name;
 		const auto show_typing = is_friend || !is_cloaked;
-		const auto is_bounty_target = (Game_mode & GM_BOUNTY) && pnum == Bounty_target;
+		const auto is_bounty_target{+(Game_mode & GM_BOUNTY) && pnum == Bounty_target};
 		const auto show_indi = (is_friend || !is_cloaked) &&
 #if DXX_BUILD_DESCENT == 1
 			is_bounty_target;
@@ -3744,7 +3744,7 @@ void show_HUD_names(const d_robot_info_array &Robot_info, grs_canvas &canvas, co
 								((multi_get_team_from_player(Netgame, pnum) == team_number::blue) ? c.r : c.b) = 31;
 						else if (game_mode_hoard(Game_mode))
 						{
-								((Game_mode & GM_TEAM)
+								(+(Game_mode & GM_TEAM)
 									? ((multi_get_team_from_player(Netgame, pnum) == team_number::blue) ? c.b : c.r)
 									: c.g
 								) = 31;
@@ -3801,7 +3801,7 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 		gr_set_fontcolor(canvas, BM_XRGB(0, 31, 0), -1);
 			auto &game_font = *GAME_FONT;
 			const auto &&line_spacing = LINE_SPACING(game_font, game_font);
-			const auto is_multiplayer{Game_mode & GM_MULTI};
+			const auto is_multiplayer{+(Game_mode & GM_MULTI)};
 			int y{};
 			switch (PlayerCfg.CockpitMode[1])
 			{
@@ -3850,7 +3850,7 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 
 			auto &game_font = *GAME_FONT;
 			const auto &&line_spacing = LINE_SPACING(game_font, game_font);
-			const unsigned base_y = canvas.cv_bitmap.bm_h - ((Game_mode & GM_MULTI) ? (line_spacing * (5 + (N_players > 3))) : line_spacing);
+			const unsigned base_y = canvas.cv_bitmap.bm_h - (+(Game_mode & GM_MULTI) ? (line_spacing * (5 + (N_players > 3))) : line_spacing);
 			unsigned current_y = base_y;
 			hud_show_energy(canvas, player_info, game_font, current_y);
 			current_y -= line_spacing;
@@ -3860,12 +3860,12 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 			hud_show_afterburner(canvas, player_info, game_font, current_y);
 			current_y -= line_spacing;
 #endif
-			hud_show_weapons(canvas, plrobj, game_font, Game_mode & GM_MULTI);
+			hud_show_weapons(canvas, plrobj, game_font, +(Game_mode & GM_MULTI));
 #if DXX_BUILD_DESCENT == 1
 			if (!PCSharePig)
 #endif
 			{
-				if (!((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
+				if (!(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
 					/* In non-cooperative multiplayer games, everyone always has all
 					 * keys.  Hide them to reduce visual clutter.
 					 */
@@ -3878,7 +3878,7 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 		}
 
 #ifndef RELEASE
-		if (!(Game_mode&GM_MULTI && Show_kill_list != show_kill_list_mode::None))
+		if (!(+(Game_mode & GM_MULTI) && Show_kill_list != show_kill_list_mode::None))
 			show_time(canvas, *canvas.cv_font);
 #endif
 
@@ -3892,8 +3892,8 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 		HUD_render_message_frame(canvas);
 
 		if (PlayerCfg.CockpitMode[1] != cockpit_mode_t::status_bar)
-			hud_show_lives(hudctx, HUD_SCALE_AR(grd_curscreen->get_screen_width(), grd_curscreen->get_screen_height(), multires_gauge_graphic), player_info, Game_mode & GM_MULTI);
-		if (Game_mode&GM_MULTI && Show_kill_list != show_kill_list_mode::None)
+			hud_show_lives(hudctx, HUD_SCALE_AR(grd_curscreen->get_screen_width(), grd_curscreen->get_screen_height(), multires_gauge_graphic), player_info, +(Game_mode & GM_MULTI));
+		if (+(Game_mode & GM_MULTI) && Show_kill_list != show_kill_list_mode::None)
 			hud_show_kill_list(vcobjptr, canvas, Game_mode);
 		if (PlayerCfg.CockpitMode[1] != cockpit_mode_t::letterbox)
 			show_reticle(canvas, player_info, PlayerCfg.ReticleType, 1);
@@ -4007,8 +4007,8 @@ void render_gauges(grs_canvas &canvas, const game_mode_flags Game_mode)
 		}
 		draw_keys_state(hudctx, player_info.powerup_flags).draw_all_statusbar_keys();
 
-		sb_show_lives(hudctx, HUD_SCALE_AR(grd_curscreen->get_screen_width(), grd_curscreen->get_screen_height(), hudctx.multires_gauge_graphic), player_info, Game_mode & GM_MULTI);
-		const auto is_multiplayer_non_cooperative = (Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP);
+		const auto is_multiplayer{+(Game_mode & GM_MULTI)}; sb_show_lives(hudctx, HUD_SCALE_AR(grd_curscreen->get_screen_width(), grd_curscreen->get_screen_height(), hudctx.multires_gauge_graphic), player_info, is_multiplayer);
+		const auto is_multiplayer_non_cooperative{is_multiplayer && !(Game_mode & GM_MULTI_COOP)};
 		sb_show_score(hudctx, player_info, is_multiplayer_non_cooperative);
 
 		if (!is_multiplayer_non_cooperative)

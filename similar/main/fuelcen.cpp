@@ -388,7 +388,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 	}
 
 	//	No robot making in multiplayer mode.
-	if ((Game_mode & GM_MULTI) && (!(Game_mode & GM_MULTI_ROBOTS) || !multi_i_am_master()))
+	if (+(Game_mode & GM_MULTI) && (!(Game_mode & GM_MULTI_ROBOTS) || !multi_i_am_master()))
 		return;
 
 	// Wait until transmorgafier has capacity to make a robot...
@@ -426,7 +426,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 	auto &vcvertptr = Vertices.vcptr;
 	switch( robotcen->Flag )	{
 	case 0:		// Wait until next robot can generate
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			top_time = ROBOT_GEN_TIME;	
 		}
@@ -529,7 +529,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 
 				const auto &&obj = create_morph_robot(Robot_info, vmsegptridx(robotcen->segnum), cur_object_loc, type );
 				if (obj != object_none) {
-					if (Game_mode & GM_MULTI)
+					if (+(Game_mode & GM_MULTI))
 						multi_send_create_robot(numrobotcen, obj, type);
 					obj->matcen_creator = underlying_value(numrobotcen) | 0x80;
 

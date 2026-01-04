@@ -383,7 +383,7 @@ void wall_damage(const vmsegptridx_t seg, const sidenum_t side, fix damage)
 		
 		if (w0.hps < WALL_HPS*1/n) {
 			blast_blastable_wall(seg, side, w0);
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_door_open(seg, side, w0.flags);
 		}
 		else
@@ -1091,7 +1091,7 @@ namespace {
 //	Allowed to open the normally locked special boss door if in multiplayer mode.
 static int special_boss_opening_allowed(const segnum_t segnum, const sidenum_t sidenum)
 {
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		return (Current_level_num == BOSS_LOCKED_DOOR_LEVEL) && (segnum == BOSS_LOCKED_DOOR_SEG) && (sidenum == BOSS_LOCKED_DOOR_SIDE);
 	else
 		return 0;
@@ -1184,7 +1184,7 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 			if (w->state != wall_state::opening)
 			{
 				wall_open_door(seg, side);
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 #if DXX_BUILD_DESCENT == 1
 					const wall_flags flags{};

@@ -217,7 +217,7 @@ static int pick_up_energy(player_info &player_info)
 static int pick_up_primary_or_energy(player_info &player_info, const primary_weapon_index_t weapon_index)
 {
 	const auto used = pick_up_primary(player_info, weapon_index);
-	if (used || (Game_mode & GM_MULTI))
+	if (used || +(Game_mode & GM_MULTI))
 		return used;
 	return pick_up_energy(player_info);
 }
@@ -247,7 +247,7 @@ static int pick_up_key(const int r, const int g, const int b, player_flags &play
 	auto &BuddyState = LevelUniqueObjectState.BuddyState;
 	invalidate_escort_goal(BuddyState);
 #endif
-	return (Game_mode & GM_MULTI) ? 0 : 1;
+	return +(Game_mode & GM_MULTI) ? 0 : 1;
 }
 
 //	returns true if powerup consumed
@@ -317,7 +317,7 @@ struct player_hit_headlight_powerup
 			: PLAYER_FLAG::HEADLIGHT;
 		powerup_basic(15, 0, 15, 0, "HEADLIGHT BOOST! (Headlight is O%s)", active ? "N" : "FF");
 		multi_digi_play_sample(Powerup_info[powerup_type_t::POW_HEADLIGHT].hit_sound, F1_0);
-		if (active && (Game_mode & GM_MULTI))
+		if (active && +(Game_mode & GM_MULTI))
 			multi_send_flags (Player_num);
 	}
 };
@@ -360,7 +360,7 @@ struct player_hit_quadlaser_powerup
 static int player_has_powerup(player_info &player_info, const char *const desc_have)
 {
 	HUD_init_message(HM_DEFAULT | HM_REDUNDANT | HM_MAYDUPL, "%s %s!", TXT_ALREADY_HAVE, desc_have);
-	return (Game_mode & GM_MULTI) ? 0 : pick_up_energy(player_info);
+	return +(Game_mode & GM_MULTI) ? 0 : pick_up_energy(player_info);
 }
 
 template <PLAYER_FLAG player_flag, typename F>
@@ -390,7 +390,7 @@ int do_powerup(const vmobjptridx_t obj)
 	if ((obj->ctype.powerup_info.flags & PF_SPAT_BY_PLAYER) && obj->ctype.powerup_info.creation_time>0 && GameTime64<obj->ctype.powerup_info.creation_time+i2f(2))
 		return 0;		//not enough time elapsed
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		/*
 		 * The fact: Collecting a powerup is decided Client-side and due to PING it takes time for other players to know if one collected a powerup actually. This may lead to the case two players collect the same powerup!
@@ -512,7 +512,7 @@ int do_powerup(const vmobjptridx_t obj)
 					powerup_basic(7, 14, 21, VULCAN_AMMO_SCORE, "%s!", TXT_VULCAN_AMMO);
 					special_used = 1;
 					id = powerup_type_t::POW_VULCAN_AMMO;		//set new id for making sound at end of this function
-                                        if (Game_mode & GM_MULTI)
+					if (+(Game_mode & GM_MULTI))
                                                 multi_send_vulcan_weapon_ammo_adjust(obj); // let other players know how much ammo we took.
 				}
 			}
@@ -599,7 +599,7 @@ int do_powerup(const vmobjptridx_t obj)
 				player_info.cloak_time = {GameTime64};	//	Not! changed by awareness events (like player fires laser).
 				player_info.powerup_flags |= PLAYER_FLAGS_CLOAKED;
 				ai_do_cloak_stuff();
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_cloak();
 				powerup_basic(-10,-10,-10, CLOAK_SCORE, "%s!",TXT_CLOAKING_DEVICE);
 				used = 1;

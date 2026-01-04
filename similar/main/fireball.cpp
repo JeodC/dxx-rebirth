@@ -555,7 +555,7 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 									}
 								}
 #endif
-								if (obj_explosion_origin != object_none && (Game_mode & GM_MULTI) && obj_explosion_origin->type == OBJ_PLAYER)
+								if (obj_explosion_origin != object_none && +(Game_mode & GM_MULTI) && obj_explosion_origin->type == OBJ_PLAYER)
 								{
 									killer = obj_explosion_origin;
 								}
@@ -728,7 +728,7 @@ static vmsegptridx_t choose_drop_segment(fvmsegptridx &vmsegptridx, fvcvertptr &
 				continue;
 			if (plr.connected == player_connection_status::disconnected)
 				continue;
-			if ((Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == team_of_drop_player)
+			if (+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == team_of_drop_player)
 				continue;
 			*r++ = pnum;
 		}
@@ -840,8 +840,8 @@ void maybe_drop_net_powerup(powerup_type_t powerup_type, bool adjust_cap, bool r
 	auto &LevelUniqueControlCenterState{LevelUniqueObjectState.ControlCenterState};
 	auto &Vertices{LevelSharedVertexState.get_vertices()};
 	playernum_t pnum{Player_num};
-	if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)) {
-		if ((Game_mode & GM_NETWORK) && adjust_cap)
+	if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)) {
+		if (+(Game_mode & GM_NETWORK) && adjust_cap)
 		{
 			MultiLevelInv_Recount(); // recount current items
 			if (!MultiLevelInv_AllowSpawn(powerup_type))
@@ -1070,7 +1070,7 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 		del_obj.contains.count = 0;
 
 	// Change multiplayer extra-lives into invulnerability
-	if ((Game_mode & GM_MULTI) && (del_obj.contains.id.powerup == powerup_type_t::POW_EXTRA_LIFE))
+	if (+(Game_mode & GM_MULTI) && (del_obj.contains.id.powerup == powerup_type_t::POW_EXTRA_LIFE))
 	{
 		del_obj.contains.id.powerup = powerup_type_t::POW_INVULNERABILITY;
 	}
@@ -1082,7 +1082,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 				int	rand_scale;
 
 				//	We want powerups to move more in network mode.
-				if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)) {
+				if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)) {
 					rand_scale = 4;
 					//	extra life powerups are converted to invulnerability in multiplayer, for what is an extra life, anyway?
 					if (id == powerup_type_t::POW_EXTRA_LIFE)
@@ -1090,7 +1090,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 				} else
 					rand_scale = 2;
 
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{	
 					if (Net_create_loc >= MAX_NET_CREATE_OBJECTS)
 					{
@@ -1098,7 +1098,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 						return object_none;
 					}
 #if DXX_BUILD_DESCENT == 2
-					if ((Game_mode & GM_NETWORK) && Network_status == network_state::endlevel)
+					if (+(Game_mode & GM_NETWORK) && Network_status == network_state::endlevel)
 					 return object_none;
 #endif
 				}
@@ -1112,14 +1112,14 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 					obj.flags |= OF_PLAYER_DROPPED;
 #endif
 
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					Net_create_objnums[Net_create_loc++] = objp;
 				}
 
 				// Give keys zero velocity so they can be tracked better in multi
 				auto &object_velocity{obj.mtype.phys_info.velocity};
-				if ((Game_mode & GM_MULTI) && (id >= powerup_type_t::POW_KEY_BLUE) && (id <= powerup_type_t::POW_KEY_GOLD))
+				if (+(Game_mode & GM_MULTI) && (id >= powerup_type_t::POW_KEY_BLUE) && (id <= powerup_type_t::POW_KEY_GOLD))
 					object_velocity = {};
 				else
 				{
@@ -1148,7 +1148,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 					case powerup_type_t::POW_SHIELD_BOOST:
 					case powerup_type_t::POW_ENERGY:
 						obj.lifeleft = (d_rand() + F1_0*3) * 64;		//	Lives for 3 to 3.5 binary minutes (a binary minute is 64 seconds)
-						if (Game_mode & GM_MULTI)
+						if (+(Game_mode & GM_MULTI))
 							obj.lifeleft /= 2;
 						break;
 #if DXX_BUILD_DESCENT == 2
@@ -1222,7 +1222,7 @@ static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained
 				created = true;
 				++LevelUniqueObjectState.accumulated_robots;
 				++GameUniqueState.accumulated_robots;
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					Net_create_objnums[Net_create_loc++] = objp;
 				}

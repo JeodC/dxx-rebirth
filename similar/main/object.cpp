@@ -411,7 +411,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 #endif
 
 	//	If option set for bright players in netgame, brighten them!
-	light = unlikely(Netgame.BrightPlayers && (Game_mode & GM_MULTI) && obj->type == OBJ_PLAYER)
+	light = unlikely(Netgame.BrightPlayers && +(Game_mode & GM_MULTI) && obj->type == OBJ_PLAYER)
 		? g3s_lrgb{F1_0 * 2, F1_0 * 2, F1_0 * 2}
 		: compute_object_light(LevelUniqueLightState, obj);
 
@@ -1555,7 +1555,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 				const auto cobjp = vmobjptridx(ConsoleObject);
 				drop_player_eggs(cobjp);
 				player_info.Player_eggs_dropped = true;
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					multi_send_player_deres(deres_explode);
 				}
@@ -1573,7 +1573,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 			}
 		} else {
 			if (d_rand() < FrameTime*4) {
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_create_explosion(Player_num);
 				create_small_fireball_on_object(vmobjptridx(ConsoleObject), F1_0, 1);
 			}
@@ -1586,7 +1586,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 			if (!player_info.Player_eggs_dropped) {
 				player_info.Player_eggs_dropped = true;
 				drop_player_eggs(vmobjptridx(ConsoleObject));
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					multi_send_player_deres(deres_explode);
 				}
@@ -1614,7 +1614,7 @@ static void start_player_death_sequence(object &player)
 	assert(&player == ConsoleObject);
 	if (Player_dead_state != player_dead_state::no ||
 		Dead_player_camera != NULL ||
-		((Game_mode & GM_MULTI) && get_local_player().connected != player_connection_status::playing))
+		(+(Game_mode & GM_MULTI) && get_local_player().connected != player_connection_status::playing))
 		return;
 
 	//Assert(Dead_player_camera == NULL);
@@ -1626,7 +1626,7 @@ static void start_player_death_sequence(object &player)
 
 	GameViewUniqueState.Death_sequence_aborted = 0;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 #if DXX_BUILD_DESCENT == 2
 		// If Hoard, increase number of orbs by 1. Only if you haven't killed yourself. This prevents cheating
@@ -2092,7 +2092,7 @@ static window_event_result object_move_one(const d_level_shared_robot_info_state
 	if (Drop_afterburner_blob_flag) {
 		Assert(obj==ConsoleObject);
 		drop_afterburner_blobs(obj, 2, i2f(5)/2, -1);	//	-1 means use default lifetime
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_drop_blobs(Player_num);
 		Drop_afterburner_blob_flag = 0;
 	}
@@ -2541,7 +2541,7 @@ imobjptridx_t drop_marker_object(const vms_vector &pos, const vmsegptridx_t segn
 		return object_none;
 	}
 	const auto movement_type =
-		((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view)
+		(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view)
 		? object::movement_type::None
 		: object::movement_type::spinning;
 	const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_MARKER, underlying_value(marker_num), segnum, pos, &orient, Polygon_models[Marker_model_num].rad, object::control_type::None, movement_type, render_type::RT_POLYOBJ);

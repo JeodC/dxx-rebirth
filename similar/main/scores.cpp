@@ -450,7 +450,7 @@ void scores_maybe_add_player()
 	auto &vmobjptr = Objects.vmptr;
 	stats_info last_game;
 
-	if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+	if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
 		return;
 	auto scores{scores_read()};
 	auto &player_info = get_local_plrobj().ctype.player_info;

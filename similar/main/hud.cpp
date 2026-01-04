@@ -119,7 +119,7 @@ static int is_worth_showing(int class_flag)
 	if (PlayerCfg.NoRedundancy && (class_flag & HM_REDUNDANT))
 		return 0;
 
-	if (PlayerCfg.MultiMessages && (Game_mode & GM_MULTI) && !(class_flag & HM_MULTI))
+	if (PlayerCfg.MultiMessages && +(Game_mode & GM_MULTI) && !(class_flag & HM_MULTI))
 		return 0;
 	return 1;
 }

@@ -589,7 +589,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 	if (is_trigger)
 	{
 		if (force_blowup_flag || (
-				(Game_mode & GM_MULTI)
+				+(Game_mode & GM_MULTI)
 	// If this wall has a trigger and the blower-upper is not the player or the buddy, abort!
 	// For Multiplayer perform an additional check to see if it's a local-player hit. If a remote player hits, a packet is expected (remote 1) which would be followed by MULTI_TRIGGER to ensure sync with the switch and the actual trigger.
 				? (!(blower.parent_type == OBJ_PLAYER && (blower.parent_num == get_local_player().objnum || remote)))
@@ -664,7 +664,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 #endif
 			{		//not trans, thus on effect
 #if DXX_BUILD_DESCENT == 2
-				if ((Game_mode & GM_MULTI) && Netgame.AlwaysLighting)
+				if (+(Game_mode & GM_MULTI) && Netgame.AlwaysLighting)
 					if (!(ec != eclip_none && db != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT)))
 						return 0;
 
@@ -674,7 +674,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 				subtract_light(LevelSharedDestructibleLightState, seg, side);
 
 				// we blew up something connected to a trigger. Send it to others!
-				if ((Game_mode & GM_MULTI) && is_trigger && !remote && !force_blowup_flag)
+				if (+(Game_mode & GM_MULTI) && is_trigger && !remote && !force_blowup_flag)
 					multi_send_effect_blowup(seg, side, pnt);
 #endif
 				if (Newdemo_state == ND_STATE_RECORDING)
@@ -1153,7 +1153,7 @@ void apply_damage_to_controlcen(const d_robot_info_array &Robot_info, const vmob
 		return;
 	}
 
-	if ((Game_mode & GM_MULTI) &&
+	if (+(Game_mode & GM_MULTI) &&
 		!(Game_mode & GM_MULTI_COOP))
 	{
 		auto &player = get_local_player();
@@ -1179,7 +1179,7 @@ void apply_damage_to_controlcen(const d_robot_info_array &Robot_info, const vmob
 	if ( (controlcen->shields < 0) && !(controlcen->flags&(OF_EXPLODING|OF_DESTROYED)) ) {
 		do_controlcen_destroyed_stuff(controlcen);
 
-		if (Game_mode & GM_MULTI) {
+		if (+(Game_mode & GM_MULTI)) {
 			if (get_player_id(who) == Player_num)
 				add_points_to_score(ConsoleObject->ctype.player_info, CONTROL_CEN_SCORE, Game_mode);
 			multi_send_destroy_controlcen(controlcen, get_player_id(who) );
@@ -1218,7 +1218,7 @@ static void collide_player_and_marker(const d_robot_info_array &, const object_b
 		const auto marker_id = get_marker_id(marker);
 		auto &msg = MarkerState.message[marker_id];
 		auto &p = msg[0u];
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			const auto marker_owner = get_marker_owner(Game_mode, marker_id, Netgame.max_numplayers);
 			drawn = HUD_init_message(HM_DEFAULT|HM_MAYDUPL, "MARKER %s: %s", vcplayerptr(marker_owner)->callsign.operator const char *(), &p);
@@ -1474,7 +1474,7 @@ int apply_damage_to_robot(const d_robot_info_array &Robot_info, const vmobjptrid
 		if (PLAYING_BUILTIN_MISSION && Current_level_num == Current_mission->last_level)
 			if (robot->shields < 0)
 			 {
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				  {
 					 if (!multi_all_players_alive(Objects.vcptr, partial_range(Players, N_players))) // everyones gotta be alive
 					   robot->shields=1;
@@ -1499,7 +1499,7 @@ int apply_damage_to_robot(const d_robot_info_array &Robot_info, const vmobjptrid
 		auto &plr = get_local_player();
 		plr.num_kills_level++;
 		plr.num_kills_total++;
-		if (Game_mode & GM_MULTI) {
+		if (+(Game_mode & GM_MULTI)) {
 			if (multi_explode_robot_sub(Robot_info, robot))
 			{
 				multi_send_robot_explode(robot, killer_objnum);
@@ -1572,14 +1572,14 @@ static boss_weapon_collision_result do_boss_weapon_collision(const d_robot_info_
 					if (spew != object_none)
 					{
 						BossUniqueState.Last_gate_time = GameTime64 - GameUniqueState.Boss_gate_interval - 1;	//	Force allowing spew of another bot.
-						if (Game_mode & GM_MULTI)
+						if (+(Game_mode & GM_MULTI))
 							multi_send_boss_create_robot(robotptridx, spew);
 					}
 				}
 			const auto &&spew = boss_spew_robot(Robot_info, robot, collision_point);
 			if (spew != object_none)
 			{
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_boss_create_robot(robotptridx, spew);
 			}
 		}
@@ -1844,7 +1844,7 @@ static void collide_hostage_and_player(const d_robot_info_array &, const vmobjpt
 		// Remove the hostage object.
 		hostage->flags |= OF_SHOULD_BE_DEAD;
 
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_remobj(hostage);
 	}
 	return;
@@ -1858,7 +1858,7 @@ static void collide_player_and_player(const d_robot_info_array &Robot_info, cons
 		digi_link_sound_to_pos(sound_effect::SOUND_ROBOT_HIT_PLAYER, vcsegptridx(player1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
 
 	// Multi is special - as always. Clients do the bump damage locally but the remote players do their collision result (change velocity) on their own. So after our initial collision, ignore further collision damage till remote players (hopefully) react.
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		damage_flag = 0;
 		if (!(get_player_id(player1) == Player_num || get_player_id(player2) == Player_num))
@@ -1961,13 +1961,13 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 	if ((playerobj->type == OBJ_PLAYER) || (playerobj->type == OBJ_GHOST)) {
 		// Seed the random number generator so in net play the eggs will always
 		// drop the same way
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			Net_create_loc = 0;
 		}
 		auto &player_info = playerobj->ctype.player_info;
 		auto &plr_laser_level = player_info.laser_level;
-		if (const auto GrantedItems = (Game_mode & GM_MULTI) ? (d_srand(5483L), Netgame.SpawnGrantedItems) : netgrant_flag::None)
+		if (const auto GrantedItems{+(Game_mode & GM_MULTI) ? (d_srand(5483L), Netgame.SpawnGrantedItems) : netgrant_flag::None})
 		{
 			if (const auto granted_laser_level = map_granted_flags_to_laser_level(GrantedItems); granted_laser_level != laser_level::_1)
 			{
@@ -2030,7 +2030,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		drop_armed_bomb(secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX], weapon_id_type::SUPERPROX_ID);
 
 		//	If the player had proximity bombs, maybe arm one of them.
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			drop_armed_bomb(secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX], weapon_id_type::PROXIMITY_ID);
 #endif
 
@@ -2143,7 +2143,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		}
 
 		//	Always drop a shield and energy powerup.
-		if (Game_mode & GM_MULTI) {
+		if (+(Game_mode & GM_MULTI)) {
 			call_object_create_egg(playerobj, powerup_type_t::POW_SHIELD_BOOST);
 			call_object_create_egg(playerobj, powerup_type_t::POW_ENERGY);
 		}
@@ -2225,7 +2225,7 @@ static void collide_player_and_weapon(const d_robot_info_array &Robot_info, cons
 
 	damage = fixmul(damage, weapon->ctype.laser_info.multiplier);
 #if DXX_BUILD_DESCENT == 2
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		damage = fixmul(damage, Weapon_info[get_weapon_id(weapon)].multi_damage_scale);
 #endif
 
@@ -2365,7 +2365,7 @@ void collide_live_local_player_and_powerup(const vmobjptridx_t powerup)
 	if (do_powerup(powerup))
 	{
 		powerup->flags |= OF_SHOULD_BE_DEAD;
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_remobj(powerup);
 	}
 }
@@ -2382,7 +2382,7 @@ static void collide_player_and_powerup(const d_robot_info_array &, object &playe
 	{
 		collide_live_local_player_and_powerup(powerup);
 	}
-	else if ((Game_mode & GM_MULTI_COOP) && (get_player_id(playerobj) != Player_num))
+	else if (+(Game_mode & GM_MULTI_COOP) && (get_player_id(playerobj) != Player_num))
 	{
 		switch (get_powerup_id(powerup)) {
 			case powerup_type_t::POW_KEY_BLUE:

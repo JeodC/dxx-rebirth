@@ -2753,7 +2753,7 @@ void net_udp_update_netgame()
 		const auto game_flag_no_hoard{Netgame.game_flag & ~(netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)};
 		Netgame.game_flag = is_hoard_game
 			? (
-				(Game_mode & GM_TEAM)
+				+(Game_mode & GM_TEAM)
 				? (game_flag_no_hoard | netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)
 				: (game_flag_no_hoard | netgame_rule_flags::hoard)
 			)
@@ -2924,7 +2924,7 @@ static std::span<const uint8_t> net_udp_prepare_heavy_game_info(const d_level_un
 	buf[len] = Netgame.team_vector;							len++;
 	PUT_INTEL_INT(&buf[len], underlying_value(Netgame.AllowedItems));					len += 4;
 	/* In cooperative games, never shuffle. */
-	PUT_INTEL_INT(&buf[len], (Game_mode & GM_MULTI_COOP) ? 0 : Netgame.ShufflePowerupSeed);			len += 4;
+	PUT_INTEL_INT(&buf[len], +(Game_mode & GM_MULTI_COOP) ? 0 : Netgame.ShufflePowerupSeed);			len += 4;
 	buf[len] = Netgame.SecludedSpawns;			len += 1;
 #if DXX_BUILD_DESCENT == 1
 	buf[len] = Netgame.SpawnGrantedItems.mask;			len += 1;
@@ -5955,7 +5955,7 @@ void net_udp_process_pdata(const std::span<const uint8_t> data, const _sockaddr 
 	UDP_frame_info pd;
 	int len{0};
 
-	if (!((Game_mode & GM_NETWORK) && (Network_status == network_state::playing || Network_status == network_state::endlevel)))
+	if (!(+(Game_mode & GM_NETWORK) && (Network_status == network_state::playing || Network_status == network_state::endlevel)))
 		return;
 
 	len++;
@@ -6216,7 +6216,7 @@ void net_udp_do_refuse_stuff(const UDP_sequence_request_packet &their, const str
 #endif
 	
 		const auto &&rankstr = GetRankStringWithSpace(their.rank);
-		if (Game_mode & GM_TEAM)
+		if (+(Game_mode & GM_TEAM))
 		{
 			HUD_init_message(HM_MULTI, "%s%s'%s' wants to join", rankstr.first, rankstr.second, their.callsign.operator const char *());
 			HUD_init_message(HM_MULTI, "Alt-1 assigns to team %s. Alt-2 to team %s", Netgame.team_name[team_number::blue].operator const char *(), Netgame.team_name[team_number::red].operator const char *());
@@ -6241,7 +6241,7 @@ void net_udp_do_refuse_stuff(const UDP_sequence_request_packet &their, const str
 			RefuseTimeLimit=0;
 			RefuseThisPlayer=0;
 			WaitForRefuseAnswer=0;
-			if (Game_mode & GM_TEAM)
+			if (+(Game_mode & GM_TEAM))
 			{
 				new_player_num=net_udp_get_new_player_num ();
 	
@@ -6328,7 +6328,7 @@ void net_udp_send_extras ()
 		net_udp_send_door_updates(Player_joining_extras);
 	if (Network_sending_extras==7)
 		multi_send_markers();
-	if (Network_sending_extras==6 && (Game_mode & GM_MULTI_ROBOTS))
+	if (Network_sending_extras==6 && +(Game_mode & GM_MULTI_ROBOTS))
 		multi_send_stolen_items();
 	if (Network_sending_extras==5 && (Netgame.PlayTimeAllowed.count() || Netgame.KillGoal))
 #endif
@@ -6341,7 +6341,7 @@ void net_udp_send_extras ()
 #endif
 	if (Network_sending_extras==2)
 		multi_send_player_inventory(multiplayer_data_priority::_1);
-	if (Network_sending_extras==1 && Game_mode & GM_BOUNTY)
+	if (Network_sending_extras==1 && +(Game_mode & GM_BOUNTY))
 		multi_send_bounty();
 
 	Network_sending_extras--;

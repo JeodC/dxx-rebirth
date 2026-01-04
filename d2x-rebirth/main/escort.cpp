@@ -436,7 +436,7 @@ static uint8_t show_buddy_message()
 		return 0;
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		if (!Netgame.AllowGuidebot)
 			return 0;
@@ -614,7 +614,7 @@ void set_escort_special_goal(d_unique_buddy_state &BuddyState, const int raw_spe
 	say_escort_goal(BuddyState.Escort_special_goal);
 	BuddyState.Escort_goal_object = ESCORT_GOAL_UNSPECIFIED;
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_escort_goal(BuddyState);
 #endif
 }
@@ -1699,7 +1699,7 @@ static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_in
 	{
 		if ((
 #if DXX_USE_MULTIPLAYER
-				(Game_mode & GM_MULTI)
+			+(Game_mode & GM_MULTI)
 				? Netgame.ThiefModifierFlags
 				:
 #endif
@@ -1851,7 +1851,7 @@ void attempt_to_steal_item(const vmobjptridx_t thiefp, const robot_info &robptr,
 	ailp.mode = ai_mode::AIM_THIEF_RETREAT;
 	if (rval) {
 		PALETTE_FLASH_ADD(30, 15, -20);
-                if (Game_mode & GM_NETWORK)
+		if (+(Game_mode & GM_NETWORK))
                  multi_send_stolen_items();
 	}
 }
@@ -2010,7 +2010,7 @@ void do_escort_menu(void)
 	int	next_goal;
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		if (!check_warn_local_player_can_control_guidebot(vcobjptr, BuddyState, Netgame))
 			return;
 	}
