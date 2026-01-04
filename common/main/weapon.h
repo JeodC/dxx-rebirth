@@ -32,6 +32,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #ifdef __cplusplus
 #include "dxxsconf.h"
 #include "dsx-ns.h"
+#include "d_bit_enum.h"
 #include "objnum.h"
 #include "pack.h"
 #include "fwd-valptridx.h"
@@ -67,20 +68,11 @@ enum class has_secondary_weapon_result : bool
 	present,
 };
 
-static constexpr has_primary_weapon_result operator&(const has_primary_weapon_result r, const has_primary_weapon_result m)
-{
-	return static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) & static_cast<uint8_t>(m));
-}
+template <>
+inline constexpr bool enable_bit_enum_and<has_primary_weapon_result, has_primary_weapon_result>{true};
 
-static constexpr has_primary_weapon_result operator|(const has_primary_weapon_result r, const has_primary_weapon_result m)
-{
-	return static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) | static_cast<uint8_t>(m));
-}
-
-static constexpr has_primary_weapon_result &operator|=(has_primary_weapon_result &r, const has_primary_weapon_result m)
-{
-	return r = static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) | static_cast<uint8_t>(m));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<has_primary_weapon_result, has_primary_weapon_result>{true};
 
 static constexpr uint8_t has_weapon(const has_primary_weapon_result r)
 {
