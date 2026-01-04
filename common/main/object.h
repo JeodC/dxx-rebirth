@@ -413,24 +413,16 @@ struct object_base
 
 	// movement info, determined by MOVEMENT_TYPE
 	union movement_info {
-		physics_info phys_info; // a physics object
+		physics_info phys_info{}; // a physics object
 		vms_vector   spin_rate; // for spinning objects
-		constexpr movement_info() :
-			phys_info{}
-		{
-			static_assert(sizeof(phys_info) == sizeof(*this), "insufficient initialization");
-		}
+		static_assert(sizeof(phys_info) >= sizeof(spin_rate), "insufficient initialization");
 	} mtype;
 
 	// render info, determined by RENDER_TYPE
 	union render_info {
-		struct polyobj_info    pobj_info;      // polygon model
+		struct polyobj_info    pobj_info{};      // polygon model
 		struct vclip_info      vclip_info;     // vclip
-		constexpr render_info() :
-			pobj_info{}
-		{
-			static_assert(sizeof(pobj_info) == sizeof(*this), "insufficient initialization");
-		}
+		static_assert(sizeof(pobj_info) >= sizeof(vclip_info), "insufficient initialization");
 	} rtype;
 };
 
