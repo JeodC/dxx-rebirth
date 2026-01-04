@@ -369,7 +369,7 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 	const int ForceFieldHit = 0;
 #elif DXX_BUILD_DESCENT == 2
 	int ForceFieldHit{0};
-	if (tmi1.flags & tmapinfo_flag::force_field)
+	if (+(tmi1.flags & tmapinfo_flag::force_field))
 	{
 		vms_vector force;
 
@@ -404,7 +404,7 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 			 * walls will not deal damage, and so are a free hit.
 			 */
 			constexpr auto tmi_no_damage{(tmapinfo_flag::water | tmapinfo_flag::lava)};
-			if (tmi1.flags & tmi_no_damage)
+			if (+(tmi1.flags & tmi_no_damage))
 				return 0;
 			const auto tmap_num2{hitseg->unique_segment::sides[hitwall].tmap_num2};
 			if (tmap_num2 != texture2_value::None)
@@ -412,7 +412,7 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 				const auto texture2_index{get_texture_index(tmap_num2)};
 				if (texture2_index >= TmapInfo.size()) [[unlikely]]
 					return 0;
-				if (TmapInfo[texture2_index].flags & tmi_no_damage)
+				if (+(TmapInfo[texture2_index].flags & tmi_no_damage))
 					return 0;
 			}
 	// Note: Does quad damage if hit a force field - JL
@@ -473,7 +473,7 @@ volatile_wall_result check_volatile_wall(const vmobjptridx_t obj, const unique_s
 	const fix d = tmi1.damage;
 	if (d > 0
 #if DXX_BUILD_DESCENT == 2
-		|| (tmi1.flags & tmapinfo_flag::water)
+		|| +(tmi1.flags & tmapinfo_flag::water)
 #endif
 		)
 	{
@@ -796,7 +796,7 @@ static window_event_result collide_weapon_and_wall(
 		return window_event_result::ignored;
 	auto &tmi1{TmapInfo[texture1_index]};
 	//if an energy weapon hits a forcefield, let it bounce
-	if ((tmi1.flags & tmapinfo_flag::force_field) &&
+	if (+(tmi1.flags & tmapinfo_flag::force_field) &&
 		 !(weapon->type == OBJ_WEAPON && Weapon_info[get_weapon_id(weapon)].energy_usage==0)) {
 
 		//make sound
@@ -864,7 +864,7 @@ static window_event_result collide_weapon_and_wall(
 
 	const auto Difficulty_level = GameUniqueState.Difficulty_level;
 	// Wall is volatile if either tmap 1 or 2 is volatile
-	if (const auto texture_flags{get_side_combined_tmapinfo_flags(TmapInfo, uhitside)}; texture_flags & tmapinfo_flag::lava)
+	if (const auto texture_flags{get_side_combined_tmapinfo_flags(TmapInfo, uhitside)}; +(texture_flags & tmapinfo_flag::lava))
 	{
 		weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 
@@ -891,7 +891,7 @@ static window_event_result collide_weapon_and_wall(
 		weapon->flags |= OF_SHOULD_BE_DEAD;		//make flares die in lava
 	}
 #if DXX_BUILD_DESCENT == 2
-	else if (texture_flags & tmapinfo_flag::water)
+	else if (+(texture_flags & tmapinfo_flag::water))
 	{
 		weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 
@@ -976,7 +976,7 @@ static window_event_result collide_weapon_and_wall(
 				weapon->flags |= OF_SHOULD_BE_DEAD;
 
 			//don't let flares stick in force fields
-			if ((get_weapon_id(weapon) == weapon_id_type::FLARE_ID) && (tmi1.flags & tmapinfo_flag::force_field))
+			if ((get_weapon_id(weapon) == weapon_id_type::FLARE_ID) && +(tmi1.flags & tmapinfo_flag::force_field))
 				weapon->flags |= OF_SHOULD_BE_DEAD;
 #endif
 

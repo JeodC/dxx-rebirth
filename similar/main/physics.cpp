@@ -598,11 +598,11 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 						if (wall_part < 0 && wall_part > -f1_0) wall_part = -f1_0;
 						if (wall_part > 0 && wall_part < f1_0) wall_part = f1_0;
 
-						if (forcefield_bounce || (obj->mtype.phys_info.flags & PF_BOUNCE)) {		//bounce off wall
+						if (+forcefield_bounce || (obj->mtype.phys_info.flags & PF_BOUNCE)) {		//bounce off wall
 							wall_part *= 2;	//Subtract out wall part twice to achieve bounce
 
 #if DXX_BUILD_DESCENT == 2
-							if (forcefield_bounce) {
+							if (+forcefield_bounce) {
 								check_vel = 1;				//check for max velocity
 								if (obj->type == OBJ_PLAYER)
 									wall_part *= 2;		//player bounce twice as much

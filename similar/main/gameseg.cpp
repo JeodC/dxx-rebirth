@@ -1796,8 +1796,8 @@ void set_ambient_sound_flags()
 			 * both ternary expressions have finished.
 			 */
 			sound_ambient_flags sound_flag{};
-			const auto pl = (texture_flags & tmapinfo_flag::lava) ? (sound_flag |= sound_ambient_flags::lava, &segdepth_lava) : nullptr;
-			const auto pw = (texture_flags & tmapinfo_flag::water) ? (sound_flag |= sound_ambient_flags::water, &segdepth_water) : nullptr;
+			const auto pl{+(texture_flags & tmapinfo_flag::lava) ? (sound_flag |= sound_ambient_flags::lava, &segdepth_lava) : nullptr};
+			const auto pw{+(texture_flags & tmapinfo_flag::water) ? (sound_flag |= sound_ambient_flags::water, &segdepth_water) : nullptr};
 			if (sound_flag != sound_ambient_flags::None)
 				ambient_mark_bfs(segp, pl, pw, AMBIENT_SEGMENT_DEPTH, sound_flag);
 		}

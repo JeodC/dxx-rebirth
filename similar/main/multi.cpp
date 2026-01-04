@@ -3570,7 +3570,7 @@ texture_index find_goal_texture(const d_level_unique_tmap_info_state &LevelUniqu
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
 	const auto &&r = partial_const_range(TmapInfo, NumTextures);
 	const auto &&predicate = [tmi_flag](const tmap_info &i) {
-		return (i.flags & tmi_flag);
+		return +(i.flags & tmi_flag);
 	};
 	const auto begin = r.begin();
 	return static_cast<texture_index>(std::distance(begin, std::ranges::find_if(begin, r.end(), predicate)));
