@@ -3795,13 +3795,13 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 		return;
 
 	// Cruise speed
-	if (auto &viewer = *Viewer; viewer.type == OBJ_PLAYER && get_player_id(viewer) == Player_num && PlayerCfg.CockpitMode[1] != cockpit_mode_t::rear_view)
-	{
+	if (const auto cruise_speed{Cruise_speed}; cruise_speed && PlayerCfg.CockpitMode[1] != cockpit_mode_t::rear_view)
+		if (auto &viewer{*Viewer}; viewer.type == OBJ_PLAYER && get_player_id(viewer) == Player_num)
+		{
 		int	x = FSPACX(1);
 		int	y = canvas.cv_bitmap.bm_h;
 
 		gr_set_fontcolor(canvas, BM_XRGB(0, 31, 0), -1);
-		if (Cruise_speed > 0) {
 			auto &game_font = *GAME_FONT;
 			const auto &&line_spacing = LINE_SPACING(game_font, game_font);
 			if (PlayerCfg.CockpitMode[1] == cockpit_mode_t::full_screen)
@@ -3821,9 +3821,8 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 					: line_spacing * 2;
 			}
 
-			gr_printf(canvas, game_font, x, y, "%s %2d%%", TXT_CRUISE, f2i(Cruise_speed) );
+			gr_printf(canvas, game_font, x, y, "%s %2d%%", TXT_CRUISE, f2i(cruise_speed));
 		}
-	}
 
 	//	Show score so long as not in rearview
 	if (!Rear_view && PlayerCfg.CockpitMode[1] != cockpit_mode_t::rear_view && PlayerCfg.CockpitMode[1] != cockpit_mode_t::status_bar)
