@@ -1680,12 +1680,12 @@ static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_in
 	bool is_energy_weapon = true;
 	switch (static_cast<primary_weapon_index>(weapon_num))
 	{
-		case primary_weapon_index::LASER_INDEX:
+		case primary_weapon_index::laser:
 			if (player_info.laser_level == laser_level::_1)
 				return 0;
 			break;
-		case primary_weapon_index::VULCAN_INDEX:
-		case primary_weapon_index::GAUSS_INDEX:
+		case primary_weapon_index::vulcan:
+		case primary_weapon_index::gauss:
 			if (!player_info.vulcan_ammo)
 				return 0;
 			is_energy_weapon = false;
@@ -1709,7 +1709,7 @@ static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_in
 	{
 		if (d_rand() < THIEF_PROBABILITY) {
 			powerup_type_t primary_weapon_powerup;
-			if (weapon_num == primary_weapon_index::LASER_INDEX)
+			if (weapon_num == primary_weapon_index::laser)
 			{
 				auto &laser_level = player_info.laser_level;
 				primary_weapon_powerup = (laser_level > MAX_LASER_LEVEL)
@@ -1756,7 +1756,7 @@ static int attempt_to_steal_item_3(object &thief, object &player_num)
 
 	//	If primary weapon = laser, first try to rip away those nasty quad lasers!
 	const auto Primary_weapon = player_num.ctype.player_info.Primary_weapon;
-	if (Primary_weapon == primary_weapon_index::LASER_INDEX)
+	if (Primary_weapon == primary_weapon_index::laser)
 		if (auto r = maybe_steal_flag_item(player_num, PLAYER_FLAGS_QUAD_LASERS))
 			return r;
 

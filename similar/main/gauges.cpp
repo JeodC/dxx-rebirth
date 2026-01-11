@@ -129,26 +129,26 @@ static constexpr const char *PRIMARY_WEAPON_NAMES_SHORT(const primary_weapon_ind
 	switch (weapon_index)
 	{
 		default:	// unreachable
-		case primary_weapon_index::LASER_INDEX:	// reachable
+		case primary_weapon_index::laser:	// reachable
 			return TXT_W_LASER_S;
-		case primary_weapon_index::VULCAN_INDEX:
+		case primary_weapon_index::vulcan:
 			return TXT_W_VULCAN_S;
-		case primary_weapon_index::SPREADFIRE_INDEX:
+		case primary_weapon_index::spreadfire:
 			return TXT_W_SPREADFIRE_S;
-		case primary_weapon_index::PLASMA_INDEX:
+		case primary_weapon_index::plasma:
 			return TXT_W_PLASMA_S;
-		case primary_weapon_index::FUSION_INDEX:
+		case primary_weapon_index::fusion:
 			return TXT_W_FUSION_S;
 #if DXX_BUILD_DESCENT == 2
-		case primary_weapon_index::SUPER_LASER_INDEX:
+		case primary_weapon_index::super_laser:
 			return TXT_W_SLASER_S;
-		case primary_weapon_index::GAUSS_INDEX:
+		case primary_weapon_index::gauss:
 			return TXT_W_SVULCAN_S;
-		case primary_weapon_index::HELIX_INDEX:
+		case primary_weapon_index::helix:
 			return TXT_W_SSPREADFIRE_S;
-		case primary_weapon_index::PHOENIX_INDEX:
+		case primary_weapon_index::phoenix:
 			return TXT_W_SPLASMA_S;
-		case primary_weapon_index::OMEGA_INDEX:
+		case primary_weapon_index::omega:
 			return TXT_W_SFUSION_S;
 #endif
 	}
@@ -1591,22 +1591,22 @@ static void hud_show_primary_weapons_mode(grs_canvas &canvas, const player_info 
 			hud_set_primary_weapon_fontcolor(player_info, i, canvas);
 			switch(i)
 			{
-				case primary_weapon_index::LASER_INDEX:
+				case primary_weapon_index::laser:
 					{
 						snprintf(weapon_str, sizeof(weapon_str), "%c%u", (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS) ? 'Q' : 'L', static_cast<unsigned>(player_info.laser_level) + 1);
 					txtweapon = weapon_str;
 					}
 					break;
-				case primary_weapon_index::VULCAN_INDEX:
+				case primary_weapon_index::vulcan:
 					txtweapon = "V";
 					break;
-				case primary_weapon_index::SPREADFIRE_INDEX:
+				case primary_weapon_index::spreadfire:
 					txtweapon = "S";
 					break;
-				case primary_weapon_index::PLASMA_INDEX:
+				case primary_weapon_index::plasma:
 					txtweapon = "P";
 					break;
-				case primary_weapon_index::FUSION_INDEX:
+				case primary_weapon_index::fusion:
 					txtweapon = "F";
 					break;
 				default:
@@ -1618,7 +1618,7 @@ static void hud_show_primary_weapons_mode(grs_canvas &canvas, const player_info 
 			}else
 				x -= w + fspacx3;
 			gr_string(canvas, *canvas.cv_font, x, y, txtweapon, w, h);
-			if (i == primary_weapon_index::VULCAN_INDEX)
+			if (i == primary_weapon_index::vulcan)
 			{
 				/*
 				 * In Descent 1, this will always draw the ammo, but the
@@ -1671,19 +1671,19 @@ static void hud_show_primary_weapons_mode(grs_canvas &canvas, const player_info 
 			hud_set_primary_weapon_fontcolor(player_info, i, canvas);
 			switch(i)
 			{
-				case primary_weapon_index::SUPER_LASER_INDEX:
+				case primary_weapon_index::super_laser:
 					txtweapon = " ";
 					break;
-				case primary_weapon_index::GAUSS_INDEX:
+				case primary_weapon_index::gauss:
 					txtweapon = "G";
 					break;
-				case primary_weapon_index::HELIX_INDEX:
+				case primary_weapon_index::helix:
 					txtweapon = "H";
 					break;
-				case primary_weapon_index::PHOENIX_INDEX:
+				case primary_weapon_index::phoenix:
 					txtweapon = "P";
 					break;
-				case primary_weapon_index::OMEGA_INDEX:
+				case primary_weapon_index::omega:
 					if (PlayerCfg.CockpitMode[1] == cockpit_mode_t::full_screen && (player_info.primary_weapon_flags & HAS_OMEGA_FLAG))
 					{
 						snprintf(weapon_str, sizeof(weapon_str), "O%3i", player_info.Omega_charge * 100 / MAX_OMEGA_CHARGE);
@@ -1700,7 +1700,7 @@ static void hud_show_primary_weapons_mode(grs_canvas &canvas, const player_info 
 				y -= h + fspacy2;
 			}else
 				x -= w + fspacx3;
-			if (i == primary_weapon_index::SUPER_LASER_INDEX)
+			if (i == primary_weapon_index::super_laser)
 			{
 				if (vertical && (PlayerCfg.CockpitMode[1] == cockpit_mode_t::full_screen))
 					hud_printf_vulcan_ammo(canvas, player_info, x, y);
@@ -1823,7 +1823,7 @@ static void hud_show_weapons(grs_canvas &canvas, const object &plrobj, const grs
 
 		weapon_name = PRIMARY_WEAPON_NAMES_SHORT(Primary_weapon);
 		switch (Primary_weapon) {
-			case primary_weapon_index::LASER_INDEX:
+			case primary_weapon_index::laser:
 				{
 					const auto level = static_cast<unsigned>(player_info.laser_level) + 1;
 				if (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS)
@@ -1834,32 +1834,32 @@ static void hud_show_weapons(grs_canvas &canvas, const object &plrobj, const grs
 				disp_primary_weapon_name = weapon_str;
 				break;
 
-			case primary_weapon_index::VULCAN_INDEX:
+			case primary_weapon_index::vulcan:
 #if DXX_BUILD_DESCENT == 2
-			case primary_weapon_index::GAUSS_INDEX:
+			case primary_weapon_index::gauss:
 #endif
 				snprintf(weapon_str, sizeof(weapon_str), "%s: %u", weapon_name, vulcan_ammo_scale(player_info.vulcan_ammo));
 				convert_1s(weapon_str);
 				disp_primary_weapon_name = weapon_str;
 				break;
 
-			case primary_weapon_index::SPREADFIRE_INDEX:
-			case primary_weapon_index::PLASMA_INDEX:
-			case primary_weapon_index::FUSION_INDEX:
+			case primary_weapon_index::spreadfire:
+			case primary_weapon_index::plasma:
+			case primary_weapon_index::fusion:
 #if DXX_BUILD_DESCENT == 2
-			case primary_weapon_index::HELIX_INDEX:
-			case primary_weapon_index::PHOENIX_INDEX:
+			case primary_weapon_index::helix:
+			case primary_weapon_index::phoenix:
 #endif
 				disp_primary_weapon_name = weapon_name;
 				break;
 #if DXX_BUILD_DESCENT == 2
-			case primary_weapon_index::OMEGA_INDEX:
+			case primary_weapon_index::omega:
 				snprintf(weapon_str, sizeof(weapon_str), "%s: %03i", weapon_name, player_info.Omega_charge * 100 / MAX_OMEGA_CHARGE);
 				convert_1s(weapon_str);
 				disp_primary_weapon_name = weapon_str;
 				break;
 
-			case primary_weapon_index::SUPER_LASER_INDEX:	//no such thing as super laser
+			case primary_weapon_index::super_laser:	//no such thing as super laser
 #endif
 			default:
 				Int3();
@@ -2863,7 +2863,7 @@ static void draw_weapon_box(const hud_draw_context_hs_mr hudctx, const player_in
 	auto &canvas = hudctx.canvas;
 	gr_set_curfont(canvas, *GAME_FONT);
 
-	const auto laser_level_changed = (wt == gauge_inset_window_view::primary && weapon_num.primary == primary_weapon_index::LASER_INDEX && (player_info.laser_level != old_laser_level));
+	const auto laser_level_changed = (wt == gauge_inset_window_view::primary && weapon_num.primary == primary_weapon_index::laser && (player_info.laser_level != old_laser_level));
 
 	auto &inset = inset_window[wt];
 	if ((weapon_num != inset.old_weapon || laser_level_changed) && inset.box_state == weapon_box_state::set && inset.old_weapon != weapon_index{} && PlayerCfg.HudMode == HudType::Standard)
@@ -2997,7 +2997,7 @@ static void draw_weapon_box0(const hud_draw_context_hs_mr hudctx, const player_i
 				ammo_count = vulcan_ammo_scale(nd_ammo);
 			}
 #if DXX_BUILD_DESCENT == 2
-			else if (Primary_weapon == primary_weapon_index::OMEGA_INDEX)
+			else if (Primary_weapon == primary_weapon_index::omega)
 			{
 				auto &Omega_charge = player_info.Omega_charge;
 				nd_ammo = Omega_charge;
@@ -3262,7 +3262,7 @@ void show_reticle(grs_canvas &canvas, const player_info &player_info, enum retic
 	auto &Secondary_weapon = player_info.Secondary_weapon;
 	secondary_bm_num = (missile_ready && has_all(player_has_secondary_weapon(player_info, Secondary_weapon)));
 
-	if (primary_bm_num && Primary_weapon == primary_weapon_index::LASER_INDEX && (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS))
+	if (primary_bm_num && Primary_weapon == primary_weapon_index::laser && (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS))
 		primary_bm_num++;
 
 	const auto opt_secondary_weapon_num{Secondary_weapon_to_gun_num.valid_index(Secondary_weapon)};
@@ -3782,10 +3782,10 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 	{
 		int ammo;
 		auto &Primary_weapon = player_info.Primary_weapon;
-		if ((Primary_weapon == primary_weapon_index::VULCAN_INDEX && (ammo = player_info.vulcan_ammo, true))
+		if ((Primary_weapon == primary_weapon_index::vulcan && (ammo = player_info.vulcan_ammo, true))
 #if DXX_BUILD_DESCENT == 2
 			||
-			(Primary_weapon == primary_weapon_index::OMEGA_INDEX && (ammo = player_info.Omega_charge, true))
+			(Primary_weapon == primary_weapon_index::omega && (ammo = player_info.Omega_charge, true))
 #endif
 		)
 			newdemo_record_primary_ammo(ammo);
@@ -4028,7 +4028,7 @@ void render_gauges(grs_canvas &canvas, const game_mode_flags Game_mode)
 void update_laser_weapon_info(void)
 {
 	auto &old_weapon = inset_window[gauge_inset_window_view::primary].old_weapon;
-	if (old_weapon.primary == primary_weapon_index::LASER_INDEX)
+	if (old_weapon.primary == primary_weapon_index::laser)
 		old_weapon = {};
 }
 

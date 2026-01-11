@@ -109,21 +109,21 @@ void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_Fi
 						std::size_t offset);
 
 // Weapon flags, if player->weapon_flags & WEAPON_FLAG is set, then the player has this weapon
-#define HAS_LASER_FLAG      HAS_PRIMARY_FLAG(primary_weapon_index::LASER_INDEX)
-#define HAS_VULCAN_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::VULCAN_INDEX)
-#define HAS_SPREADFIRE_FLAG HAS_PRIMARY_FLAG(primary_weapon_index::SPREADFIRE_INDEX)
-#define HAS_PLASMA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::PLASMA_INDEX)
-#define HAS_FUSION_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::FUSION_INDEX)
+#define HAS_LASER_FLAG      HAS_PRIMARY_FLAG(primary_weapon_index::laser)
+#define HAS_VULCAN_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::vulcan)
+#define HAS_SPREADFIRE_FLAG HAS_PRIMARY_FLAG(primary_weapon_index::spreadfire)
+#define HAS_PLASMA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::plasma)
+#define HAS_FUSION_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::fusion)
 
 #define NUM_SMART_CHILDREN  6   // Number of smart children created by default.
 #if DXX_BUILD_DESCENT == 1
 #define	NUM_SHAREWARE_WEAPONS	3		//in shareware, old get first 3 of each
 #elif DXX_BUILD_DESCENT == 2
-#define HAS_SUPER_LASER_FLAG	HAS_PRIMARY_FLAG(primary_weapon_index::SUPER_LASER_INDEX)
-#define HAS_GAUSS_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::GAUSS_INDEX)
-#define HAS_HELIX_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::HELIX_INDEX)
-#define HAS_PHOENIX_FLAG   HAS_PRIMARY_FLAG(primary_weapon_index::PHOENIX_INDEX)
-#define HAS_OMEGA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::OMEGA_INDEX)
+#define HAS_SUPER_LASER_FLAG	HAS_PRIMARY_FLAG(primary_weapon_index::super_laser)
+#define HAS_GAUSS_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::gauss)
+#define HAS_HELIX_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::helix)
+#define HAS_PHOENIX_FLAG   HAS_PRIMARY_FLAG(primary_weapon_index::phoenix)
+#define HAS_OMEGA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::omega)
 #define SUPER_WEAPON        5
 
 static constexpr bool is_super_weapon(const primary_weapon_index i)

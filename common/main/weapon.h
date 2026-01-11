@@ -208,17 +208,17 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 
 enum class primary_weapon_index : uint8_t
 {
-	LASER_INDEX = 0,
-	VULCAN_INDEX = 1,
-	SPREADFIRE_INDEX = 2,
-	PLASMA_INDEX = 3,
-	FUSION_INDEX = 4,
+	laser = 0,
+	vulcan = 1,
+	spreadfire = 2,
+	plasma = 3,
+	fusion = 4,
 #if DXX_BUILD_DESCENT == 2
-	SUPER_LASER_INDEX = 5,
-	GAUSS_INDEX = 6,
-	HELIX_INDEX = 7,
-	PHOENIX_INDEX = 8,
-	OMEGA_INDEX = 9,
+	super_laser = 5,
+	gauss = 6,
+	helix = 7,
+	phoenix = 8,
+	omega = 9,
 #endif
 };
 
@@ -261,7 +261,7 @@ static constexpr secondary_weapon_index which_bomb(const player_info &)
 
 static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
-	return id == primary_weapon_index::VULCAN_INDEX;
+	return id == primary_weapon_index::vulcan;
 }
 
 static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
@@ -280,7 +280,7 @@ secondary_weapon_index which_bomb(const player_info &player_info);
 
 static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
-	return id == primary_weapon_index::VULCAN_INDEX || id == primary_weapon_index::GAUSS_INDEX;
+	return id == primary_weapon_index::vulcan || id == primary_weapon_index::gauss;
 }
 
 static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)

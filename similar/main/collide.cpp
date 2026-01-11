@@ -1925,16 +1925,16 @@ static void maybe_drop_primary_vulcan_weapons(const object &playerobj)
 		gauss_ammo -= vulcan_ammo;
 	}
 #endif
-	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::VULCAN_INDEX, vulcan_ammo);
+	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::vulcan, vulcan_ammo);
 #if DXX_BUILD_DESCENT == 2
-	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::GAUSS_INDEX, gauss_ammo);
+	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::gauss, gauss_ammo);
 #endif
 }
 
 #if DXX_BUILD_DESCENT == 2
 static void maybe_drop_primary_omega_weapon(const object &playerobj)
 {
-	maybe_drop_primary_weapon_with_adjustment(playerobj, primary_weapon_index::OMEGA_INDEX,
+	maybe_drop_primary_weapon_with_adjustment(playerobj, primary_weapon_index::omega,
 		[&playerobj](object &weapon) {
 			weapon.ctype.powerup_info.count = (get_player_id(playerobj) == Player_num) ? playerobj.ctype.player_info.Omega_charge : MAX_OMEGA_CHARGE;
 		}
@@ -2091,13 +2091,13 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		maybe_drop_primary_vulcan_weapons(playerobj);
 
 		//	Drop the rest of the primary weapons
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::SPREADFIRE_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::PLASMA_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::FUSION_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::spreadfire);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::plasma);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::fusion);
 
 #if DXX_BUILD_DESCENT == 2
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::HELIX_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::PHOENIX_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::helix);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::phoenix);
 		maybe_drop_primary_omega_weapon(playerobj);
 #endif
 

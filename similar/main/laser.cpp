@@ -552,7 +552,7 @@ fix get_omega_energy_consumption(const fix delta_charge)
 //	Call this every frame to recharge the Omega Cannon.
 void omega_charge_frame(player_info &player_info)
 {
-	if (!(player_info.primary_weapon_flags & HAS_PRIMARY_FLAG(primary_weapon_index::OMEGA_INDEX)))
+	if (!(player_info.primary_weapon_flags & HAS_PRIMARY_FLAG(primary_weapon_index::omega)))
 		return;
 	auto &Omega_charge = player_info.Omega_charge;
 	if (Omega_charge >= MAX_OMEGA_CHARGE)
@@ -1818,7 +1818,7 @@ void do_laser_firing_player(object &plrobj)
 	auto &pl_energy = player_info.energy;
 	const auto base_energy_used{
 #if DXX_BUILD_DESCENT == 2
-		(Primary_weapon == primary_weapon_index::OMEGA_INDEX)
+		(Primary_weapon == primary_weapon_index::omega)
 		? 0	//	Omega consumes energy when recharging, not when firing.
 		:
 #endif
@@ -1851,26 +1851,26 @@ void do_laser_firing_player(object &plrobj)
 
 			switch (Primary_weapon)
 			{
-				case primary_weapon_index::LASER_INDEX:
+				case primary_weapon_index::laser:
 					if (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS)
 						flags |= LASER_QUAD;
 					break;
-				case primary_weapon_index::SPREADFIRE_INDEX:
+				case primary_weapon_index::spreadfire:
 					flags |= (player_info.Spreadfire_toggle ^= LASER_SPREADFIRE_TOGGLED) & LASER_SPREADFIRE_TOGGLED;
 					break;
-				case primary_weapon_index::VULCAN_INDEX:
-				case primary_weapon_index::PLASMA_INDEX:
-				case primary_weapon_index::FUSION_INDEX:
+				case primary_weapon_index::vulcan:
+				case primary_weapon_index::plasma:
+				case primary_weapon_index::fusion:
 				default:
 					break;
 #if DXX_BUILD_DESCENT == 2
-				case primary_weapon_index::HELIX_INDEX:
+				case primary_weapon_index::helix:
 					flags |= (player_info.Helix_orientation++ & LASER_HELIX_MASK);
 					break;
-				case primary_weapon_index::SUPER_LASER_INDEX:
-				case primary_weapon_index::GAUSS_INDEX:
-				case primary_weapon_index::PHOENIX_INDEX:
-				case primary_weapon_index::OMEGA_INDEX:
+				case primary_weapon_index::super_laser:
+				case primary_weapon_index::gauss:
+				case primary_weapon_index::phoenix:
+				case primary_weapon_index::omega:
 					break;
 #endif
 			}
@@ -1924,7 +1924,7 @@ void do_laser_firing_player(object &plrobj)
 int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index weapon_num, const laser_level level, unsigned flags, vms_vector shot_orientation, const icobjidx_t Network_laser_track)
 {
 	switch (weapon_num) {
-		case primary_weapon_index::LASER_INDEX: {
+		case primary_weapon_index::laser: {
 			weapon_id_type weapon_type;
 
 			switch(level)
@@ -1968,12 +1968,12 @@ int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index weapon_num, c
 			}
 			break;
 		}
-		case primary_weapon_index::VULCAN_INDEX: {
+		case primary_weapon_index::vulcan: {
 			if (Laser_player_fire_spread(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::VULCAN_ID, player_gun_number::center, d_rand()/8 - 32767/16, d_rand()/8 - 32767/16, weapon_sound_flag::audible, shot_orientation, object_none) == object_none)
 				return 0;
 			break;
 		}
-		case primary_weapon_index::SPREADFIRE_INDEX:
+		case primary_weapon_index::spreadfire:
 			{
 				fix spreadr0, spreadu0, spreadr1, spreadu1;
 				if (flags & LASER_SPREADFIRE_TOGGLED)
@@ -1987,13 +1987,13 @@ int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index weapon_num, c
 			}
 			break;
 
-		case primary_weapon_index::PLASMA_INDEX:
+		case primary_weapon_index::plasma:
 			if (Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::PLASMA_ID, player_gun_number::_0, weapon_sound_flag::audible, shot_orientation, object_none) == object_none)
 				return 0;
 			Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::PLASMA_ID, player_gun_number::_1, weapon_sound_flag::silent, shot_orientation, object_none);
 			break;
 
-		case primary_weapon_index::FUSION_INDEX: {
+		case primary_weapon_index::fusion: {
 			auto &&weapon_obj = Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::FUSION_ID, player_gun_number::_0, weapon_sound_flag::audible, shot_orientation, object_none);
 			Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::FUSION_ID, player_gun_number::_1, weapon_sound_flag::audible, shot_orientation, object_none);
 
@@ -2027,12 +2027,12 @@ int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index weapon_num, c
 		}
 			break;
 #if DXX_BUILD_DESCENT == 2
-		case primary_weapon_index::GAUSS_INDEX: {
+		case primary_weapon_index::gauss: {
 			if (Laser_player_fire_spread(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::GAUSS_ID, player_gun_number::center, (d_rand()/8 - 32767/16)/5, (d_rand()/8 - 32767/16)/5, weapon_sound_flag::audible, shot_orientation, object_none) == object_none)
 				return 0;
 			break;
 		}
-		case primary_weapon_index::HELIX_INDEX: {
+		case primary_weapon_index::helix: {
 			static constexpr std::array<std::pair<fix, fix>, 8> spread{{
 				{ F1_0/16, 0},			// Vertical
 				{ F1_0/17, F1_0/42},	//  22.5 degrees
@@ -2056,18 +2056,18 @@ int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index weapon_num, c
 			break;
 		}
 
-		case primary_weapon_index::PHOENIX_INDEX:
+		case primary_weapon_index::phoenix:
 			if (Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::PHOENIX_ID, player_gun_number::_0, weapon_sound_flag::audible, shot_orientation, object_none) == object_none)
 				return 0;
 			Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::PHOENIX_ID, player_gun_number::_1, weapon_sound_flag::silent, shot_orientation, object_none);
 			break;
 
-		case primary_weapon_index::OMEGA_INDEX:
+		case primary_weapon_index::omega:
 			if (Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::OMEGA_ID, player_gun_number::_1, weapon_sound_flag::audible, shot_orientation, Network_laser_track) == object_none)
 				return 0;
 			break;
 
-		case primary_weapon_index::SUPER_LASER_INDEX:
+		case primary_weapon_index::super_laser:
 #endif
 		default:
 			Int3();	//	Contact Yuan: Unknown Primary weapon type, setting to 0.

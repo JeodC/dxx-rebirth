@@ -1117,7 +1117,7 @@ void newdemo_record_start_demo()
 	nd_record_v_secondary_ammo = -1;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+		nd_write_short(primary_weapon_index{i} == primary_weapon_index::vulcan ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);
@@ -1909,7 +1909,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX)
+		if (primary_weapon_index{i} == primary_weapon_index::vulcan)
 			player_info.vulcan_ammo = s;
 		if (purpose == purpose_type::rewrite)
 			nd_write_short(s);
@@ -3128,7 +3128,7 @@ static int newdemo_read_frame_information(int rewrite)
 				break;
 			auto &player_info = get_local_plrobj().ctype.player_info;
 #if DXX_BUILD_DESCENT == 2
-			if (player_info.Primary_weapon == primary_weapon_index::OMEGA_INDEX) // If Omega cannon, we need to update Omega_charge - not stored in primary_ammo
+			if (player_info.Primary_weapon == primary_weapon_index::omega) // If Omega cannon, we need to update Omega_charge - not stored in primary_ammo
 				player_info.Omega_charge = (value<=0?f1_0:value);
 			else
 #endif
@@ -3556,7 +3556,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX)
+		if (primary_weapon_index{i} == primary_weapon_index::vulcan)
 			player_info.vulcan_ammo = s;
 	}
 	range_for (auto &i, player_info.secondary_ammo)
@@ -4013,7 +4013,7 @@ static void newdemo_write_end()
 	byte_count += 8;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+		nd_write_short(primary_weapon_index{i} == primary_weapon_index::vulcan ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);

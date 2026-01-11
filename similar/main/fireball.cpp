@@ -935,7 +935,7 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 	 * borrow LASER_INDEX as a flag value to indicate that the powerup
 	 * ID was not recognized.
 	 */
-	static constexpr primary_weapon_index unset_weapon_index{primary_weapon_index::LASER_INDEX};
+	static constexpr primary_weapon_index unset_weapon_index{primary_weapon_index::laser};
 	primary_weapon_index weapon_index{unset_weapon_index};
 
 	if (del_obj.contains.type != contained_object_type::powerup)
@@ -948,29 +948,29 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 				del_obj.contains.count = 0;
 			return;
 		case powerup_type_t::POW_VULCAN_WEAPON:
-			weapon_index = primary_weapon_index::VULCAN_INDEX;
+			weapon_index = primary_weapon_index::vulcan;
 			break;
 		case powerup_type_t::POW_SPREADFIRE_WEAPON:
-			weapon_index = primary_weapon_index::SPREADFIRE_INDEX;
+			weapon_index = primary_weapon_index::spreadfire;
 			break;
 		case powerup_type_t::POW_PLASMA_WEAPON:
-			weapon_index = primary_weapon_index::PLASMA_INDEX;
+			weapon_index = primary_weapon_index::plasma;
 			break;
 		case powerup_type_t::POW_FUSION_WEAPON:
-			weapon_index = primary_weapon_index::FUSION_INDEX;
+			weapon_index = primary_weapon_index::fusion;
 			break;
 #if DXX_BUILD_DESCENT == 2
 		case powerup_type_t::POW_GAUSS_WEAPON:
-			weapon_index = primary_weapon_index::GAUSS_INDEX;
+			weapon_index = primary_weapon_index::gauss;
 			break;
 		case powerup_type_t::POW_HELIX_WEAPON:
-			weapon_index = primary_weapon_index::HELIX_INDEX;
+			weapon_index = primary_weapon_index::helix;
 			break;
 		case powerup_type_t::POW_PHOENIX_WEAPON:
-			weapon_index = primary_weapon_index::PHOENIX_INDEX;
+			weapon_index = primary_weapon_index::phoenix;
 			break;
 		case powerup_type_t::POW_OMEGA_WEAPON:
-			weapon_index = primary_weapon_index::OMEGA_INDEX;
+			weapon_index = primary_weapon_index::omega;
 			break;
 #endif
 		case powerup_type_t::POW_EXTRA_LIFE:
