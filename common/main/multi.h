@@ -400,7 +400,7 @@ void multi_digi_link_sound_to_pos(sound_effect soundnum, vcsegptridx_t segnum, s
 void multi_object_to_object_rw(const object &obj, object_rw *obj_rw);
 void multi_object_rw_to_object(const object_rw *obj_rw, object &obj);
 
-using GMNames_array = std::array<char[MULTI_GAME_NAME_LENGTH], MULTI_GAME_TYPE_COUNT>;
+using GMNames_array = enumerated_array<char[MULTI_GAME_NAME_LENGTH], MULTI_GAME_TYPE_COUNT, network_game_type>;
 extern const GMNames_array GMNames;
 using multi_allow_powerup_text_array = std::array<char[MULTI_ALLOW_POWERUP_TEXT_LENGTH], MULTI_ALLOW_POWERUP_MAX>;
 extern const multi_allow_powerup_text_array multi_allow_powerup_text;

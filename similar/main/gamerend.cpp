@@ -212,8 +212,8 @@ static void show_netplayerinfo(grs_canvas &canvas)
 	const auto &&fspacx8 = fspacx(8);
 	x += fspacx8;
 	y += line_spacing * 2;
-	const auto gamemode = underlying_value(Netgame.gamemode);
-	gr_printf(canvas, game_font, x, y, "game mode: %s", gamemode < GMNames.size() ? GMNames[gamemode] : "INVALID");
+	const auto gamemode{Netgame.gamemode};
+	gr_printf(canvas, game_font, x, y, "Game mode: %s", GMNames.valid_index(gamemode) ? GMNames[gamemode] : "INVALID");
 	y += line_spacing;
 	gr_printf(canvas, game_font, x, y,"difficulty: %s", MENU_DIFFICULTY_TEXT(Netgame.difficulty));
 	y += line_spacing;

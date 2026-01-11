@@ -6399,7 +6399,7 @@ const std::array<char, 512> &show_game_info_menu::setup_subtitle_text(std::array
 #define DXX_SECRET_LEVEL_FORMAT
 #define DXX_SECRET_LEVEL_PARAMETER
 #endif
-	const auto gamemode = underlying_value(netgame.gamemode);
+	const auto gamemode{netgame.gamemode};
 	const unsigned
 #if DXX_BUILD_DESCENT == 1
 	players = netgame.numplayers;
@@ -6411,7 +6411,7 @@ const std::array<char, 512> &show_game_info_menu::setup_subtitle_text(std::array
 	F("%." DXX_STRINGIZE(MISSION_NAME_LEN) "s", netgame.mission_title.data())	\
 	F(" - Lvl " DXX_SECRET_LEVEL_FORMAT "%i", DXX_SECRET_LEVEL_PARAMETER netgame.levelnum)	\
 	F("\n\nDifficulty: %s", MENU_DIFFICULTY_TEXT(netgame.difficulty))	\
-	F("\nGame Mode: %s", gamemode < GMNames.size() ? GMNames[gamemode] : "INVALID")	\
+	F("\nGame Mode: %s", GMNames.valid_index(gamemode) ? GMNames[gamemode] : "INVALID")	\
 	F("\nPlayers: %u/%i", players, netgame.max_numplayers)
 #define EXPAND_FORMAT(A,B,...)	A
 #define EXPAND_ARGUMENT(A,B,...)	, B, ## __VA_ARGS__
