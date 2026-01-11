@@ -224,17 +224,17 @@ enum class primary_weapon_index : uint8_t
 
 enum class secondary_weapon_index : uint8_t
 {
-	CONCUSSION_INDEX = 0,
-	HOMING_INDEX = 1,
-	PROXIMITY_INDEX = 2,
-	SMART_INDEX = 3,
-	MEGA_INDEX = 4,
+	concussion = 0,
+	homing = 1,
+	proximity = 2,
+	smart = 3,
+	mega = 4,
 #if DXX_BUILD_DESCENT == 2
-	SMISSILE1_INDEX = 5,
-	GUIDED_INDEX = 6,
-	SMART_MINE_INDEX = 7,
-	SMISSILE4_INDEX = 8,
-	SMISSILE5_INDEX = 9,
+	smissile1 = 5,
+	guided = 6,
+	smart_mine = 7,
+	smissile4 = 8,
+	smissile5 = 9,
 #endif
 };
 
@@ -256,7 +256,7 @@ void delayed_autoselect(player_info &, const control_info &Controls);
 #if DXX_BUILD_DESCENT == 1
 static constexpr secondary_weapon_index which_bomb(const player_info &)
 {
-	return secondary_weapon_index::PROXIMITY_INDEX;
+	return secondary_weapon_index::proximity;
 }
 
 static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
@@ -266,7 +266,7 @@ static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id
 
 static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
 {
-	return id == secondary_weapon_index::PROXIMITY_INDEX;
+	return id == secondary_weapon_index::proximity;
 }
 
 //multiply ammo by this before displaying
@@ -285,7 +285,7 @@ static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id
 
 static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
 {
-	return id == secondary_weapon_index::PROXIMITY_INDEX || id == secondary_weapon_index::SMART_MINE_INDEX;
+	return id == secondary_weapon_index::proximity || id == secondary_weapon_index::smart_mine;
 }
 
 //multiply ammo by this before displaying

@@ -1342,17 +1342,17 @@ static constexpr const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const secondary_w
 		default:
 			Int3();
 			[[fallthrough]];
-		case secondary_weapon_index::CONCUSSION_INDEX:	return TXT_CONCUSSION;
-		case secondary_weapon_index::HOMING_INDEX:		return TXT_HOMING;
-		case secondary_weapon_index::PROXIMITY_INDEX:	return TXT_PROXBOMB;
-		case secondary_weapon_index::SMART_INDEX:		return TXT_SMART;
-		case secondary_weapon_index::MEGA_INDEX:		return TXT_MEGA;
+		case secondary_weapon_index::concussion:	return TXT_CONCUSSION;
+		case secondary_weapon_index::homing:		return TXT_HOMING;
+		case secondary_weapon_index::proximity:	return TXT_PROXBOMB;
+		case secondary_weapon_index::smart:		return TXT_SMART;
+		case secondary_weapon_index::mega:		return TXT_MEGA;
 #if DXX_BUILD_DESCENT == 2
-		case secondary_weapon_index::SMISSILE1_INDEX:	return "Flash";
-		case secondary_weapon_index::GUIDED_INDEX:		return "Guided";
-		case secondary_weapon_index::SMART_MINE_INDEX:	return "SmrtMine";
-		case secondary_weapon_index::SMISSILE4_INDEX:	return "Mercury";
-		case secondary_weapon_index::SMISSILE5_INDEX:	return "Shaker";
+		case secondary_weapon_index::smissile1:	return "Flash";
+		case secondary_weapon_index::guided:		return "Guided";
+		case secondary_weapon_index::smart_mine:	return "SmrtMine";
+		case secondary_weapon_index::smissile4:	return "Mercury";
+		case secondary_weapon_index::smissile5:	return "Shaker";
 #endif
 	}
 }
@@ -1379,7 +1379,7 @@ static void show_bomb_count(grs_canvas &canvas, const player_info &player_info, 
 		return;
 
 	gr_set_fontcolor(canvas, count
-		? (bomb == secondary_weapon_index::PROXIMITY_INDEX
+		? (bomb == secondary_weapon_index::proximity
 			? gr_find_closest_color(55, 0, 0)
 			: BM_XRGB(59, 50, 21)
 		)
@@ -2781,35 +2781,35 @@ static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, cons
 		switch (weapon_num)
 		{
 			default:	// unreachable
-			case secondary_weapon_index::CONCUSSION_INDEX:	// reachable
+			case secondary_weapon_index::concussion:	// reachable
 				weapon_name = TXT_W_C_MISSILE_S;
 				break;
-			case secondary_weapon_index::HOMING_INDEX:
+			case secondary_weapon_index::homing:
 				weapon_name = TXT_W_H_MISSILE_S;
 				break;
-			case secondary_weapon_index::PROXIMITY_INDEX:
+			case secondary_weapon_index::proximity:
 				weapon_name = TXT_W_P_BOMB_S;
 				break;
-			case secondary_weapon_index::SMART_INDEX:
+			case secondary_weapon_index::smart:
 				weapon_name = TXT_W_S_MISSILE_S;
 				break;
-			case secondary_weapon_index::MEGA_INDEX:
+			case secondary_weapon_index::mega:
 				weapon_name = TXT_W_M_MISSILE_S;
 				break;
 #if DXX_BUILD_DESCENT == 2
-			case secondary_weapon_index::SMISSILE1_INDEX:
+			case secondary_weapon_index::smissile1:
 				weapon_name = TXT_W_SMISSILE1_S;
 				break;
-			case secondary_weapon_index::GUIDED_INDEX:
+			case secondary_weapon_index::guided:
 				weapon_name = TXT_W_SMISSILE2_S;
 				break;
-			case secondary_weapon_index::SMART_MINE_INDEX:
+			case secondary_weapon_index::smart_mine:
 				weapon_name = TXT_W_SMISSILE3_S;
 				break;
-			case secondary_weapon_index::SMISSILE4_INDEX:
+			case secondary_weapon_index::smissile4:
 				weapon_name = TXT_W_SMISSILE4_S;
 				break;
-			case secondary_weapon_index::SMISSILE5_INDEX:
+			case secondary_weapon_index::smissile5:
 				weapon_name = TXT_W_SMISSILE5_S;
 				break;
 #endif

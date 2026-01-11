@@ -129,7 +129,7 @@ constexpr weapon_enum_type get_super_weapon_from_base_weapon(const weapon_enum_t
 }
 
 static_assert(get_super_weapon_from_base_weapon(primary_weapon_index::laser) == primary_weapon_index::super_laser);
-static_assert(get_super_weapon_from_base_weapon(secondary_weapon_index::HOMING_INDEX) == secondary_weapon_index::GUIDED_INDEX);
+static_assert(get_super_weapon_from_base_weapon(secondary_weapon_index::homing) == secondary_weapon_index::guided);
 
 /*
  * On entry:
@@ -160,7 +160,7 @@ constexpr weapon_enum_type get_alternate_weapon(const weapon_enum_type current_w
 }
 
 static_assert(get_alternate_weapon(primary_weapon_index::laser, primary_weapon_index::laser) == primary_weapon_index::super_laser);
-static_assert(get_alternate_weapon(secondary_weapon_index::GUIDED_INDEX, secondary_weapon_index::HOMING_INDEX) == secondary_weapon_index::HOMING_INDEX);
+static_assert(get_alternate_weapon(secondary_weapon_index::guided, secondary_weapon_index::homing) == secondary_weapon_index::homing);
 
 static inline void set_weapon_last_was_super(auto &last, const auto mask, const auto is_super)
 {
@@ -318,14 +318,14 @@ constexpr std::array<primary_weapon_index, MAX_PRIMARY_WEAPONS + 1> DefaultPrima
 	primary_weapon_index::fusion, primary_weapon_index::plasma, primary_weapon_index::spreadfire, primary_weapon_index::vulcan, primary_weapon_index::laser, primary_weapon_index{255}
 }};
 constexpr std::array<secondary_weapon_index, MAX_SECONDARY_WEAPONS + 1> DefaultSecondaryOrder{{
-	secondary_weapon_index::MEGA_INDEX, secondary_weapon_index::SMART_INDEX, secondary_weapon_index::HOMING_INDEX, secondary_weapon_index::CONCUSSION_INDEX, secondary_weapon_index{255}, secondary_weapon_index::PROXIMITY_INDEX
+	secondary_weapon_index::mega, secondary_weapon_index::smart, secondary_weapon_index::homing, secondary_weapon_index::concussion, secondary_weapon_index{255}, secondary_weapon_index::proximity
 }};
 #elif DXX_BUILD_DESCENT == 2
 constexpr std::array<primary_weapon_index, MAX_PRIMARY_WEAPONS + 1> DefaultPrimaryOrder={{
 	primary_weapon_index::omega, primary_weapon_index::phoenix, primary_weapon_index::helix, primary_weapon_index::gauss, primary_weapon_index::super_laser, primary_weapon_index::fusion, primary_weapon_index::plasma, primary_weapon_index::spreadfire, primary_weapon_index::vulcan, primary_weapon_index::laser, primary_weapon_index{255}
 }};
 constexpr std::array<secondary_weapon_index, MAX_SECONDARY_WEAPONS + 1> DefaultSecondaryOrder={{
-	secondary_weapon_index::SMISSILE5_INDEX, secondary_weapon_index::SMISSILE4_INDEX, secondary_weapon_index::MEGA_INDEX, secondary_weapon_index::SMART_INDEX, secondary_weapon_index::HOMING_INDEX, secondary_weapon_index::SMISSILE1_INDEX, secondary_weapon_index::CONCUSSION_INDEX, secondary_weapon_index{255}, secondary_weapon_index::SMART_MINE_INDEX, secondary_weapon_index::GUIDED_INDEX, secondary_weapon_index::PROXIMITY_INDEX
+	secondary_weapon_index::smissile5, secondary_weapon_index::smissile4, secondary_weapon_index::mega, secondary_weapon_index::smart, secondary_weapon_index::homing, secondary_weapon_index::smissile1, secondary_weapon_index::concussion, secondary_weapon_index{255}, secondary_weapon_index::smart_mine, secondary_weapon_index::guided, secondary_weapon_index::proximity
 }};
 #endif
 
@@ -698,7 +698,7 @@ void select_primary_weapon(player_info &player_info, const char *const weapon_na
 
 void set_secondary_weapon_to_concussion(player_info &player_info)
 {
-	const auto weapon_num = secondary_weapon_index::CONCUSSION_INDEX;
+	const auto weapon_num = secondary_weapon_index::concussion;
 	if (Newdemo_state == ND_STATE_RECORDING)
 		newdemo_record_player_weapon(weapon_num);
 
@@ -1057,9 +1057,9 @@ int pick_up_secondary(player_info &player_info, const secondary_weapon_index wea
 			if (weapon_index_is_player_bomb(weapon_index) &&
 				!weapon_index_is_player_bomb(player_info.Secondary_weapon))
 			{
-				const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::PROXIMITY_INDEX);
-				if (weapon_order < SOrderList((player_info.Secondary_last_was_super & mask) ? secondary_weapon_index::SMART_MINE_INDEX : secondary_weapon_index::PROXIMITY_INDEX))
-					set_weapon_last_was_super(player_info.Secondary_last_was_super, mask, weapon_index == secondary_weapon_index::SMART_MINE_INDEX);
+				const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::proximity);
+				if (weapon_order < SOrderList((player_info.Secondary_last_was_super & mask) ? secondary_weapon_index::smart_mine : secondary_weapon_index::proximity))
+					set_weapon_last_was_super(player_info.Secondary_last_was_super, mask, weapon_index == secondary_weapon_index::smart_mine);
 			}
 #endif
 	}

@@ -2339,13 +2339,13 @@ void do_missile_firing(const secondary_weapon_index weapon, const vmobjptridx_t 
 			Next_missile_fire_time = GameTime64 + (F1_0/25) - fire_frame_overhead;
 
 		-- secondary_weapon_ammo;
-		if (weapon != secondary_weapon_index::CONCUSSION_INDEX)
+		if (weapon != secondary_weapon_index::concussion)
 			maybe_drop_net_powerup(Secondary_weapon_to_powerup[weapon], 1, 0);
 
 #if DXX_BUILD_DESCENT == 1
-		if (weapon == secondary_weapon_index::MEGA_INDEX)
+		if (weapon == secondary_weapon_index::mega)
 #elif DXX_BUILD_DESCENT == 2
-		if (weapon == secondary_weapon_index::MEGA_INDEX || weapon == secondary_weapon_index::SMISSILE5_INDEX)
+		if (weapon == secondary_weapon_index::mega || weapon == secondary_weapon_index::smissile5)
 #endif
 		{
 			const vms_vector backward_vec{

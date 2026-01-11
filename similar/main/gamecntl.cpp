@@ -253,10 +253,10 @@ secondary_weapon_index read_update_which_proximity_mine_to_use(T &player_info)
 	//use the last one selected, unless there aren't any, in which case use
 	//the other if there are any
 	auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
-	const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::PROXIMITY_INDEX);
+	const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::proximity);
 	const auto [bomb, alt_bomb] = (Secondary_last_was_super & mask)
-		? std::pair(secondary_weapon_index::SMART_MINE_INDEX, secondary_weapon_index::PROXIMITY_INDEX)
-		: std::pair(secondary_weapon_index::PROXIMITY_INDEX, secondary_weapon_index::SMART_MINE_INDEX);
+		? std::pair(secondary_weapon_index::smart_mine, secondary_weapon_index::proximity)
+		: std::pair(secondary_weapon_index::proximity, secondary_weapon_index::smart_mine);
 	auto &secondary_ammo = player_info.secondary_ammo;
 	if (secondary_ammo[bomb])
 		/* Player has the requested bomb type available.  Use it. */
@@ -355,15 +355,15 @@ static void do_weapon_n_item_stuff(object_array &Objects, control_info &Controls
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
 		auto &secondary_ammo = player_info.secondary_ammo;
 		sound_effect sound;
-		if (!secondary_ammo[secondary_weapon_index::PROXIMITY_INDEX] && !secondary_ammo[secondary_weapon_index::SMART_MINE_INDEX])
+		if (!secondary_ammo[secondary_weapon_index::proximity] && !secondary_ammo[secondary_weapon_index::smart_mine])
 		{
 			HUD_init_message_literal(HM_DEFAULT, "No bombs available!");
 			sound = sound_effect::SOUND_BAD_SELECTION;
 		}
 		else
 		{	
-			const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::PROXIMITY_INDEX);
-			const auto &&[desc, bomb] = (Secondary_last_was_super & mask) ? std::pair("Proximity bombs", secondary_weapon_index::PROXIMITY_INDEX) : std::pair("Smart mines", secondary_weapon_index::SMART_MINE_INDEX);
+			const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::proximity);
+			const auto &&[desc, bomb] = (Secondary_last_was_super & mask) ? std::pair("Proximity bombs", secondary_weapon_index::proximity) : std::pair("Smart mines", secondary_weapon_index::smart_mine);
 			if (secondary_ammo[bomb] == 0)
 			{
 				HUD_init_message(HM_DEFAULT, "No %s available!", desc);
@@ -1745,7 +1745,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 		player_info.vulcan_ammo = VULCAN_AMMO_MAX;
 		auto &secondary_ammo = player_info.secondary_ammo;
-		for (const auto i : {secondary_weapon_index::CONCUSSION_INDEX, secondary_weapon_index::HOMING_INDEX, secondary_weapon_index::PROXIMITY_INDEX})
+		for (const auto i : {secondary_weapon_index::concussion, secondary_weapon_index::homing, secondary_weapon_index::proximity})
 			secondary_ammo[i] = Secondary_ammo_max[i];
 
 		if (Newdemo_state == ND_STATE_RECORDING)
@@ -1804,9 +1804,9 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 		if (Piggy_hamfile_version < pig_hamfile_version::_3) // SHAREWARE
 		{
-			secondary_ammo[secondary_weapon_index::SMISSILE4_INDEX] = 0;
-			secondary_ammo[secondary_weapon_index::SMISSILE5_INDEX] = 0;
-			secondary_ammo[secondary_weapon_index::MEGA_INDEX] = 0;
+			secondary_ammo[secondary_weapon_index::smissile4] = 0;
+			secondary_ammo[secondary_weapon_index::smissile5] = 0;
+			secondary_ammo[secondary_weapon_index::mega] = 0;
 		}
 
 		if (Newdemo_state == ND_STATE_RECORDING)
@@ -2071,7 +2071,7 @@ public:
 	DXX_MENUITEM(VERB, TEXT, TXT_SCORE, opt_txt_score)	\
 	DXX_MENUITEM(VERB, INPUT, score_text, opt_score)	\
 	DXX_MENUITEM(VERB, NUMBER, "Laser Level", opt_laser_level, menu_number_bias_wrapper<1>(plr_laser_level), static_cast<uint8_t>(laser_level::_1) + 1, static_cast<uint8_t>(DXX_MAXIMUM_LASER_LEVEL) + 1)	\
-	DXX_MENUITEM(VERB, NUMBER, "Concussion", opt_concussion, pl_info.secondary_ammo[secondary_weapon_index::CONCUSSION_INDEX], 0, 200)	\
+	DXX_MENUITEM(VERB, NUMBER, "Concussion", opt_concussion, pl_info.secondary_ammo[secondary_weapon_index::concussion], 0, 200)	\
 
 struct wimp_menu_items
 {
