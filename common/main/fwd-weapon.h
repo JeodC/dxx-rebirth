@@ -118,7 +118,8 @@ void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_Fi
 #define HAS_HELIX_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::helix)
 #define HAS_PHOENIX_FLAG   HAS_PRIMARY_FLAG(primary_weapon_index::phoenix)
 #define HAS_OMEGA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::omega)
-#define SUPER_WEAPON        5
+
+static constexpr uint8_t SUPER_WEAPON{5};
 
 static constexpr bool is_super_weapon(const primary_weapon_index i)
 {
