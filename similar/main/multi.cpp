@@ -330,7 +330,7 @@ constexpr GMNames_array GMNames{{{
 #endif
 	"Bounty"
 }}};
-const std::array<char[8], MULTI_GAME_TYPE_COUNT> GMNamesShrt = {{
+constexpr enumerated_array<char[8], MULTI_GAME_TYPE_COUNT, network_game_type> GMNamesShrt{{{
 	"ANRCHY",
 	"TEAM",
 	"ROBO",
@@ -345,7 +345,7 @@ const std::array<char[8], MULTI_GAME_TYPE_COUNT> GMNamesShrt = {{
 	"TMHOARD",
 #endif
 	"BOUNTY"
-}};
+}}};
 
 }
 

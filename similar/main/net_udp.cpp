@@ -1675,9 +1675,9 @@ window_event_result netgame_list_game_menu::event_handler(const d_event &event)
 		else
 			status = "BETWEEN ";
 		
-		const auto gamemode = underlying_value(augi.gamemode);
+		const auto gamemode{augi.gamemode};
 		auto &p = ljtext[i];
-		snprintf(p.data(), p.size(), "%d.\t%.24s \t%.7s \t%3u/%u \t%.24s \t %s \t%s", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1, GameName.data(), (gamemode < std::size(GMNamesShrt)) ? GMNamesShrt[gamemode] : "INVALID", nplayers, augi.max_numplayers, MissName.data(), levelname, status);
+		snprintf(p.data(), p.size(), "%d.\t%.24s \t%.7s \t%3u/%u \t%.24s \t %s \t%s", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1, GameName.data(), GMNamesShrt.valid_index(gamemode) ? GMNamesShrt[gamemode] : "INVALID", nplayers, augi.max_numplayers, MissName.data(), levelname, status);
 	}
 	return newmenu::event_handler(event);
 }
