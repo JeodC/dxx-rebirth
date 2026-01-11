@@ -83,6 +83,7 @@ constexpr per_secondary_weapon_array<weapon_id_type> Secondary_weapon_to_weapon_
 #include "fvi.h"
 
 namespace dsx {
+
 constexpr per_primary_weapon_array<weapon_id_type> Primary_weapon_to_weapon_info{{
 	{
 		weapon_id_type::LASER_ID,
@@ -148,6 +149,22 @@ static T get_alternate_weapon(const T current_weapon, const T base_weapon)
 	 * non-super form of base_weapon.
 	 */
 	return static_cast<T>(b + s - c);
+}
+
+static inline void set_weapon_last_was_super(auto &last, const auto mask, const auto is_super)
+{
+	if (is_super)
+		last |= mask;
+	else
+		last &= ~mask;
+}
+
+template <typename mask_type, typename weapon_enum_type>
+static inline void set_weapon_last_was_super(mask_type &last, const weapon_enum_type eweapon_num)
+{
+	const auto is_super{is_super_weapon(eweapon_num)};
+	const auto weapon_num{underlying_value(eweapon_num)};
+	set_weapon_last_was_super(last, static_cast<mask_type>(1 << (is_super ? weapon_num - SUPER_WEAPON : weapon_num)), is_super);
 }
 
 }
@@ -596,25 +613,6 @@ void CycleSecondary(player_info &player_info)
 {
 	CycleWeapon(cycle_secondary_state(player_info), player_info.Secondary_weapon);
 }
-
-#if DXX_BUILD_DESCENT == 2
-namespace {
-static inline void set_weapon_last_was_super(uint8_t &last, const uint8_t mask, const bool is_super)
-{
-	if (is_super)
-		last |= mask;
-	else
-		last &= ~mask;
-}
-
-static inline void set_weapon_last_was_super(uint8_t &last, const auto eweapon_num)
-{
-	const bool is_super = is_super_weapon(eweapon_num);
-	const auto weapon_num = underlying_value(eweapon_num);
-	set_weapon_last_was_super(last, 1 << (is_super ? weapon_num - SUPER_WEAPON : weapon_num), is_super);
-}
-}
-#endif
 
 void set_primary_weapon(player_info &player_info, const primary_weapon_index_t weapon_num)
 {
