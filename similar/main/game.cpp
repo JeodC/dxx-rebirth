@@ -2114,7 +2114,7 @@ window_event_result GameProcessFrame(const d_level_shared_robot_info_state &Leve
 		auto laser_firing_count = FireLaser(player_info, Controls);
 		if (auto &Auto_fire_fusion_cannon_time = player_info.Auto_fire_fusion_cannon_time)
 		{
-			if (player_info.Primary_weapon != primary_weapon_index_t::FUSION_INDEX)
+			if (player_info.Primary_weapon != primary_weapon_index::FUSION_INDEX)
 				Auto_fire_fusion_cannon_time = 0;
 			else if ((laser_firing_count = (GameTime64 + FrameTime/2 >= Auto_fire_fusion_cannon_time)))
 			{
@@ -2346,7 +2346,7 @@ bool FireLaser(player_info &player_info, const control_info &Controls)
 		/* Retail data sets fire_count=1 for all primary weapons */
 		return false;
 
-	if (Primary_weapon == primary_weapon_index_t::FUSION_INDEX)
+	if (Primary_weapon == primary_weapon_index::FUSION_INDEX)
 	{
 		auto energy{player_info.energy};
 		auto &Auto_fire_fusion_cannon_time = player_info.Auto_fire_fusion_cannon_time;

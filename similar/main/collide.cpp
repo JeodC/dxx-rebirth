@@ -1875,7 +1875,7 @@ static void collide_player_and_player(const d_robot_info_array &Robot_info, cons
 	bump_two_objects(Robot_info, player1, player2, damage_flag);
 }
 
-static imobjptridx_t maybe_drop_primary_weapon_egg(const object &playerobj, const primary_weapon_index_t weapon_index)
+static imobjptridx_t maybe_drop_primary_weapon_egg(const object &playerobj, const primary_weapon_index weapon_index)
 {
 	int weapon_flag = HAS_PRIMARY_FLAG(weapon_index);
 	const auto powerup_num = Primary_weapon_to_powerup[weapon_index];
@@ -1892,13 +1892,13 @@ static void maybe_drop_secondary_weapon_egg(const object_base &playerobj, const 
 	call_object_create_egg(playerobj, std::min(count, 3u), powerup_num);
 }
 
-static void maybe_drop_primary_weapon_with_adjustment(const object &playerobj, const primary_weapon_index_t weapon_index, auto adjust)
+static void maybe_drop_primary_weapon_with_adjustment(const object &playerobj, const primary_weapon_index weapon_index, auto adjust)
 {
 	if (const auto objp{maybe_drop_primary_weapon_egg(playerobj, weapon_index)}; objp != object_none)
 		adjust(*objp);
 }
 
-static void maybe_drop_primary_vulcan_based_weapon(const object &playerobj, const primary_weapon_index_t weapon_index, const uint16_t ammo)
+static void maybe_drop_primary_vulcan_based_weapon(const object &playerobj, const primary_weapon_index weapon_index, const uint16_t ammo)
 {
 	maybe_drop_primary_weapon_with_adjustment(playerobj, weapon_index,
 		[ammo](object &weapon) {
@@ -1925,16 +1925,16 @@ static void maybe_drop_primary_vulcan_weapons(const object &playerobj)
 		gauss_ammo -= vulcan_ammo;
 	}
 #endif
-	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index_t::VULCAN_INDEX, vulcan_ammo);
+	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::VULCAN_INDEX, vulcan_ammo);
 #if DXX_BUILD_DESCENT == 2
-	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index_t::GAUSS_INDEX, gauss_ammo);
+	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::GAUSS_INDEX, gauss_ammo);
 #endif
 }
 
 #if DXX_BUILD_DESCENT == 2
 static void maybe_drop_primary_omega_weapon(const object &playerobj)
 {
-	maybe_drop_primary_weapon_with_adjustment(playerobj, primary_weapon_index_t::OMEGA_INDEX,
+	maybe_drop_primary_weapon_with_adjustment(playerobj, primary_weapon_index::OMEGA_INDEX,
 		[&playerobj](object &weapon) {
 			weapon.ctype.powerup_info.count = (get_player_id(playerobj) == Player_num) ? playerobj.ctype.player_info.Omega_charge : MAX_OMEGA_CHARGE;
 		}
@@ -2091,13 +2091,13 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		maybe_drop_primary_vulcan_weapons(playerobj);
 
 		//	Drop the rest of the primary weapons
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::SPREADFIRE_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::PLASMA_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::FUSION_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::SPREADFIRE_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::PLASMA_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::FUSION_INDEX);
 
 #if DXX_BUILD_DESCENT == 2
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::HELIX_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::PHOENIX_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::HELIX_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::PHOENIX_INDEX);
 		maybe_drop_primary_omega_weapon(playerobj);
 #endif
 

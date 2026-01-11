@@ -935,8 +935,8 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 	 * borrow LASER_INDEX as a flag value to indicate that the powerup
 	 * ID was not recognized.
 	 */
-	static constexpr primary_weapon_index_t unset_weapon_index{primary_weapon_index_t::LASER_INDEX};
-	primary_weapon_index_t weapon_index{unset_weapon_index};
+	static constexpr primary_weapon_index unset_weapon_index{primary_weapon_index::LASER_INDEX};
+	primary_weapon_index weapon_index{unset_weapon_index};
 
 	if (del_obj.contains.type != contained_object_type::powerup)
 		return;
@@ -948,29 +948,29 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 				del_obj.contains.count = 0;
 			return;
 		case powerup_type_t::POW_VULCAN_WEAPON:
-			weapon_index = primary_weapon_index_t::VULCAN_INDEX;
+			weapon_index = primary_weapon_index::VULCAN_INDEX;
 			break;
 		case powerup_type_t::POW_SPREADFIRE_WEAPON:
-			weapon_index = primary_weapon_index_t::SPREADFIRE_INDEX;
+			weapon_index = primary_weapon_index::SPREADFIRE_INDEX;
 			break;
 		case powerup_type_t::POW_PLASMA_WEAPON:
-			weapon_index = primary_weapon_index_t::PLASMA_INDEX;
+			weapon_index = primary_weapon_index::PLASMA_INDEX;
 			break;
 		case powerup_type_t::POW_FUSION_WEAPON:
-			weapon_index = primary_weapon_index_t::FUSION_INDEX;
+			weapon_index = primary_weapon_index::FUSION_INDEX;
 			break;
 #if DXX_BUILD_DESCENT == 2
 		case powerup_type_t::POW_GAUSS_WEAPON:
-			weapon_index = primary_weapon_index_t::GAUSS_INDEX;
+			weapon_index = primary_weapon_index::GAUSS_INDEX;
 			break;
 		case powerup_type_t::POW_HELIX_WEAPON:
-			weapon_index = primary_weapon_index_t::HELIX_INDEX;
+			weapon_index = primary_weapon_index::HELIX_INDEX;
 			break;
 		case powerup_type_t::POW_PHOENIX_WEAPON:
-			weapon_index = primary_weapon_index_t::PHOENIX_INDEX;
+			weapon_index = primary_weapon_index::PHOENIX_INDEX;
 			break;
 		case powerup_type_t::POW_OMEGA_WEAPON:
-			weapon_index = primary_weapon_index_t::OMEGA_INDEX;
+			weapon_index = primary_weapon_index::OMEGA_INDEX;
 			break;
 #endif
 		case powerup_type_t::POW_EXTRA_LIFE:

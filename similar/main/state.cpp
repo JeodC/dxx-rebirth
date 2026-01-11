@@ -1631,9 +1631,9 @@ int state_save_all_sub(const char *filename, const char *desc)
 		 * MAX_*_WEAPONS for each.  Copy into a temporary, then write
 		 * the temporary to the file.
 		 */
-		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index::SUPER_LASER_INDEX); ++j)
 		{
-			if (Primary_last_was_super & HAS_PRIMARY_FLAG(primary_weapon_index_t{j}))
+			if (Primary_last_was_super & HAS_PRIMARY_FLAG(primary_weapon_index{j}))
 				last_was_super[j] = 1;
 		}
 		PHYSFSX_writeBytes(fp, &last_was_super, MAX_PRIMARY_WEAPONS);
@@ -2067,7 +2067,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	{
 		uint8_t v{};
 		PHYSFSX_readBytes(fp, &v, sizeof(v));
-		Primary_weapon = primary_weapon_index_t{v};
+		Primary_weapon = primary_weapon_index{v};
 	}
 	auto &Secondary_weapon = pl_info.Secondary_weapon;
 	{
@@ -2358,10 +2358,10 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		 */
 		PHYSFSX_readBytes(fp, &last_was_super, MAX_PRIMARY_WEAPONS);
 		uint8_t Primary_last_was_super{};
-		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index::SUPER_LASER_INDEX); ++j)
 		{
 			if (last_was_super[j])
-				Primary_last_was_super |= HAS_PRIMARY_FLAG(primary_weapon_index_t{j});
+				Primary_last_was_super |= HAS_PRIMARY_FLAG(primary_weapon_index{j});
 		}
 		player_info.Primary_last_was_super = Primary_last_was_super;
 		PHYSFSX_readBytes(fp, &last_was_super, MAX_SECONDARY_WEAPONS);

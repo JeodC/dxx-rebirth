@@ -128,7 +128,7 @@ constexpr weapon_enum_type get_super_weapon_from_base_weapon(const weapon_enum_t
 	return static_cast<weapon_enum_type>(static_cast<std::underlying_type_t<weapon_enum_type>>(base_weapon) + SUPER_WEAPON);
 }
 
-static_assert(get_super_weapon_from_base_weapon(primary_weapon_index_t::LASER_INDEX) == primary_weapon_index_t::SUPER_LASER_INDEX);
+static_assert(get_super_weapon_from_base_weapon(primary_weapon_index::LASER_INDEX) == primary_weapon_index::SUPER_LASER_INDEX);
 static_assert(get_super_weapon_from_base_weapon(secondary_weapon_index_t::HOMING_INDEX) == secondary_weapon_index_t::GUIDED_INDEX);
 
 /*
@@ -159,7 +159,7 @@ constexpr weapon_enum_type get_alternate_weapon(const weapon_enum_type current_w
 	);
 }
 
-static_assert(get_alternate_weapon(primary_weapon_index_t::LASER_INDEX, primary_weapon_index_t::LASER_INDEX) == primary_weapon_index_t::SUPER_LASER_INDEX);
+static_assert(get_alternate_weapon(primary_weapon_index::LASER_INDEX, primary_weapon_index::LASER_INDEX) == primary_weapon_index::SUPER_LASER_INDEX);
 static_assert(get_alternate_weapon(secondary_weapon_index_t::GUIDED_INDEX, secondary_weapon_index_t::HOMING_INDEX) == secondary_weapon_index_t::HOMING_INDEX);
 
 static inline void set_weapon_last_was_super(auto &last, const auto mask, const auto is_super)
@@ -314,28 +314,28 @@ static void check_enum(auto && /* accessor */, polygon_model_index &pmi)
 namespace dsx {
 namespace {
 #if DXX_BUILD_DESCENT == 1
-constexpr std::array<primary_weapon_index_t, MAX_PRIMARY_WEAPONS + 1> DefaultPrimaryOrder{{
-	primary_weapon_index_t::FUSION_INDEX, primary_weapon_index_t::PLASMA_INDEX, primary_weapon_index_t::SPREADFIRE_INDEX, primary_weapon_index_t::VULCAN_INDEX, primary_weapon_index_t::LASER_INDEX, primary_weapon_index_t{255}
+constexpr std::array<primary_weapon_index, MAX_PRIMARY_WEAPONS + 1> DefaultPrimaryOrder{{
+	primary_weapon_index::FUSION_INDEX, primary_weapon_index::PLASMA_INDEX, primary_weapon_index::SPREADFIRE_INDEX, primary_weapon_index::VULCAN_INDEX, primary_weapon_index::LASER_INDEX, primary_weapon_index{255}
 }};
 constexpr std::array<secondary_weapon_index_t, MAX_SECONDARY_WEAPONS + 1> DefaultSecondaryOrder{{
 	secondary_weapon_index_t::MEGA_INDEX, secondary_weapon_index_t::SMART_INDEX, secondary_weapon_index_t::HOMING_INDEX, secondary_weapon_index_t::CONCUSSION_INDEX, secondary_weapon_index_t{255}, secondary_weapon_index_t::PROXIMITY_INDEX
 }};
 #elif DXX_BUILD_DESCENT == 2
-constexpr std::array<primary_weapon_index_t, MAX_PRIMARY_WEAPONS + 1> DefaultPrimaryOrder={{
-	primary_weapon_index_t::OMEGA_INDEX, primary_weapon_index_t::PHOENIX_INDEX, primary_weapon_index_t::HELIX_INDEX, primary_weapon_index_t::GAUSS_INDEX, primary_weapon_index_t::SUPER_LASER_INDEX, primary_weapon_index_t::FUSION_INDEX, primary_weapon_index_t::PLASMA_INDEX, primary_weapon_index_t::SPREADFIRE_INDEX, primary_weapon_index_t::VULCAN_INDEX, primary_weapon_index_t::LASER_INDEX, primary_weapon_index_t{255}
+constexpr std::array<primary_weapon_index, MAX_PRIMARY_WEAPONS + 1> DefaultPrimaryOrder={{
+	primary_weapon_index::OMEGA_INDEX, primary_weapon_index::PHOENIX_INDEX, primary_weapon_index::HELIX_INDEX, primary_weapon_index::GAUSS_INDEX, primary_weapon_index::SUPER_LASER_INDEX, primary_weapon_index::FUSION_INDEX, primary_weapon_index::PLASMA_INDEX, primary_weapon_index::SPREADFIRE_INDEX, primary_weapon_index::VULCAN_INDEX, primary_weapon_index::LASER_INDEX, primary_weapon_index{255}
 }};
 constexpr std::array<secondary_weapon_index_t, MAX_SECONDARY_WEAPONS + 1> DefaultSecondaryOrder={{
 	secondary_weapon_index_t::SMISSILE5_INDEX, secondary_weapon_index_t::SMISSILE4_INDEX, secondary_weapon_index_t::MEGA_INDEX, secondary_weapon_index_t::SMART_INDEX, secondary_weapon_index_t::HOMING_INDEX, secondary_weapon_index_t::SMISSILE1_INDEX, secondary_weapon_index_t::CONCUSSION_INDEX, secondary_weapon_index_t{255}, secondary_weapon_index_t::SMART_MINE_INDEX, secondary_weapon_index_t::GUIDED_INDEX, secondary_weapon_index_t::PROXIMITY_INDEX
 }};
 #endif
 
-static primary_weapon_index_t get_mapped_weapon_index(const player_info &player_info, const primary_weapon_index_t weapon_index)
+static primary_weapon_index get_mapped_weapon_index(const player_info &player_info, const primary_weapon_index weapon_index)
 {
 #if DXX_BUILD_DESCENT == 1
 	(void)player_info;
 #elif DXX_BUILD_DESCENT == 2
-	if (weapon_index == primary_weapon_index_t::LASER_INDEX && player_info.laser_level > MAX_LASER_LEVEL)
-		return primary_weapon_index_t::SUPER_LASER_INDEX;
+	if (weapon_index == primary_weapon_index::LASER_INDEX && player_info.laser_level > MAX_LASER_LEVEL)
+		return primary_weapon_index::SUPER_LASER_INDEX;
 #endif
 	return weapon_index;
 }
@@ -387,7 +387,7 @@ static primary_weapon_index_t get_mapped_weapon_index(const player_info &player_
 //		has_primary_weapon_result::ammo
 // See weapon.h for bit values
 namespace dsx {
-has_primary_weapon_result player_has_primary_weapon(const player_info &player_info, primary_weapon_index_t weapon_num)
+has_primary_weapon_result player_has_primary_weapon(const player_info &player_info, primary_weapon_index weapon_num)
 {
 	if (!(player_info.primary_weapon_flags & HAS_PRIMARY_FLAG(weapon_num)))
 	{
@@ -408,14 +408,14 @@ has_primary_weapon_result player_has_primary_weapon(const player_info &player_in
 #if DXX_BUILD_DESCENT == 1
 		//added on 1/21/99 by Victor Rachels... yet another hack
 		//fusion has 0 energy usage, HAS_ENERGY_FLAG was always true
-		if(weapon_num == primary_weapon_index_t::FUSION_INDEX)
+		if(weapon_num == primary_weapon_index::FUSION_INDEX)
 		{
 			if (energy >= F1_0*2)
 				return result_has_weapon_ammo | has_primary_weapon_result::energy;
 			return result_has_weapon_ammo;
 		}
 #elif DXX_BUILD_DESCENT == 2
-		if (weapon_num == primary_weapon_index_t::OMEGA_INDEX) {	// Hack: Make sure player has energy to omega
+		if (weapon_num == primary_weapon_index::OMEGA_INDEX) {	// Hack: Make sure player has energy to omega
 			if (energy > 0 || player_info.Omega_charge)
 				return result_has_weapon_ammo | has_primary_weapon_result::energy;
 			return result_has_weapon_ammo;
@@ -458,7 +458,7 @@ void InitWeaponOrdering ()
 
 namespace {
 
-static uint_fast32_t POrderList(primary_weapon_index_t num);
+static uint_fast32_t POrderList(primary_weapon_index num);
 static uint_fast32_t SOrderList(secondary_weapon_index_t num);
 
 class cycle_weapon_state
@@ -474,7 +474,7 @@ class cycle_primary_state : public cycle_weapon_state
 {
 	player_info &pl_info;
 public:
-	using weapon_index_type = primary_weapon_index_t;
+	using weapon_index_type = primary_weapon_index;
 	static constexpr std::integral_constant<weapon_index_type, weapon_index_type{255}> cycle_never_autoselect_below{};
 	cycle_primary_state(player_info &p) :
 		pl_info(p)
@@ -483,7 +483,7 @@ public:
 	static constexpr std::integral_constant<uint_fast32_t, MAX_PRIMARY_WEAPONS> max_weapons{};
 	static constexpr char reorder_title[] = "Reorder Primary";
 	static constexpr char error_weapon_list_corrupt[] = "primary weapon list corrupt";
-	static uint_fast32_t get_cycle_position(primary_weapon_index_t i)
+	static uint_fast32_t get_cycle_position(primary_weapon_index i)
 	{
 		return POrderList(i);
 	}
@@ -500,17 +500,17 @@ public:
 		weapon_index_type desired_weapon = static_cast<weapon_index_type>(desired_weapon_idx);
 #if DXX_BUILD_DESCENT == 2
 		// some remapping for SUPER LASER which is not an actual weapon type at all
-		if (desired_weapon == primary_weapon_index_t::LASER_INDEX)
+		if (desired_weapon == primary_weapon_index::LASER_INDEX)
 		{
 			if (pl_info.laser_level > MAX_LASER_LEVEL)
 				return false;
 		}
-		else if (desired_weapon == primary_weapon_index_t::SUPER_LASER_INDEX)
+		else if (desired_weapon == primary_weapon_index::SUPER_LASER_INDEX)
 		{
 			if (pl_info.laser_level <= MAX_LASER_LEVEL)
 				return false;
 			else
-				desired_weapon = primary_weapon_index_t::LASER_INDEX;
+				desired_weapon = primary_weapon_index::LASER_INDEX;
 		}
 #endif
 		if (!has_all(player_has_primary_weapon(pl_info, desired_weapon)))
@@ -524,11 +524,11 @@ public:
 			const auto &&m = TXT_NO_PRIMARY;
 			HUD_init_message_literal(HM_DEFAULT, {m, strlen(m)});
 		}
-		if (pl_info.Primary_weapon == primary_weapon_index_t::LASER_INDEX)
+		if (pl_info.Primary_weapon == primary_weapon_index::LASER_INDEX)
 			return;
-		select_primary_weapon(pl_info, nullptr, primary_weapon_index_t::LASER_INDEX, 1);
+		select_primary_weapon(pl_info, nullptr, primary_weapon_index::LASER_INDEX, 1);
 	}
-	static const char *get_weapon_name(const primary_weapon_index_t i)
+	static const char *get_weapon_name(const primary_weapon_index i)
 	{
 		return i == cycle_never_autoselect_below ? DXX_WEAPON_TEXT_NEVER_AUTOSELECT : PRIMARY_WEAPON_NAMES(i);
 	}
@@ -625,7 +625,7 @@ void CycleSecondary(player_info &player_info)
 	CycleWeapon(cycle_secondary_state(player_info), player_info.Secondary_weapon);
 }
 
-void set_primary_weapon(player_info &player_info, const primary_weapon_index_t weapon_num)
+void set_primary_weapon(player_info &player_info, const primary_weapon_index weapon_num)
 {
 	if (Newdemo_state == ND_STATE_RECORDING)
 		newdemo_record_player_weapon(weapon_num);
@@ -641,7 +641,7 @@ void set_primary_weapon(player_info &player_info, const primary_weapon_index_t w
 
 //	------------------------------------------------------------------------------------
 //if message flag set, print message saying selected
-void select_primary_weapon(player_info &player_info, const char *const weapon_name, const primary_weapon_index_t weapon_num, const int wait_for_rearm)
+void select_primary_weapon(player_info &player_info, const char *const weapon_name, const primary_weapon_index weapon_num, const int wait_for_rearm)
 {
 	if (Newdemo_state==ND_STATE_RECORDING )
 		newdemo_record_player_weapon(weapon_num);
@@ -687,7 +687,7 @@ void select_primary_weapon(player_info &player_info, const char *const weapon_na
 	if (weapon_name)
 	{
 #if DXX_BUILD_DESCENT == 2
-		if (weapon_num == primary_weapon_index_t::LASER_INDEX)
+		if (weapon_num == primary_weapon_index::LASER_INDEX)
 			HUD_init_message(HM_DEFAULT, "%s Level %u %s", weapon_name, static_cast<unsigned>(player_info.laser_level) + 1, TXT_SELECTED);
 		else
 #endif
@@ -761,13 +761,13 @@ static bool reject_shareware_weapon_select_impl(const uint_fast32_t weapon_num, 
 }
 
 template <typename T>
-requires(std::is_same<T, primary_weapon_index_t>::value || std::is_same<T, secondary_weapon_index_t>::value)
+requires(std::is_same<T, primary_weapon_index>::value || std::is_same<T, secondary_weapon_index_t>::value)
 static bool reject_shareware_weapon_select(const T weapon_num, const char *const weapon_name)
 {
 	return reject_shareware_weapon_select_impl(underlying_value(weapon_num), weapon_name);
 }
 
-static bool reject_unusable_primary_weapon_select(const player_info &player_info, const primary_weapon_index_t weapon_num, const char *const weapon_name)
+static bool reject_unusable_primary_weapon_select(const player_info &player_info, const primary_weapon_index weapon_num, const char *const weapon_name)
 {
 	const auto weapon_status = player_has_primary_weapon(player_info, weapon_num);
 	const char *prefix;
@@ -794,7 +794,7 @@ static bool reject_unusable_secondary_weapon_select(const player_info &player_in
 
 //	------------------------------------------------------------------------------------
 //	Select a weapon, primary or secondary.
-void do_primary_weapon_select(player_info &player_info, primary_weapon_index_t weapon_num)
+void do_primary_weapon_select(player_info &player_info, primary_weapon_index weapon_num)
 {
 #if DXX_BUILD_DESCENT == 1
         //added on 10/9/98 by Victor Rachels to add laser cycle
@@ -812,7 +812,7 @@ void do_primary_weapon_select(player_info &player_info, primary_weapon_index_t w
 	const auto current = Primary_weapon.get_active();
 	const auto last_was_super = player_info.Primary_last_was_super & HAS_PRIMARY_FLAG(weapon_num);
 
-	if (current == weapon_num || current == static_cast<primary_weapon_index_t>(underlying_value(weapon_num) + SUPER_WEAPON))
+	if (current == weapon_num || current == static_cast<primary_weapon_index>(underlying_value(weapon_num) + SUPER_WEAPON))
 	{
 		//already have this selected, so toggle to other of normal/super version
 		weapon_num = get_alternate_weapon(current, weapon_num);
@@ -844,7 +844,7 @@ void do_primary_weapon_select(player_info &player_info, primary_weapon_index_t w
 	if (!has_weapon(weapon_status))
 	{
 		{
-			if (weapon_num == primary_weapon_index_t::SUPER_LASER_INDEX)
+			if (weapon_num == primary_weapon_index::SUPER_LASER_INDEX)
 				return; 		//no such thing as super laser, so no error
 			HUD_init_message(HM_DEFAULT, "%s %s!", TXT_DONT_HAVE, weapon_name);
 		}
@@ -985,7 +985,7 @@ void delayed_autoselect(player_info &player_info, const control_info &Controls)
 
 namespace {
 
-static void maybe_autoselect_primary_weapon(player_info &player_info, primary_weapon_index_t weapon_index, const control_info &Controls)
+static void maybe_autoselect_primary_weapon(player_info &player_info, primary_weapon_index weapon_index, const control_info &Controls)
 {
 	const auto want_switch = [weapon_index, &player_info]{
 		const auto cutpoint = POrderList(cycle_primary_state::cycle_never_autoselect_below);
@@ -1120,7 +1120,7 @@ namespace dsx {
 
 namespace {
 
-uint_fast32_t POrderList (primary_weapon_index_t num)
+uint_fast32_t POrderList (primary_weapon_index num)
 {
 	return search_weapon_order_list<cycle_primary_state>(num);
 }
@@ -1134,11 +1134,11 @@ uint_fast32_t SOrderList (secondary_weapon_index_t num)
 
 //called when a primary weapon is picked up
 //returns true if actually picked up
-int pick_up_primary(player_info &player_info, const primary_weapon_index_t weapon_index)
+int pick_up_primary(player_info &player_info, const primary_weapon_index weapon_index)
 {
 	ushort flag = HAS_PRIMARY_FLAG(weapon_index);
 
-	if (weapon_index != primary_weapon_index_t::LASER_INDEX &&
+	if (weapon_index != primary_weapon_index::LASER_INDEX &&
 		(player_info.primary_weapon_flags & flag))
 	{		//already have
 		HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, "%s %s!", TXT_ALREADY_HAVE_THE, PRIMARY_WEAPON_NAMES(weapon_index));
@@ -1151,7 +1151,7 @@ int pick_up_primary(player_info &player_info, const primary_weapon_index_t weapo
 
 	PALETTE_FLASH_ADD(7,14,21);
 
-	if (weapon_index != primary_weapon_index_t::LASER_INDEX)
+	if (weapon_index != primary_weapon_index::LASER_INDEX)
    	HUD_init_message(HM_DEFAULT, "%s!",PRIMARY_WEAPON_NAMES(weapon_index));
 
 	return 1;
@@ -1162,12 +1162,12 @@ void check_to_use_primary_super_laser(player_info &player_info)
 {
 	if (!(player_info.primary_weapon_flags & HAS_SUPER_LASER_FLAG))
 	{
-		const auto weapon_index = primary_weapon_index_t::SUPER_LASER_INDEX;
+		const auto weapon_index = primary_weapon_index::SUPER_LASER_INDEX;
 		const auto pwi = POrderList(weapon_index);
 		if (pwi < POrderList(cycle_primary_state::cycle_never_autoselect_below) &&
 			pwi < POrderList(player_info.Primary_weapon))
 		{
-			select_primary_weapon(player_info, nullptr, primary_weapon_index_t::LASER_INDEX, 1);
+			select_primary_weapon(player_info, nullptr, primary_weapon_index::LASER_INDEX, 1);
 		}
 	}
 	PALETTE_FLASH_ADD(7,14,21);
@@ -1187,9 +1187,9 @@ static void maybe_autoselect_vulcan_weapon(player_info &player_info)
 	if (!(primary_weapon_flags & weapon_flag_mask))
 		return;
 	const auto cutpoint = POrderList(cycle_primary_state::cycle_never_autoselect_below);
-	auto weapon_index = primary_weapon_index_t::VULCAN_INDEX;
+	auto weapon_index = primary_weapon_index::VULCAN_INDEX;
 #if DXX_BUILD_DESCENT == 1
-	const auto weapon_order_vulcan = POrderList(primary_weapon_index_t::VULCAN_INDEX);
+	const auto weapon_order_vulcan = POrderList(primary_weapon_index::VULCAN_INDEX);
 	const auto better{weapon_order_vulcan};
 #elif DXX_BUILD_DESCENT == 2
 	/* If a weapon is missing, pretend its auto-select priority is equal
@@ -1197,17 +1197,17 @@ static void maybe_autoselect_vulcan_weapon(player_info &player_info)
 	 * auto-selected.
 	 */
 	const auto weapon_order_vulcan = (primary_weapon_flags & HAS_VULCAN_FLAG)
-		? POrderList(primary_weapon_index_t::VULCAN_INDEX)
+		? POrderList(primary_weapon_index::VULCAN_INDEX)
 		: cutpoint;
 	const auto weapon_order_gauss = (primary_weapon_flags & HAS_GAUSS_FLAG)
-		? POrderList(primary_weapon_index_t::GAUSS_INDEX)
+		? POrderList(primary_weapon_index::GAUSS_INDEX)
 		: cutpoint;
 	/* Set better to whichever vulcan-based weapon is higher priority.
 	 * The chosen weapon might still be worse than cutpoint.
 	 */
 	const auto better = (weapon_order_vulcan < weapon_order_gauss)
 		? weapon_order_vulcan
-		: (weapon_index = primary_weapon_index_t::GAUSS_INDEX, weapon_order_gauss);
+		: (weapon_index = primary_weapon_index::GAUSS_INDEX, weapon_order_gauss);
 #endif
 	if (better >= cutpoint)
 		/* Preferred weapon is not auto-selectable */
@@ -1560,7 +1560,7 @@ void DropCurrentWeapon (player_info &player_info)
 	const auto &Primary_weapon{player_info.Primary_weapon};
 	const auto GrantedItems{+(Game_mode & GM_MULTI) ? Netgame.SpawnGrantedItems : netgrant_flag::None};
 	auto weapon_name{PRIMARY_WEAPON_NAMES(Primary_weapon)};
-	if (Primary_weapon == primary_weapon_index_t::LASER_INDEX)
+	if (Primary_weapon == primary_weapon_index::LASER_INDEX)
 	{
 		if ((player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS) && !GrantedItems.has_quad_laser())
 		{
@@ -1631,7 +1631,7 @@ void DropCurrentWeapon (player_info &player_info)
 		objnum->ctype.powerup_info.count = ammo;
 	}
 #if DXX_BUILD_DESCENT == 2
-	else if (Primary_weapon == primary_weapon_index_t::OMEGA_INDEX) {
+	else if (Primary_weapon == primary_weapon_index::OMEGA_INDEX) {
 
 		//dropped weapon has current energy
 		objnum->ctype.powerup_info.count = player_info.Omega_charge;
@@ -1641,7 +1641,7 @@ void DropCurrentWeapon (player_info &player_info)
 	if (+(Game_mode & GM_MULTI))
 		multi_send_drop_weapon(objnum,seed);
 
-	if (Primary_weapon == primary_weapon_index_t::LASER_INDEX)
+	if (Primary_weapon == primary_weapon_index::LASER_INDEX)
 	{
 		if (drop_type == powerup_type_t::POW_QUAD_FIRE)
 			player_info.powerup_flags &= ~PLAYER_FLAGS_QUAD_LASERS;

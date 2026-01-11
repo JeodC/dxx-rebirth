@@ -711,10 +711,10 @@ void init_player_stats_new_ship(const playernum_t pnum)
 			{
 				if (underlying_value(i) >= MAX_PRIMARY_WEAPONS)
 					break;
-				if (i == primary_weapon_index_t::LASER_INDEX)
+				if (i == primary_weapon_index::LASER_INDEX)
 					break;
 #if DXX_BUILD_DESCENT == 2
-				if (i == primary_weapon_index_t::SUPER_LASER_INDEX)
+				if (i == primary_weapon_index::SUPER_LASER_INDEX)
 				{
 					if (granted_laser_level <= laser_level::_4)
 						/* Granted lasers are not super lasers */
@@ -728,17 +728,17 @@ void init_player_stats_new_ship(const playernum_t pnum)
 				if (HAS_PRIMARY_FLAG(i) & static_cast<unsigned>(granted_primary_weapon_flags))
 					return i;
 			}
-			return primary_weapon_index_t::LASER_INDEX;
+			return primary_weapon_index::LASER_INDEX;
 		}());
 #if DXX_BUILD_DESCENT == 2
 		auto primary_last_was_super = player_info.Primary_last_was_super;
-		for (uint8_t i = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX), mask = 1 << i; i != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++i, mask <<= 1)
+		for (uint8_t i = static_cast<uint8_t>(primary_weapon_index::VULCAN_INDEX), mask = 1 << i; i != static_cast<uint8_t>(primary_weapon_index::SUPER_LASER_INDEX); ++i, mask <<= 1)
 		{
 			/* If no super granted, force to non-super. */
-			if (!(HAS_PRIMARY_FLAG(primary_weapon_index_t{static_cast<uint8_t>(i + 5)}) & granted_primary_weapon_flags))
+			if (!(HAS_PRIMARY_FLAG(primary_weapon_index{static_cast<uint8_t>(i + 5)}) & granted_primary_weapon_flags))
 				primary_last_was_super &= ~mask;
 			/* If only super granted, force to super. */
-			else if (!(HAS_PRIMARY_FLAG(primary_weapon_index_t{i}) & granted_primary_weapon_flags))
+			else if (!(HAS_PRIMARY_FLAG(primary_weapon_index{i}) & granted_primary_weapon_flags))
 				primary_last_was_super |= mask;
 			/* else both granted, so leave as-is. */
 			else

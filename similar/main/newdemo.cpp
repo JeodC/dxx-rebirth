@@ -1117,7 +1117,7 @@ void newdemo_record_start_demo()
 	nd_record_v_secondary_ammo = -1;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+		nd_write_short(primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);
@@ -1131,7 +1131,7 @@ void newdemo_record_start_demo()
 	nd_write_byte(nd_record_v_player_energy = static_cast<int8_t>(f2ir(player_info.energy)));
 	nd_write_byte(nd_record_v_player_shields = static_cast<int8_t>(f2ir(get_local_plrobj().shields)));
 	nd_write_int(nd_record_v_player_flags = player_info.powerup_flags.get_player_flags());        // be sure players flags are set
-	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon)));
 	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
 	nd_record_v_start_frame = nd_record_v_frame_number = 0;
 #if DXX_BUILD_DESCENT == 2
@@ -1424,11 +1424,11 @@ static void newdemo_record_player_weapon(int weapon_num, int weapon_type)
 	auto &player_info = get_local_plrobj().ctype.player_info;
 	nd_write_byte(weapon_type
 		? static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon))
-		: static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon))
+		: static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon))
 	);
 }
 
-void newdemo_record_player_weapon(const primary_weapon_index_t weapon_num)
+void newdemo_record_player_weapon(const primary_weapon_index weapon_num)
 {
 	newdemo_record_player_weapon(underlying_value(weapon_num), 0);
 }
@@ -1909,7 +1909,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX)
+		if (primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX)
 			player_info.vulcan_ammo = s;
 		if (purpose == purpose_type::rewrite)
 			nd_write_short(s);
@@ -1992,7 +1992,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		Primary_weapon = static_cast<primary_weapon_index_t>(v);
+		Primary_weapon = static_cast<primary_weapon_index>(v);
 	}
 	auto &Secondary_weapon = player_info.Secondary_weapon;
 	{
@@ -2018,7 +2018,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 			auto flags = player_info.powerup_flags.get_player_flags();
 			energy = shield;
 			shield = static_cast<uint8_t>(flags);
-			Primary_weapon = static_cast<primary_weapon_index_t>(Secondary_weapon.get_active());
+			Primary_weapon = static_cast<primary_weapon_index>(Secondary_weapon.get_active());
 			Secondary_weapon = static_cast<secondary_weapon_index_t>(c);
 		} else
 			PHYSFS_seek(infile, PHYSFS_tell(infile) - 1);
@@ -2720,7 +2720,7 @@ static int newdemo_read_frame_information(int rewrite)
 
 			auto &player_info = get_local_plrobj().ctype.player_info;
 			if (weapon_type == 0)
-				player_info.Primary_weapon = static_cast<primary_weapon_index_t>(weapon_num);
+				player_info.Primary_weapon = static_cast<primary_weapon_index>(weapon_num);
 			else
 				player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(weapon_num);
 
@@ -2744,12 +2744,12 @@ static int newdemo_read_frame_information(int rewrite)
 			auto &player_info = get_local_plrobj().ctype.player_info;
 			if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
 				if (weapon_type == 0)
-					player_info.Primary_weapon = static_cast<primary_weapon_index_t>(weapon_num);
+					player_info.Primary_weapon = static_cast<primary_weapon_index>(weapon_num);
 				else
 					player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(weapon_num);
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (weapon_type == 0)
-					player_info.Primary_weapon = static_cast<primary_weapon_index_t>(old_weapon);
+					player_info.Primary_weapon = static_cast<primary_weapon_index>(old_weapon);
 				else
 					player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(old_weapon);
 			}
@@ -3128,7 +3128,7 @@ static int newdemo_read_frame_information(int rewrite)
 				break;
 			auto &player_info = get_local_plrobj().ctype.player_info;
 #if DXX_BUILD_DESCENT == 2
-			if (player_info.Primary_weapon == primary_weapon_index_t::OMEGA_INDEX) // If Omega cannon, we need to update Omega_charge - not stored in primary_ammo
+			if (player_info.Primary_weapon == primary_weapon_index::OMEGA_INDEX) // If Omega cannon, we need to update Omega_charge - not stored in primary_ammo
 				player_info.Omega_charge = (value<=0?f1_0:value);
 			else
 #endif
@@ -3545,7 +3545,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		player_info.Primary_weapon = static_cast<primary_weapon_index_t>(v);
+		player_info.Primary_weapon = static_cast<primary_weapon_index>(v);
 	}
 	{
 		int8_t v;
@@ -3556,7 +3556,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX)
+		if (primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX)
 			player_info.vulcan_ammo = s;
 	}
 	range_for (auto &i, player_info.secondary_ammo)
@@ -4008,12 +4008,12 @@ static void newdemo_write_end()
 	nd_write_byte(static_cast<int8_t>(f2ir(player_info.energy)));
 	nd_write_byte(static_cast<int8_t>(f2ir(get_local_plrobj().shields)));
 	nd_write_int(player_info.powerup_flags.get_player_flags());        // be sure players flags are set
-	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon)));
 	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
 	byte_count += 8;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+		nd_write_short(primary_weapon_index{i} == primary_weapon_index::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);

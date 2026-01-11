@@ -496,7 +496,7 @@ void ogl_cache_level_textures(void)
 	{
 		auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 		// always have lasers, concs, flares.  Always shows player appearance, and at least concs are always available to disappear.
-		ogl_cache_weapon_textures(Vclip, Weapon_info, Primary_weapon_to_weapon_info[primary_weapon_index_t::LASER_INDEX]);
+		ogl_cache_weapon_textures(Vclip, Weapon_info, Primary_weapon_to_weapon_info[primary_weapon_index::LASER_INDEX]);
 		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[secondary_weapon_index_t::CONCUSSION_INDEX]);
 		ogl_cache_weapon_textures(Vclip, Weapon_info, weapon_id_type::FLARE_ID);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::player_appearance);
@@ -510,16 +510,16 @@ void ogl_cache_level_textures(void)
 			{
 				ogl_cache_vclipn_textures(Vclip, objp->rtype.vclip_info.vclip_num);
 				const auto id = get_powerup_id(objp);
-				primary_weapon_index_t p;
+				primary_weapon_index p;
 				secondary_weapon_index_t s;
 				int w;
 				if (
 					(
 						(
-							(id == powerup_type_t::POW_VULCAN_WEAPON && (p = primary_weapon_index_t::VULCAN_INDEX, true)) ||
-							(id == powerup_type_t::POW_SPREADFIRE_WEAPON && (p = primary_weapon_index_t::SPREADFIRE_INDEX, true)) ||
-							(id == powerup_type_t::POW_PLASMA_WEAPON && (p = primary_weapon_index_t::PLASMA_INDEX, true)) ||
-							(id == powerup_type_t::POW_FUSION_WEAPON && (p = primary_weapon_index_t::FUSION_INDEX, true))
+							(id == powerup_type_t::POW_VULCAN_WEAPON && (p = primary_weapon_index::VULCAN_INDEX, true)) ||
+							(id == powerup_type_t::POW_SPREADFIRE_WEAPON && (p = primary_weapon_index::SPREADFIRE_INDEX, true)) ||
+							(id == powerup_type_t::POW_PLASMA_WEAPON && (p = primary_weapon_index::PLASMA_INDEX, true)) ||
+							(id == powerup_type_t::POW_FUSION_WEAPON && (p = primary_weapon_index::FUSION_INDEX, true))
 						) && (w = Primary_weapon_to_weapon_info[p], true)
 					) ||
 					(

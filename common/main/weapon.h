@@ -206,7 +206,7 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 #endif
 };
 
-enum class primary_weapon_index_t : uint8_t
+enum class primary_weapon_index : uint8_t
 {
 	LASER_INDEX = 0,
 	VULCAN_INDEX = 1,
@@ -239,7 +239,7 @@ enum class secondary_weapon_index_t : uint8_t
 };
 
 //given a weapon index, return the flag value
-static constexpr unsigned HAS_PRIMARY_FLAG(const primary_weapon_index_t w)
+static constexpr unsigned HAS_PRIMARY_FLAG(const primary_weapon_index w)
 {
 	return 1 << static_cast<unsigned>(w);
 }
@@ -259,9 +259,9 @@ static constexpr secondary_weapon_index_t which_bomb(const player_info &)
 	return secondary_weapon_index_t::PROXIMITY_INDEX;
 }
 
-static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index_t id)
+static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
-	return id == primary_weapon_index_t::VULCAN_INDEX;
+	return id == primary_weapon_index::VULCAN_INDEX;
 }
 
 static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
@@ -278,9 +278,9 @@ static constexpr unsigned vulcan_ammo_scale(const unsigned v)
 secondary_weapon_index_t which_bomb(player_info &player_info);
 secondary_weapon_index_t which_bomb(const player_info &player_info);
 
-static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index_t id)
+static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
-	return id == primary_weapon_index_t::VULCAN_INDEX || id == primary_weapon_index_t::GAUSS_INDEX;
+	return id == primary_weapon_index::VULCAN_INDEX || id == primary_weapon_index::GAUSS_INDEX;
 }
 
 static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)

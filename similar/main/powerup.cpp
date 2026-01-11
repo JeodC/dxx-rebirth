@@ -214,7 +214,7 @@ static int pick_up_energy(player_info &player_info)
 	return used;
 }
 
-static int pick_up_primary_or_energy(player_info &player_info, const primary_weapon_index_t weapon_index)
+static int pick_up_primary_or_energy(player_info &player_info, const primary_weapon_index weapon_index)
 {
 	const auto used = pick_up_primary(player_info, weapon_index);
 	if (used || +(Game_mode & GM_MULTI))
@@ -462,7 +462,7 @@ int do_powerup(const vmobjptridx_t obj)
 				if (Newdemo_state == ND_STATE_RECORDING)
 					newdemo_record_laser_level(level_before_powerup, level_after_powerup);
 				powerup_basic(10, 0, 10, LASER_SCORE, "%s %s %u", TXT_LASER, TXT_BOOSTED_TO, static_cast<unsigned>(level_after_powerup) + 1);
-				pick_up_primary(player_info, primary_weapon_index_t::LASER_INDEX);
+				pick_up_primary(player_info, primary_weapon_index::LASER_INDEX);
 				used=1;
 			}
 			if (!used && !(Game_mode & GM_MULTI) )
@@ -496,10 +496,10 @@ int do_powerup(const vmobjptridx_t obj)
 			used = pick_up_primary(player_info,
 #if DXX_BUILD_DESCENT == 2
 									(id == powerup_type_t::POW_GAUSS_WEAPON)
-				? primary_weapon_index_t::GAUSS_INDEX
+				? primary_weapon_index::GAUSS_INDEX
 				:
 #endif
-				primary_weapon_index_t::VULCAN_INDEX
+				primary_weapon_index::VULCAN_INDEX
 			);
 			if (const auto ammo_used = pick_up_vulcan_ammo(player_info, obj->ctype.powerup_info.count))
 			{
@@ -520,26 +520,26 @@ int do_powerup(const vmobjptridx_t obj)
 		}
 
 		case	powerup_type_t::POW_SPREADFIRE_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::SPREADFIRE_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::SPREADFIRE_INDEX);
 			break;
 		case	powerup_type_t::POW_PLASMA_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::PLASMA_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::PLASMA_INDEX);
 			break;
 		case	powerup_type_t::POW_FUSION_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::FUSION_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::FUSION_INDEX);
 			break;
 
 #if DXX_BUILD_DESCENT == 2
 		case	powerup_type_t::POW_HELIX_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::HELIX_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::HELIX_INDEX);
 			break;
 
 		case	powerup_type_t::POW_PHOENIX_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::PHOENIX_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::PHOENIX_INDEX);
 			break;
 
 		case	powerup_type_t::POW_OMEGA_WEAPON:
-			used = pick_up_primary(player_info, primary_weapon_index_t::OMEGA_INDEX);
+			used = pick_up_primary(player_info, primary_weapon_index::OMEGA_INDEX);
 			if (used)
 				player_info.Omega_charge = obj->ctype.powerup_info.count;
 			if (!used && !(Game_mode & GM_MULTI) )
@@ -652,7 +652,7 @@ int do_powerup(const vmobjptridx_t obj)
 				if (Newdemo_state == ND_STATE_RECORDING)
 					newdemo_record_laser_level(old_level, player_info.laser_level);
 				powerup_basic(10, 0, 10, LASER_SCORE, "Super Boost to Laser level %u", static_cast<unsigned>(player_info.laser_level) + 1);
-				if (player_info.Primary_weapon != primary_weapon_index_t::LASER_INDEX)
+				if (player_info.Primary_weapon != primary_weapon_index::LASER_INDEX)
 					check_to_use_primary_super_laser(player_info);
 				used=1;
 			}
