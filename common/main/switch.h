@@ -67,7 +67,6 @@ enum class trigger_action : uint8_t
 };
 
 #if DXX_BUILD_DESCENT == 2
-#define NUM_TRIGGER_TYPES   14
 
 // Trigger flags
 
