@@ -2981,7 +2981,8 @@ static std::span<const uint8_t> net_udp_prepare_heavy_game_info(const d_level_un
 		buf[len] = static_cast<uint8_t>(i.get_player_flags());
 		len++;
 	}
-	PUT_INTEL_SHORT(&buf[len], Netgame.PacketsPerSec);				len += 2;
+	buf[len++] = Netgame.PacketsPerSec;
+	buf[len++] = 0;	/* was high 8 bits of PacketsPerSec, but PacketsPerSec never exceeds MAX_PPS */
 	buf[len] = Netgame.PacketLossPrevention;					len++;
 	buf[len] = Netgame.NoFriendlyFire;						len++;
 	buf[len] = Netgame.MouselookFlags;						len++;
@@ -3237,7 +3238,7 @@ static void net_udp_process_game_info_heavy(const uint8_t *data, uint_fast32_t, 
 			i = player_flags(data[len]);
 			len++;
 		}
-		Netgame.PacketsPerSec = GET_INTEL_SHORT(&(data[len]));				len += 2;
+		Netgame.PacketsPerSec = data[len];	len += 2;
 		Netgame.PacketLossPrevention = data[len];					len++;
 		Netgame.NoFriendlyFire = data[len];						len++;
 		Netgame.MouselookFlags = data[len];						len++;
@@ -3967,7 +3968,9 @@ public:
 #endif
 	void update_packstring()
 	{
-		snprintf(packstring.data(), packstring.size(), "%u", Netgame.PacketsPerSec);
+		const unsigned PacketsPerSec{Netgame.PacketsPerSec};
+		cf_assert(PacketsPerSec <= MAX_PPS);
+		snprintf(packstring.data(), packstring.size(), "%u", PacketsPerSec);
 	}
 	void update_portstring()
 	{
@@ -4437,7 +4440,6 @@ window_event_result net_udp_setup_game()
 	Netgame.ThiefModifierFlags = 0;
 #endif
 	Netgame.difficulty=PlayerCfg.DefaultDifficulty;
-	Netgame.PacketsPerSec=DEFAULT_PPS;
 	snprintf(Netgame.game_name.data(), Netgame.game_name.size(), "%s%s", static_cast<const char *>(InterfaceUniqueState.PilotName), TXT_S_GAME);
 	reset_UDP_MyPort();
 	Netgame.ShufflePowerupSeed = 0;

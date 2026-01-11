@@ -160,7 +160,6 @@ constexpr std::uint16_t MULTI_PROTO_VERSION{16};
 // PROTOCOL VARIABLES AND DEFINES - END
 
 // limits for Packets (i.e. positional updates) per sec
-#define DEFAULT_PPS 30
 #define MIN_PPS 5
 #define MAX_PPS 40
 
@@ -869,7 +868,7 @@ struct netgame_info : prohibit_void_ptr<netgame_info>
 	fix						level_time;
 	int						control_invul_time;
 	int						monitor_vector;
-	short						PacketsPerSec;
+	uint8_t	PacketsPerSec{30};
 	ubyte						PacketLossPrevention;
 	ubyte						NoFriendlyFire;
 	per_team_array<callsign_t>						team_name;
