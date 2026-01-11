@@ -2747,7 +2747,7 @@ void net_udp_update_netgame()
 //	"sneak" Hoard information into this field.  This is better than sending 
 //	another packet that could be lost in transit.
 
-	if (HoardEquipped())
+	if (HoardEquipped() != hoard_availability_state::Missing)
 	{
 		const auto is_hoard_game{game_mode_hoard(Game_mode)};
 		const auto game_flag_no_hoard{Netgame.game_flag & ~(netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)};
@@ -3113,7 +3113,7 @@ static void net_udp_process_game_info_light(const std::span<const uint8_t> buf, 
 #if DXX_BUILD_DESCENT == 2
 		// See if this is really a Hoard game
 		// If so, adjust all the data accordingly
-		if (HoardEquipped())
+		if (HoardEquipped() != hoard_availability_state::Missing)
 		{
 			if (const auto game_flag{i->game_flag}; (game_flag & netgame_rule_flags::hoard) != netgame_rule_flags::None)
 			{
@@ -4302,7 +4302,7 @@ static int net_udp_game_param_handler( newmenu *menu,const d_event &event, param
 				menus[opt->closed+1].value = 0;
 			}
 #elif DXX_BUILD_DESCENT == 2
-			if (((HoardEquipped() && (citem == opt->team_hoard)) || ((citem == opt->team_anarchy) || (citem == opt->capture))) && !menus[opt->closed].value && !menus[opt->refuse].value) 
+			if (((HoardEquipped() != hoard_availability_state::Missing && (citem == opt->team_hoard)) || ((citem == opt->team_anarchy) || (citem == opt->capture))) && !menus[opt->closed].value && !menus[opt->refuse].value)
 			{
 				menus[opt->refuse].value = 1;
 				menus[opt->refuse-1].value = 0;
@@ -4347,9 +4347,9 @@ static int net_udp_game_param_handler( newmenu *menu,const d_event &event, param
 #if DXX_BUILD_DESCENT == 2
 				else if (menus[opt->capture].value)
 					Netgame.gamemode = network_game_type::capture_flag;
-				else if (HoardEquipped() && menus[opt->hoard].value)
+				else if (const auto hoard{HoardEquipped()}; hoard != hoard_availability_state::Missing && menus[opt->hoard].value)
 					Netgame.gamemode = network_game_type::hoard;
-				else if (HoardEquipped() && menus[opt->team_hoard].value)
+				else if (hoard != hoard_availability_state::Missing && menus[opt->team_hoard].value)
 					Netgame.gamemode = network_game_type::team_hoard;
 #endif
 				else if( menus[opt->bounty].value )
@@ -4459,7 +4459,7 @@ window_event_result net_udp_setup_game()
 	read_netgame_profile(&Netgame);
 
 #if DXX_BUILD_DESCENT == 2
-	if (!HoardEquipped() && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard)) // did we restore a hoard mode but don't have hoard installed right now? then fall back to anarchy!
+	if (HoardEquipped() == hoard_availability_state::Missing && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard)) // did we restore a hoard mode but don't have hoard installed right now? then fall back to anarchy!
 		Netgame.gamemode = network_game_type::anarchy;
 #endif
 
@@ -4504,7 +4504,7 @@ window_event_result net_udp_setup_game()
 #if DXX_BUILD_DESCENT == 2
 	nm_set_item_radio(m[optnum], "Capture the flag", Netgame.gamemode == network_game_type::capture_flag, 0); opt.capture=optnum; optnum++;
 
-	if (HoardEquipped())
+	if (HoardEquipped() != hoard_availability_state::Missing)
 	{
 		nm_set_item_radio(m[optnum], "Hoard", Netgame.gamemode == network_game_type::hoard, 0); opt.hoard=optnum; optnum++;
 		nm_set_item_radio(m[optnum], "Team Hoard", Netgame.gamemode == network_game_type::team_hoard, 0); opt.team_hoard=optnum; optnum++;
@@ -4586,9 +4586,9 @@ static void net_udp_set_game_mode(const network_game_type gamemode)
 		 Game_mode = game_mode_flags::capture_flag;
 		Show_kill_list = show_kill_list_mode::team_kills;
 		}
-	else if (HoardEquipped() && gamemode == network_game_type::hoard)
+	else if (const auto hoard{HoardEquipped()}; hoard != hoard_availability_state::Missing && gamemode == network_game_type::hoard)
 		Game_mode = game_mode_flags::hoard;
-	else if (HoardEquipped() && gamemode == network_game_type::team_hoard)
+	else if (hoard != hoard_availability_state::Missing && gamemode == network_game_type::team_hoard)
 		 {
 		Game_mode = game_mode_flags::team_hoard;
  		Show_kill_list = show_kill_list_mode::team_kills;
@@ -5176,7 +5176,7 @@ int net_udp_do_join_game()
 		}
 	}
 
-	if (!HoardEquipped() && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard))
+	if (HoardEquipped() == hoard_availability_state::Missing && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard))
 	{
 		struct error_hoard_not_available : passive_messagebox
 		{

@@ -5578,15 +5578,17 @@ static hoard_resources_type hoard_resources;
 
 }
 
-int HoardEquipped()
+hoard_availability_state HoardEquipped()
 {
-	static int checked=-1;
-
-	if (unlikely(checked == -1))
+	static auto checked{hoard_availability_state::None};
+	if (checked == hoard_availability_state::None) [[unlikely]]
 	{
-		checked = PHYSFSX_exists_ignorecase(hoard_ham_basename);
+		if (PHYSFSX_exists_ignorecase(hoard_ham_basename) && static_cast<bool>(RAIIPHYSFS_File{PHYSFS_openRead(hoard_ham_basename)}))
+			checked = hoard_availability_state::Found;
+		else
+			checked = hoard_availability_state::Missing;
 	}
-	return (checked);
+	return checked;
 }
 
 std::array<grs_main_bitmap, 2> Orb_icons;

@@ -742,7 +742,14 @@ void init_hoard_data(d_vclip_array &Vclip);
 void multi_apply_goal_textures();
 void multi_send_escort_goal(const d_unique_buddy_state &);
 
-int HoardEquipped();
+enum class hoard_availability_state : uint8_t
+{
+	Missing,	/* Check was done, no file found */
+	Found,	/* Check was done, file exists */
+	None,	/* No check has been done */
+};
+
+hoard_availability_state HoardEquipped();
 #if DXX_USE_EDITOR
 void save_hoard_data(void);
 #endif
