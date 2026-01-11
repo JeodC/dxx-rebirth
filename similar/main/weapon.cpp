@@ -133,29 +133,34 @@ static_assert(get_super_weapon_from_base_weapon(secondary_weapon_index_t::HOMING
 
 /*
  * On entry:
- * - current_weapon may be any valid weapon index, whether regular or
+ * - `current_weapon` may be any valid weapon index, whether regular or
  *   super.
- * - base_weapon must be the non-super version of current_weapon.  If
- *   current_weapon is the regular version, then base_weapon ==
- *   current_weapon.  If current_weapon is the super version, then
- *   base_weapon + SUPER_WEAPON == current_weapon.
+ * - `base_weapon` must be the non-super version of `current_weapon`.  If
+ *   `current_weapon` is the regular version, then
+ *   `base_weapon == current_weapon`.  If `current_weapon` is the super
+ *   version, then `base_weapon + SUPER_WEAPON == current_weapon`.
  */
-template <typename T>
-static T get_alternate_weapon(const T current_weapon, const T base_weapon)
+template <typename weapon_enum_type>
+constexpr weapon_enum_type get_alternate_weapon(const weapon_enum_type current_weapon, const weapon_enum_type base_weapon)
 {
-	const auto b = static_cast<unsigned>(base_weapon);
-	const auto c = static_cast<unsigned>(current_weapon);
-	const auto s = static_cast<unsigned>(get_super_weapon_from_base_weapon(base_weapon));
-	/* If current_weapon == base_weapon, then this expression simplifies
-	 * to (base_weapon + SUPER_WEAPON) and produces the super form of
-	 * base_weapon.
+	using underlying_type = std::underlying_type_t<weapon_enum_type>;
+	/* If `current_weapon == base_weapon`, then this expression simplifies to
+	 * `base_weapon + SUPER_WEAPON` and produces the super form of
+	 * `base_weapon`.
 	 *
-	 * If current_weapon == base_weapon+SUPER_WEAPON, then this
-	 * expression simplifies to (base_weapon), and produces the
-	 * non-super form of base_weapon.
+	 * If `current_weapon == base_weapon+SUPER_WEAPON`, then this expression
+	 * simplifies to `base_weapon`, and produces the non-super form of
+	 * `base_weapon`.
 	 */
-	return static_cast<T>(b + s - c);
+	return static_cast<weapon_enum_type>(
+		static_cast<underlying_type>(base_weapon) +
+		static_cast<underlying_type>(get_super_weapon_from_base_weapon(base_weapon)) -
+		static_cast<underlying_type>(current_weapon)
+	);
 }
+
+static_assert(get_alternate_weapon(primary_weapon_index_t::LASER_INDEX, primary_weapon_index_t::LASER_INDEX) == primary_weapon_index_t::SUPER_LASER_INDEX);
+static_assert(get_alternate_weapon(secondary_weapon_index_t::GUIDED_INDEX, secondary_weapon_index_t::HOMING_INDEX) == secondary_weapon_index_t::HOMING_INDEX);
 
 static inline void set_weapon_last_was_super(auto &last, const auto mask, const auto is_super)
 {
