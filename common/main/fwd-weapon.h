@@ -59,12 +59,6 @@ struct weapon_info;
 
 #define WEAPON_DEFAULT_LIFETIME     (F1_0*12)   // Lifetime of an object if a bozo forgets to define it.
 
-#define WEAPON_RENDER_NONE          weapon_info::render_type::None
-#define WEAPON_RENDER_LASER         weapon_info::render_type::laser
-#define WEAPON_RENDER_BLOB          weapon_info::render_type::blob
-#define WEAPON_RENDER_POLYMODEL     weapon_info::render_type::polymodel
-#define WEAPON_RENDER_VCLIP         weapon_info::render_type::vclip
-
 #if DXX_BUILD_DESCENT == 1
 constexpr std::integral_constant<unsigned, 30> MAX_WEAPON_TYPES{};
 

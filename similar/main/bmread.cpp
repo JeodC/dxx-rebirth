@@ -2258,7 +2258,7 @@ void bm_read_weapon(int skip, int unused_flag)
 	}
 
 	// Initialize weapon array
-	Weapon_info[n].render = WEAPON_RENDER_NONE;		// 0=laser, 1=blob, 2=object
+	Weapon_info[n].render = weapon_info::render_type::None;		// 0=laser, 1=blob, 2=object
 	Weapon_info[n].bitmap = {};
 	Weapon_info[n].model_num = polygon_model_index::None;
 	Weapon_info[n].model_num_inner = polygon_model_index::None;
@@ -2330,23 +2330,23 @@ void bm_read_weapon(int skip, int unused_flag)
 				// Load bitmap with name equal_ptr
 
 				Weapon_info[n].bitmap = bm_load_sub(skip, equal_ptr);		//load_polymodel_bitmap(equal_ptr);
-				Weapon_info[n].render = WEAPON_RENDER_LASER;
+				Weapon_info[n].render = weapon_info::render_type::laser;
 
 			} else if (!d_stricmp( arg, "blob_bmp" ))	{
 				// Load bitmap with name equal_ptr
 
 				Weapon_info[n].bitmap = bm_load_sub(skip, equal_ptr);		//load_polymodel_bitmap(equal_ptr);
-				Weapon_info[n].render = WEAPON_RENDER_BLOB;
+				Weapon_info[n].render = weapon_info::render_type::blob;
 
 			} else if (!d_stricmp( arg, "weapon_vclip" ))	{
 				// Set vclip to play for this weapon.
 				Weapon_info[n].bitmap = {};
-				Weapon_info[n].render = WEAPON_RENDER_VCLIP;
+				Weapon_info[n].render = weapon_info::render_type::vclip;
 				Weapon_info[n].weapon_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
 
 			} else if (!d_stricmp( arg, "none_bmp" )) {
 				Weapon_info[n].bitmap = bm_load_sub(skip, equal_ptr);
-				Weapon_info[n].render = WEAPON_RENDER_NONE;
+				Weapon_info[n].render = weapon_info::render_type::None;
 
 			} else if (!d_stricmp( arg, "weapon_pof" ))	{
 				// Load pof file
@@ -2495,7 +2495,7 @@ void bm_read_weapon(int skip, int unused_flag)
 		const auto model_num = load_polygon_model(model_name[i],n_textures,first_bitmap_num[i],NULL);
 
 		if (i==0) {
-			Weapon_info[n].render = WEAPON_RENDER_POLYMODEL;
+			Weapon_info[n].render = weapon_info::render_type::polymodel;
 			Weapon_info[n].model_num = model_num;
 		}
 		else

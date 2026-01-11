@@ -87,16 +87,16 @@ void Laser_render(grs_canvas &canvas, const object_base &obj)
 	auto &wi = Weapon_info[get_weapon_id(obj)];
 	switch(wi.render)
 	{
-	case WEAPON_RENDER_LASER:
+	case weapon_info::render_type::laser:
 		Int3();	// Not supported anymore!
 					//Laser_draw_one(obj-Objects, Weapon_info[obj->id].bitmap );
 		break;
-	case WEAPON_RENDER_BLOB:
+	case weapon_info::render_type::blob:
 		draw_object_blob(GameBitmaps, *Viewer, canvas, obj, wi.bitmap);
 		break;
-	case WEAPON_RENDER_POLYMODEL:
+	case weapon_info::render_type::polymodel:
 		break;
-	case WEAPON_RENDER_VCLIP:
+	case weapon_info::render_type::vclip:
 		Int3();	//	Oops, not supported, type added by mk on 09/09/94, but not for lasers...
 		[[fallthrough]];
 	default:
@@ -309,22 +309,22 @@ static imobjptridx_t create_weapon_object(int weapon_type,const vmsegptridx_t se
 
 	switch(Weapon_info[weapon_type].render)
 	{
-		case WEAPON_RENDER_BLOB:
+		case weapon_info::render_type::blob:
 			rtype = render_type::RT_LASER;			// Render as a laser even if blob (see render code above for explanation)
 			laser_radius = Weapon_info[weapon_type].blob_size;
 			break;
-		case WEAPON_RENDER_POLYMODEL:
+		case weapon_info::render_type::polymodel:
 			laser_radius = 0;	//	Filled in below.
 			rtype = render_type::RT_POLYOBJ;
 			break;
-		case WEAPON_RENDER_LASER:
+		case weapon_info::render_type::laser:
 			Int3(); 	// Not supported anymore
 			return object_none;
-		case WEAPON_RENDER_NONE:
+		case weapon_info::render_type::None:
 			rtype = render_type::RT_NONE;
 			laser_radius = F1_0;
 			break;
-		case WEAPON_RENDER_VCLIP:
+		case weapon_info::render_type::vclip:
 			rtype = render_type::RT_WEAPON_VCLIP;
 			laser_radius = Weapon_info[weapon_type].blob_size;
 			break;
@@ -336,7 +336,7 @@ static imobjptridx_t create_weapon_object(int weapon_type,const vmsegptridx_t se
 	if (obj == object_none)
 		return object_none;
 
-	if (Weapon_info[weapon_type].render == WEAPON_RENDER_POLYMODEL) {
+	if (Weapon_info[weapon_type].render == weapon_info::render_type::polymodel) {
 		auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 		obj->rtype.pobj_info.model_num = Weapon_info[get_weapon_id(obj)].model_num;
 		obj->size = fixdiv(Polygon_models[obj->rtype.pobj_info.model_num].rad,Weapon_info[get_weapon_id(obj)].po_len_to_width_ratio);
@@ -787,7 +787,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 		obj->mtype.phys_info.flags |= PF_BOUNCE;
 
 	const fix laser_length{
-		(weapon_info.render == WEAPON_RENDER_POLYMODEL)
+		(weapon_info.render == weapon_info::render_type::polymodel)
 		? (LevelSharedPolygonModelState.Polygon_models[obj->rtype.pobj_info.model_num].rad * 2)
 		: 0
 	};
@@ -861,9 +861,9 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	// This also jitters the laser a bit so that it doesn't alias.
 	//	Don't do for weapons created by weapons.
 #if DXX_BUILD_DESCENT == 1
-	if (parent->type != OBJ_WEAPON && weapon_info.render != WEAPON_RENDER_NONE && weapon_type != weapon_id_type::FLARE_ID)
+	if (parent->type != OBJ_WEAPON && weapon_info.render != weapon_info::render_type::None && weapon_type != weapon_id_type::FLARE_ID)
 #elif DXX_BUILD_DESCENT == 2
-	if (parent->type == OBJ_PLAYER && weapon_info.render != WEAPON_RENDER_NONE && weapon_type != weapon_id_type::FLARE_ID)
+	if (parent->type == OBJ_PLAYER && weapon_info.render != weapon_info::render_type::None && weapon_type != weapon_id_type::FLARE_ID)
 #endif
 	{
 	 	const auto end_pos{vm_vec_scale_add(obj->pos, direction, (laser_length / 2))};
@@ -1655,7 +1655,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 #endif
 					vm_vec_add2(temp_vec, vector_to_object);
 					//	The boss' smart children track better...
-					if (Weapon_info[get_weapon_id(obj)].render != WEAPON_RENDER_POLYMODEL)
+					if (Weapon_info[get_weapon_id(obj)].render != weapon_info::render_type::polymodel)
 						vm_vec_add2(temp_vec, vector_to_object);
 					vm_vec_normalize_quick(temp_vec);
 #if DXX_BUILD_DESCENT == 1
@@ -1682,7 +1682,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 					}
 
 					//	Only polygon objects have visible orientation, so only they should turn.
-					if (Weapon_info[get_weapon_id(obj)].render == WEAPON_RENDER_POLYMODEL)
+					if (Weapon_info[get_weapon_id(obj)].render == weapon_info::render_type::polymodel)
 						homing_missile_turn_towards_velocity(obj, temp_vec, HOMING_TURN_TIME);		//	temp_vec is normalized velocity.
                                 }
                         }
@@ -1716,7 +1716,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 #endif
 				vm_vec_add2(temp_vec, vector_to_object);
 				//	The boss' smart children track better...
-				if (Weapon_info[get_weapon_id(obj)].render != WEAPON_RENDER_POLYMODEL)
+				if (Weapon_info[get_weapon_id(obj)].render != weapon_info::render_type::polymodel)
 					vm_vec_add2(temp_vec, vector_to_object);
 				vm_vec_normalize_quick(temp_vec);
 #if DXX_BUILD_DESCENT == 1
@@ -1747,7 +1747,7 @@ void Laser_do_weapon_sequence(const d_robot_info_array &Robot_info, const vmobjp
 				}
 
 				//	Only polygon objects have visible orientation, so only they should turn.
-				if (Weapon_info[get_weapon_id(obj)].render == WEAPON_RENDER_POLYMODEL)
+				if (Weapon_info[get_weapon_id(obj)].render == weapon_info::render_type::polymodel)
 					homing_missile_turn_towards_velocity(obj, temp_vec, FrameTime);		//	temp_vec is normalized velocity.
 			}
 #endif
