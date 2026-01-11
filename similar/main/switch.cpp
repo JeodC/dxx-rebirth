@@ -375,10 +375,10 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 		do_il_off(vcsegptridx, vmwallptr, trigger);
 	}
 #elif DXX_BUILD_DESCENT == 2
-	if (trigger.flags & trigger_behavior_flags::disabled)
+	if (+(trigger.flags & trigger_behavior_flags::disabled))
 		return window_event_result::handled;		// don't send trigger hit to other players
 
-	if (trigger.flags & trigger_behavior_flags::one_shot)		//if this is a one-shot...
+	if (+(trigger.flags & trigger_behavior_flags::one_shot))		//if this is a one-shot...
 		trigger.flags |= trigger_behavior_flags::disabled;		//..then don't let it happen again
 
 	auto &LevelSharedDestructibleLightState = LevelSharedSegmentState.DestructibleLights;
@@ -799,7 +799,7 @@ void v29_trigger_write(PHYSFS_File *fp, const trigger &rt)
 #if DXX_BUILD_DESCENT == 1
 	PHYSFS_writeSLE16(fp, t->flags);
 #elif DXX_BUILD_DESCENT == 2
-	const auto one_shot_flag = (t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{0};
+	const auto one_shot_flag{+(t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{}};
 	switch (t->type)
 	{
 		case trigger_action::open_door:
@@ -890,7 +890,7 @@ void v30_trigger_write(PHYSFS_File *fp, const trigger &rt)
 #if DXX_BUILD_DESCENT == 1
 	PHYSFS_writeSLE16(fp, t->flags);
 #elif DXX_BUILD_DESCENT == 2
-	const auto one_shot_flag = (t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{0};
+	const auto one_shot_flag{+(t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{}};
 	switch (t->type)
 	{
 		case trigger_action::open_door:
