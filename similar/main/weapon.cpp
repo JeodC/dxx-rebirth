@@ -753,7 +753,10 @@ static bool reject_shareware_weapon_select_impl(const uint_fast32_t weapon_num, 
 {
 	// do special hud msg. for picking registered weapon in shareware version.
 	if (PCSharePig)
-		if (weapon_num >= NUM_SHAREWARE_WEAPONS) {
+		/* Only the first 3 primary and secondary weapon types are available
+		 * when using shareware data.
+		 */
+		if (weapon_num >= /* NUM_SHAREWARE_WEAPONS = */ 3) {
 			HUD_init_message(HM_DEFAULT, "%s %s!", weapon_name,TXT_NOT_IN_SHAREWARE);
 			return true;
 		}

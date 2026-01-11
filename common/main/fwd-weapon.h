@@ -111,7 +111,6 @@ void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_Fi
 
 #define NUM_SMART_CHILDREN  6   // Number of smart children created by default.
 #if DXX_BUILD_DESCENT == 1
-#define	NUM_SHAREWARE_WEAPONS	3		//in shareware, old get first 3 of each
 #elif DXX_BUILD_DESCENT == 2
 #define HAS_SUPER_LASER_FLAG	HAS_PRIMARY_FLAG(primary_weapon_index::super_laser)
 #define HAS_GAUSS_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::gauss)
