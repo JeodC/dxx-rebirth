@@ -325,7 +325,7 @@ constexpr std::array<primary_weapon_index, MAX_PRIMARY_WEAPONS + 1> DefaultPrima
 	primary_weapon_index::omega, primary_weapon_index::phoenix, primary_weapon_index::helix, primary_weapon_index::gauss, primary_weapon_index::super_laser, primary_weapon_index::fusion, primary_weapon_index::plasma, primary_weapon_index::spreadfire, primary_weapon_index::vulcan, primary_weapon_index::laser, primary_weapon_index{255}
 }};
 constexpr std::array<secondary_weapon_index, MAX_SECONDARY_WEAPONS + 1> DefaultSecondaryOrder={{
-	secondary_weapon_index::smissile5, secondary_weapon_index::smissile4, secondary_weapon_index::mega, secondary_weapon_index::smart, secondary_weapon_index::homing, secondary_weapon_index::smissile1, secondary_weapon_index::concussion, secondary_weapon_index{255}, secondary_weapon_index::smart_mine, secondary_weapon_index::guided, secondary_weapon_index::proximity
+	secondary_weapon_index::earthshaker, secondary_weapon_index::mercury, secondary_weapon_index::mega, secondary_weapon_index::smart, secondary_weapon_index::homing, secondary_weapon_index::flash, secondary_weapon_index::concussion, secondary_weapon_index{255}, secondary_weapon_index::smart_mine, secondary_weapon_index::guided, secondary_weapon_index::proximity
 }};
 #endif
 

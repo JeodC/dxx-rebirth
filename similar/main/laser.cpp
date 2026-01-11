@@ -2345,7 +2345,7 @@ void do_missile_firing(const secondary_weapon_index weapon, const vmobjptridx_t 
 #if DXX_BUILD_DESCENT == 1
 		if (weapon == secondary_weapon_index::mega)
 #elif DXX_BUILD_DESCENT == 2
-		if (weapon == secondary_weapon_index::mega || weapon == secondary_weapon_index::smissile5)
+		if (weapon == secondary_weapon_index::mega || weapon == secondary_weapon_index::earthshaker)
 #endif
 		{
 			const vms_vector backward_vec{

@@ -1348,11 +1348,11 @@ static constexpr const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const secondary_w
 		case secondary_weapon_index::smart:		return TXT_SMART;
 		case secondary_weapon_index::mega:		return TXT_MEGA;
 #if DXX_BUILD_DESCENT == 2
-		case secondary_weapon_index::smissile1:	return "Flash";
+		case secondary_weapon_index::flash:	return "Flash";
 		case secondary_weapon_index::guided:		return "Guided";
 		case secondary_weapon_index::smart_mine:	return "SmrtMine";
-		case secondary_weapon_index::smissile4:	return "Mercury";
-		case secondary_weapon_index::smissile5:	return "Shaker";
+		case secondary_weapon_index::mercury:	return "Mercury";
+		case secondary_weapon_index::earthshaker:	return "Shaker";
 #endif
 	}
 }
@@ -2797,7 +2797,7 @@ static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, cons
 				weapon_name = TXT_W_M_MISSILE_S;
 				break;
 #if DXX_BUILD_DESCENT == 2
-			case secondary_weapon_index::smissile1:
+			case secondary_weapon_index::flash:
 				weapon_name = TXT_W_SMISSILE1_S;
 				break;
 			case secondary_weapon_index::guided:
@@ -2806,10 +2806,10 @@ static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, cons
 			case secondary_weapon_index::smart_mine:
 				weapon_name = TXT_W_SMISSILE3_S;
 				break;
-			case secondary_weapon_index::smissile4:
+			case secondary_weapon_index::mercury:
 				weapon_name = TXT_W_SMISSILE4_S;
 				break;
-			case secondary_weapon_index::smissile5:
+			case secondary_weapon_index::earthshaker:
 				weapon_name = TXT_W_SMISSILE5_S;
 				break;
 #endif

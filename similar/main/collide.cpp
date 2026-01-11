@@ -2111,7 +2111,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 
 #if DXX_BUILD_DESCENT == 2
 		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::smart_mine, secondary_ammo[secondary_weapon_index::smart_mine] / 4);
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::smissile5, secondary_ammo[secondary_weapon_index::smissile5]);
+		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::earthshaker, secondary_ammo[secondary_weapon_index::earthshaker]);
 #endif
 
 		//	Drop the player's missiles in packs of 1 and/or 4
@@ -2121,8 +2121,8 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 #endif
 		drop_missile_1_or_4(playerobj, secondary_weapon_index::concussion);
 #if DXX_BUILD_DESCENT == 2
-		drop_missile_1_or_4(playerobj, secondary_weapon_index::smissile1);
-		drop_missile_1_or_4(playerobj, secondary_weapon_index::smissile4);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::flash);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::mercury);
 #endif
 
 		//	If player has vulcan ammo, but no vulcan or gauss cannon, drop the ammo.

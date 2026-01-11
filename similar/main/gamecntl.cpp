@@ -1804,8 +1804,8 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 		if (Piggy_hamfile_version < pig_hamfile_version::_3) // SHAREWARE
 		{
-			secondary_ammo[secondary_weapon_index::smissile4] = 0;
-			secondary_ammo[secondary_weapon_index::smissile5] = 0;
+			secondary_ammo[secondary_weapon_index::mercury] = 0;
+			secondary_ammo[secondary_weapon_index::earthshaker] = 0;
 			secondary_ammo[secondary_weapon_index::mega] = 0;
 		}
 

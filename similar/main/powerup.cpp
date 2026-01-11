@@ -558,10 +558,10 @@ int do_powerup(const vmobjptridx_t obj)
 			break;
 #if DXX_BUILD_DESCENT == 2
 		case	powerup_type_t::POW_SMISSILE1_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index::smissile1, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::flash, 1, Controls);
 			break;
 		case	powerup_type_t::POW_SMISSILE1_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index::smissile1, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::flash, 4, Controls);
 			break;
 		case	powerup_type_t::POW_GUIDED_MISSILE_1:
 			used = pick_up_secondary(player_info, secondary_weapon_index::guided, 1, Controls);
@@ -573,13 +573,13 @@ int do_powerup(const vmobjptridx_t obj)
 			used = pick_up_secondary(player_info, secondary_weapon_index::smart_mine, 4, Controls);
 			break;
 		case	powerup_type_t::POW_MERCURY_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index::smissile4, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::mercury, 1, Controls);
 			break;
 		case	powerup_type_t::POW_MERCURY_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index::smissile4, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::mercury, 4, Controls);
 			break;
 		case	powerup_type_t::POW_EARTHSHAKER_MISSILE:
-			used = pick_up_secondary(player_info, secondary_weapon_index::smissile5, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::earthshaker, 1, Controls);
 			break;
 #endif
 		case	powerup_type_t::POW_VULCAN_AMMO:

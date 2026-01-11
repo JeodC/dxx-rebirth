@@ -1181,11 +1181,11 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 	((u) == primary_weapon_index::omega) ? TXT_W_SFUSION :	\
 
 #define _D2X_SECONDARY_SUPER_WEAPON_NAMES(u)	\
-	((u) == secondary_weapon_index::smissile1) ? TXT_W_SMISSILE1 :	\
+	((u) == secondary_weapon_index::flash) ? TXT_W_SMISSILE1 :	\
 	((u) == secondary_weapon_index::guided) ? TXT_W_SMISSILE2 :	\
 	((u) == secondary_weapon_index::smart_mine) ? TXT_W_SMISSILE3 :	\
-	((u) == secondary_weapon_index::smissile4) ? TXT_W_SMISSILE4 :	\
-	((u) == secondary_weapon_index::smissile5) ? TXT_W_SMISSILE5 :	\
+	((u) == secondary_weapon_index::mercury) ? TXT_W_SMISSILE4 :	\
+	((u) == secondary_weapon_index::earthshaker) ? TXT_W_SMISSILE5 :	\
 
 #endif
 #endif

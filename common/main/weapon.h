@@ -230,11 +230,11 @@ enum class secondary_weapon_index : uint8_t
 	smart = 3,
 	mega = 4,
 #if DXX_BUILD_DESCENT == 2
-	smissile1 = 5,
+	flash = 5,
 	guided = 6,
 	smart_mine = 7,
-	smissile4 = 8,
-	smissile5 = 9,
+	mercury = 8,
+	earthshaker = 9,
 #endif
 };
 
