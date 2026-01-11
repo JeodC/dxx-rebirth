@@ -117,13 +117,19 @@ namespace {
 
 /*
  * On entry:
- * - base_weapon must be the non-super version of a weapon.
+ * - `base_weapon` must be the non-super version of a weapon.
+ *
+ * On return:
+ * - result is the super version corresponding to `base_weapon`
  */
-template <typename T>
-static T get_super_weapon_from_base_weapon(const T base_weapon)
+template <typename weapon_enum_type>
+constexpr weapon_enum_type get_super_weapon_from_base_weapon(const weapon_enum_type base_weapon)
 {
-	return static_cast<T>(static_cast<unsigned>(base_weapon) + SUPER_WEAPON);
+	return static_cast<weapon_enum_type>(static_cast<std::underlying_type_t<weapon_enum_type>>(base_weapon) + SUPER_WEAPON);
 }
+
+static_assert(get_super_weapon_from_base_weapon(primary_weapon_index_t::LASER_INDEX) == primary_weapon_index_t::SUPER_LASER_INDEX);
+static_assert(get_super_weapon_from_base_weapon(secondary_weapon_index_t::HOMING_INDEX) == secondary_weapon_index_t::GUIDED_INDEX);
 
 /*
  * On entry:
