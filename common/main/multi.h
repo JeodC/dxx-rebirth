@@ -57,6 +57,7 @@ static inline player_ship_color get_player_color(const playernum_t pnum)
 #include <span>
 #include <type_traits>
 #include <ranges>
+#include "d_bit_enum.h"
 #include "fwd-partial_range.h"
 #include "player.h"
 #include "player-callsign.h"
@@ -657,33 +658,17 @@ enum class netgame_rule_flags : uint8_t
 	/* endif */
 };
 
-[[nodiscard]]
-constexpr netgame_rule_flags operator~(const netgame_rule_flags a)
-{
-	return netgame_rule_flags{static_cast<uint8_t>(~static_cast<uint8_t>(a))};
-}
+template <>
+inline constexpr bool enable_bit_enum_and<netgame_rule_flags, netgame_rule_flags>{true};
 
-[[nodiscard]]
-constexpr netgame_rule_flags operator&(const netgame_rule_flags a, const netgame_rule_flags b)
-{
-	return netgame_rule_flags{static_cast<uint8_t>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b))};
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<netgame_rule_flags>{true};
 
-constexpr netgame_rule_flags &operator&=(netgame_rule_flags &a, const netgame_rule_flags b)
-{
-	return a = a & b;
-}
+template <>
+inline constexpr bool enable_bit_enum_boolnot<netgame_rule_flags>{true};
 
-[[nodiscard]]
-constexpr netgame_rule_flags operator|(const netgame_rule_flags a, const netgame_rule_flags b)
-{
-	return netgame_rule_flags{static_cast<uint8_t>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b))};
-}
-
-constexpr netgame_rule_flags &operator|=(netgame_rule_flags &a, const netgame_rule_flags b)
-{
-	return a = a | b;
-}
+template <>
+inline constexpr bool enable_bit_enum_or<netgame_rule_flags, netgame_rule_flags>{true};
 
 #if DXX_USE_TRACKER
 enum TrackerNATHolePunchWarn : uint8_t
