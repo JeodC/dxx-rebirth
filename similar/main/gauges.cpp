@@ -105,7 +105,7 @@ static void draw_ammo_info(grs_canvas &, unsigned x, unsigned y, unsigned ammo_c
 union weapon_index
 {
 	primary_weapon_index primary;
-	secondary_weapon_index_t secondary;
+	secondary_weapon_index secondary;
 	constexpr weapon_index() :
 		primary(static_cast<primary_weapon_index>(~0u))
 	{
@@ -114,7 +114,7 @@ union weapon_index
 		primary(p)
 	{
 	}
-	constexpr weapon_index(const secondary_weapon_index_t s) :
+	constexpr weapon_index(const secondary_weapon_index s) :
 		secondary(s)
 	{
 	}
@@ -1335,24 +1335,24 @@ static void hud_show_afterburner(grs_canvas &canvas, const player_info &player_i
 #endif
 
 [[nodiscard]]
-static constexpr const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const secondary_weapon_index_t u)
+static constexpr const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const secondary_weapon_index u)
 {
 	switch(u)
 	{
 		default:
 			Int3();
 			[[fallthrough]];
-		case secondary_weapon_index_t::CONCUSSION_INDEX:	return TXT_CONCUSSION;
-		case secondary_weapon_index_t::HOMING_INDEX:		return TXT_HOMING;
-		case secondary_weapon_index_t::PROXIMITY_INDEX:	return TXT_PROXBOMB;
-		case secondary_weapon_index_t::SMART_INDEX:		return TXT_SMART;
-		case secondary_weapon_index_t::MEGA_INDEX:		return TXT_MEGA;
+		case secondary_weapon_index::CONCUSSION_INDEX:	return TXT_CONCUSSION;
+		case secondary_weapon_index::HOMING_INDEX:		return TXT_HOMING;
+		case secondary_weapon_index::PROXIMITY_INDEX:	return TXT_PROXBOMB;
+		case secondary_weapon_index::SMART_INDEX:		return TXT_SMART;
+		case secondary_weapon_index::MEGA_INDEX:		return TXT_MEGA;
 #if DXX_BUILD_DESCENT == 2
-		case secondary_weapon_index_t::SMISSILE1_INDEX:	return "Flash";
-		case secondary_weapon_index_t::GUIDED_INDEX:		return "Guided";
-		case secondary_weapon_index_t::SMART_MINE_INDEX:	return "SmrtMine";
-		case secondary_weapon_index_t::SMISSILE4_INDEX:	return "Mercury";
-		case secondary_weapon_index_t::SMISSILE5_INDEX:	return "Shaker";
+		case secondary_weapon_index::SMISSILE1_INDEX:	return "Flash";
+		case secondary_weapon_index::GUIDED_INDEX:		return "Guided";
+		case secondary_weapon_index::SMART_MINE_INDEX:	return "SmrtMine";
+		case secondary_weapon_index::SMISSILE4_INDEX:	return "Mercury";
+		case secondary_weapon_index::SMISSILE5_INDEX:	return "Shaker";
 #endif
 	}
 }
@@ -1379,7 +1379,7 @@ static void show_bomb_count(grs_canvas &canvas, const player_info &player_info, 
 		return;
 
 	gr_set_fontcolor(canvas, count
-		? (bomb == secondary_weapon_index_t::PROXIMITY_INDEX
+		? (bomb == secondary_weapon_index::PROXIMITY_INDEX
 			? gr_find_closest_color(55, 0, 0)
 			: BM_XRGB(59, 50, 21)
 		)
@@ -1477,7 +1477,7 @@ static void hud_set_primary_weapon_fontcolor(const player_info &player_info, con
 }
 
 [[nodiscard]]
-static rgb_t hud_get_secondary_weapon_fontcolor(const player_info &player_info, const secondary_weapon_index_t consider_weapon)
+static rgb_t hud_get_secondary_weapon_fontcolor(const player_info &player_info, const secondary_weapon_index consider_weapon)
 {
 	if (player_info.Secondary_weapon == consider_weapon)
 		/* The currently active weapon is `consider_weapon` */
@@ -1488,7 +1488,7 @@ static rgb_t hud_get_secondary_weapon_fontcolor(const player_info &player_info, 
 			/* The player has not armed this weapon, but has ammo for it. */
 #if DXX_BUILD_DESCENT == 2
 			const auto is_super = is_super_weapon(consider_weapon);
-			const auto base_weapon = is_super ? secondary_weapon_index_t{static_cast<uint8_t>(static_cast<uint8_t>(consider_weapon) - SUPER_WEAPON)} : consider_weapon;
+			const auto base_weapon = is_super ? secondary_weapon_index{static_cast<uint8_t>(static_cast<uint8_t>(consider_weapon) - SUPER_WEAPON)} : consider_weapon;
 			if (player_info.Secondary_last_was_super & HAS_SECONDARY_FLAG(base_weapon))
 			{
 				/* The player would select the super-weapon version on next press. */
@@ -1520,7 +1520,7 @@ static rgb_t hud_get_secondary_weapon_fontcolor(const player_info &player_info, 
 	}
 }
 
-static void hud_set_secondary_weapon_fontcolor(const player_info &player_info, const secondary_weapon_index_t consider_weapon, grs_canvas &canvas)
+static void hud_set_secondary_weapon_fontcolor(const player_info &player_info, const secondary_weapon_index consider_weapon, grs_canvas &canvas)
 {
 	auto rgb = hud_get_secondary_weapon_fontcolor(player_info, consider_weapon);
 	gr_set_fontcolor(canvas, gr_find_closest_color(rgb.r, rgb.g, rgb.b), -1);
@@ -1729,7 +1729,7 @@ static void hud_show_secondary_weapons_mode(grs_canvas &canvas, const player_inf
 	{
 		for (uint_fast32_t ui = 5; ui --;)
 		{
-			const auto i = static_cast<secondary_weapon_index_t>(ui);
+			const auto i = static_cast<secondary_weapon_index>(ui);
 			char weapon_str[10];
 			hud_set_secondary_weapon_fontcolor(player_info, i, canvas);
 			snprintf(weapon_str, sizeof(weapon_str), "%i", secondary_ammo[i]);
@@ -1758,7 +1758,7 @@ static void hud_show_secondary_weapons_mode(grs_canvas &canvas, const player_inf
 	{
 		for (uint_fast32_t ui = 10; ui -- != 5;)
 		{
-			const auto i = static_cast<secondary_weapon_index_t>(ui);
+			const auto i = static_cast<secondary_weapon_index>(ui);
 			char weapon_str[10];
 			hud_set_secondary_weapon_fontcolor(player_info, i, canvas);
 			snprintf(weapon_str, sizeof(weapon_str), "%u", secondary_ammo[i]);
@@ -2746,7 +2746,7 @@ static void draw_primary_weapon_info(const hud_draw_context_hs_mr hudctx, const 
 	}
 }
 
-static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, const player_info &player_info, const secondary_weapon_index_t weapon_num)
+static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, const player_info &player_info, const secondary_weapon_index weapon_num)
 {
 	int x,y;
 
@@ -2781,35 +2781,35 @@ static void draw_secondary_weapon_info(const hud_draw_context_hs_mr hudctx, cons
 		switch (weapon_num)
 		{
 			default:	// unreachable
-			case secondary_weapon_index_t::CONCUSSION_INDEX:	// reachable
+			case secondary_weapon_index::CONCUSSION_INDEX:	// reachable
 				weapon_name = TXT_W_C_MISSILE_S;
 				break;
-			case secondary_weapon_index_t::HOMING_INDEX:
+			case secondary_weapon_index::HOMING_INDEX:
 				weapon_name = TXT_W_H_MISSILE_S;
 				break;
-			case secondary_weapon_index_t::PROXIMITY_INDEX:
+			case secondary_weapon_index::PROXIMITY_INDEX:
 				weapon_name = TXT_W_P_BOMB_S;
 				break;
-			case secondary_weapon_index_t::SMART_INDEX:
+			case secondary_weapon_index::SMART_INDEX:
 				weapon_name = TXT_W_S_MISSILE_S;
 				break;
-			case secondary_weapon_index_t::MEGA_INDEX:
+			case secondary_weapon_index::MEGA_INDEX:
 				weapon_name = TXT_W_M_MISSILE_S;
 				break;
 #if DXX_BUILD_DESCENT == 2
-			case secondary_weapon_index_t::SMISSILE1_INDEX:
+			case secondary_weapon_index::SMISSILE1_INDEX:
 				weapon_name = TXT_W_SMISSILE1_S;
 				break;
-			case secondary_weapon_index_t::GUIDED_INDEX:
+			case secondary_weapon_index::GUIDED_INDEX:
 				weapon_name = TXT_W_SMISSILE2_S;
 				break;
-			case secondary_weapon_index_t::SMART_MINE_INDEX:
+			case secondary_weapon_index::SMART_MINE_INDEX:
 				weapon_name = TXT_W_SMISSILE3_S;
 				break;
-			case secondary_weapon_index_t::SMISSILE4_INDEX:
+			case secondary_weapon_index::SMISSILE4_INDEX:
 				weapon_name = TXT_W_SMISSILE4_S;
 				break;
-			case secondary_weapon_index_t::SMISSILE5_INDEX:
+			case secondary_weapon_index::SMISSILE5_INDEX:
 				weapon_name = TXT_W_SMISSILE5_S;
 				break;
 #endif

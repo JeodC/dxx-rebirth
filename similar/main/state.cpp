@@ -798,12 +798,12 @@ static void state_player_to_player_rw(const relocated_player_data &rpd, const pl
 	pl_rw->primary_weapon_flags      = pl_info.primary_weapon_flags;
 #if DXX_BUILD_DESCENT == 1
 	// make sure no side effects for Mac demo
-	pl_rw->secondary_weapon_flags    = 0x0f | (pl_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index_t::MEGA_INDEX);
+	pl_rw->secondary_weapon_flags    = 0x0f | (pl_info.secondary_ammo[secondary_weapon_index::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index::MEGA_INDEX);
 #elif DXX_BUILD_DESCENT == 2
 	// make sure no side effects for PC demo
-	pl_rw->secondary_weapon_flags    = 0xef | (pl_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index_t::MEGA_INDEX)
-											| (pl_info.secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] > 0) << underlying_value(secondary_weapon_index_t::SMISSILE4_INDEX)	// mercury missile
-											| (pl_info.secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] > 0) << underlying_value(secondary_weapon_index_t::SMISSILE5_INDEX);	// earthshaker missile
+	pl_rw->secondary_weapon_flags    = 0xef | (pl_info.secondary_ammo[secondary_weapon_index::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index::MEGA_INDEX)
+											| (pl_info.secondary_ammo[secondary_weapon_index::SMISSILE4_INDEX] > 0) << underlying_value(secondary_weapon_index::SMISSILE4_INDEX)	// mercury missile
+											| (pl_info.secondary_ammo[secondary_weapon_index::SMISSILE5_INDEX] > 0) << underlying_value(secondary_weapon_index::SMISSILE5_INDEX);	// earthshaker missile
 #endif
 	pl_rw->obsolete_primary_ammo = {};
 	pl_rw->vulcan_ammo   = pl_info.vulcan_ammo;
@@ -1641,9 +1641,9 @@ int state_save_all_sub(const char *filename, const char *desc)
 	{
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
 		std::array<uint8_t, MAX_SECONDARY_WEAPONS> last_was_super{};
-		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index_t::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index_t::SMISSILE1_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index::SMISSILE1_INDEX); ++j)
 		{
-			if (Secondary_last_was_super & HAS_SECONDARY_FLAG(secondary_weapon_index_t{j}))
+			if (Secondary_last_was_super & HAS_SECONDARY_FLAG(secondary_weapon_index{j}))
 				last_was_super[j] = 1;
 		}
 		PHYSFSX_writeBytes(fp, &last_was_super, MAX_SECONDARY_WEAPONS);
@@ -2073,7 +2073,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	{
 		uint8_t v{};
 		PHYSFSX_readBytes(fp, &v, sizeof(v));
-		Secondary_weapon = secondary_weapon_index_t{v};
+		Secondary_weapon = secondary_weapon_index{v};
 	}
 
 	select_primary_weapon(pl_info, nullptr, Primary_weapon, 0);
@@ -2366,10 +2366,10 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		player_info.Primary_last_was_super = Primary_last_was_super;
 		PHYSFSX_readBytes(fp, &last_was_super, MAX_SECONDARY_WEAPONS);
 		uint8_t Secondary_last_was_super{};
-		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index_t::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index_t::SMISSILE1_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index::SMISSILE1_INDEX); ++j)
 		{
 			if (last_was_super[j])
-				Secondary_last_was_super |= HAS_SECONDARY_FLAG(secondary_weapon_index_t{j});
+				Secondary_last_was_super |= HAS_SECONDARY_FLAG(secondary_weapon_index{j});
 		}
 		player_info.Secondary_last_was_super = Secondary_last_was_super;
 	}

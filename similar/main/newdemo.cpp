@@ -1132,7 +1132,7 @@ void newdemo_record_start_demo()
 	nd_write_byte(nd_record_v_player_shields = static_cast<int8_t>(f2ir(get_local_plrobj().shields)));
 	nd_write_int(nd_record_v_player_flags = player_info.powerup_flags.get_player_flags());        // be sure players flags are set
 	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon)));
-	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index>(player_info.Secondary_weapon)));
 	nd_record_v_start_frame = nd_record_v_frame_number = 0;
 #if DXX_BUILD_DESCENT == 2
 	nd_record_v_player_afterburner = 0;
@@ -1423,7 +1423,7 @@ static void newdemo_record_player_weapon(int weapon_num, int weapon_type)
 	nd_write_byte(static_cast<int8_t>(nd_record_v_weapon_num = weapon_num));
 	auto &player_info = get_local_plrobj().ctype.player_info;
 	nd_write_byte(weapon_type
-		? static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon))
+		? static_cast<int8_t>(static_cast<secondary_weapon_index>(player_info.Secondary_weapon))
 		: static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon))
 	);
 }
@@ -1433,7 +1433,7 @@ void newdemo_record_player_weapon(const primary_weapon_index weapon_num)
 	newdemo_record_player_weapon(underlying_value(weapon_num), 0);
 }
 
-void newdemo_record_player_weapon(const secondary_weapon_index_t weapon_num)
+void newdemo_record_player_weapon(const secondary_weapon_index weapon_num)
 {
 	newdemo_record_player_weapon(underlying_value(weapon_num), 1);
 }
@@ -1998,7 +1998,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		Secondary_weapon = static_cast<secondary_weapon_index_t>(v);
+		Secondary_weapon = static_cast<secondary_weapon_index>(v);
 	}
 	if (purpose == purpose_type::rewrite)
 	{
@@ -2019,7 +2019,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 			energy = shield;
 			shield = static_cast<uint8_t>(flags);
 			Primary_weapon = static_cast<primary_weapon_index>(Secondary_weapon.get_active());
-			Secondary_weapon = static_cast<secondary_weapon_index_t>(c);
+			Secondary_weapon = static_cast<secondary_weapon_index>(c);
 		} else
 			PHYSFS_seek(infile, PHYSFS_tell(infile) - 1);
 	}
@@ -2722,7 +2722,7 @@ static int newdemo_read_frame_information(int rewrite)
 			if (weapon_type == 0)
 				player_info.Primary_weapon = static_cast<primary_weapon_index>(weapon_num);
 			else
-				player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(weapon_num);
+				player_info.Secondary_weapon = static_cast<secondary_weapon_index>(weapon_num);
 
 			break;
 		}
@@ -2746,12 +2746,12 @@ static int newdemo_read_frame_information(int rewrite)
 				if (weapon_type == 0)
 					player_info.Primary_weapon = static_cast<primary_weapon_index>(weapon_num);
 				else
-					player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(weapon_num);
+					player_info.Secondary_weapon = static_cast<secondary_weapon_index>(weapon_num);
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (weapon_type == 0)
 					player_info.Primary_weapon = static_cast<primary_weapon_index>(old_weapon);
 				else
-					player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(old_weapon);
+					player_info.Secondary_weapon = static_cast<secondary_weapon_index>(old_weapon);
 			}
 			break;
 		}
@@ -3550,7 +3550,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(v);
+		player_info.Secondary_weapon = static_cast<secondary_weapon_index>(v);
 	}
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
 	{
@@ -4009,7 +4009,7 @@ static void newdemo_write_end()
 	nd_write_byte(static_cast<int8_t>(f2ir(get_local_plrobj().shields)));
 	nd_write_int(player_info.powerup_flags.get_player_flags());        // be sure players flags are set
 	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon)));
-	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index>(player_info.Secondary_weapon)));
 	byte_count += 8;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))

@@ -596,7 +596,7 @@ static void init_ammo_and_energy(object &plrobj)
 			shields = StartingShields;
 	}
 	const unsigned minimum_missiles = get_starting_concussion_missile_count();
-	auto &concussion = player_info.secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX];
+	auto &concussion = player_info.secondary_ammo[secondary_weapon_index::CONCUSSION_INDEX];
 	if (concussion < minimum_missiles)
 		concussion = minimum_missiles;
 }

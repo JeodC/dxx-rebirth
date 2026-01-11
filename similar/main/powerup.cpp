@@ -469,10 +469,10 @@ int do_powerup(const vmobjptridx_t obj)
 				used = pick_up_energy(player_info);
 			break;
 		case powerup_type_t::POW_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::CONCUSSION_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::CONCUSSION_INDEX, 1, Controls);
 			break;
 		case powerup_type_t::POW_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::CONCUSSION_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::CONCUSSION_INDEX, 4, Controls);
 			break;
 
 		case powerup_type_t::POW_KEY_BLUE:
@@ -548,48 +548,48 @@ int do_powerup(const vmobjptridx_t obj)
 #endif
 
 		case	powerup_type_t::POW_PROXIMITY_WEAPON:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::PROXIMITY_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::PROXIMITY_INDEX, 4, Controls);
 			break;
 		case	powerup_type_t::POW_SMARTBOMB_WEAPON:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMART_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMART_INDEX, 1, Controls);
 			break;
 		case	powerup_type_t::POW_MEGA_WEAPON:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::MEGA_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::MEGA_INDEX, 1, Controls);
 			break;
 #if DXX_BUILD_DESCENT == 2
 		case	powerup_type_t::POW_SMISSILE1_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE1_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMISSILE1_INDEX, 1, Controls);
 			break;
 		case	powerup_type_t::POW_SMISSILE1_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE1_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMISSILE1_INDEX, 4, Controls);
 			break;
 		case	powerup_type_t::POW_GUIDED_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::GUIDED_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::GUIDED_INDEX, 1, Controls);
 			break;
 		case	powerup_type_t::POW_GUIDED_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::GUIDED_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::GUIDED_INDEX, 4, Controls);
 			break;
 		case	powerup_type_t::POW_SMART_MINE:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMART_MINE_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMART_MINE_INDEX, 4, Controls);
 			break;
 		case	powerup_type_t::POW_MERCURY_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE4_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMISSILE4_INDEX, 1, Controls);
 			break;
 		case	powerup_type_t::POW_MERCURY_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE4_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMISSILE4_INDEX, 4, Controls);
 			break;
 		case	powerup_type_t::POW_EARTHSHAKER_MISSILE:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE5_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::SMISSILE5_INDEX, 1, Controls);
 			break;
 #endif
 		case	powerup_type_t::POW_VULCAN_AMMO:
 			used = pick_up_vulcan_ammo(player_info);
 			break;
 		case	powerup_type_t::POW_HOMING_AMMO_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::HOMING_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::HOMING_INDEX, 1, Controls);
 			break;
 		case	powerup_type_t::POW_HOMING_AMMO_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::HOMING_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::HOMING_INDEX, 4, Controls);
 			break;
 		case	powerup_type_t::POW_CLOAK:
 			if (player_info.powerup_flags & PLAYER_FLAGS_CLOAKED) {

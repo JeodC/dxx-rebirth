@@ -497,7 +497,7 @@ void ogl_cache_level_textures(void)
 		auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 		// always have lasers, concs, flares.  Always shows player appearance, and at least concs are always available to disappear.
 		ogl_cache_weapon_textures(Vclip, Weapon_info, Primary_weapon_to_weapon_info[primary_weapon_index::LASER_INDEX]);
-		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[secondary_weapon_index_t::CONCUSSION_INDEX]);
+		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[secondary_weapon_index::CONCUSSION_INDEX]);
 		ogl_cache_weapon_textures(Vclip, Weapon_info, weapon_id_type::FLARE_ID);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::player_appearance);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::powerup_disappearance);
@@ -511,7 +511,7 @@ void ogl_cache_level_textures(void)
 				ogl_cache_vclipn_textures(Vclip, objp->rtype.vclip_info.vclip_num);
 				const auto id = get_powerup_id(objp);
 				primary_weapon_index p;
-				secondary_weapon_index_t s;
+				secondary_weapon_index s;
 				int w;
 				if (
 					(
@@ -524,10 +524,10 @@ void ogl_cache_level_textures(void)
 					) ||
 					(
 						(
-							(id == powerup_type_t::POW_PROXIMITY_WEAPON && (s = secondary_weapon_index_t::PROXIMITY_INDEX, true)) ||
-							((id == powerup_type_t::POW_HOMING_AMMO_1 || id == powerup_type_t::POW_HOMING_AMMO_4) && (s = secondary_weapon_index_t::HOMING_INDEX, true)) ||
-							(id == powerup_type_t::POW_SMARTBOMB_WEAPON && (s = secondary_weapon_index_t::SMART_INDEX, true)) ||
-							(id == powerup_type_t::POW_MEGA_WEAPON && (s = secondary_weapon_index_t::MEGA_INDEX, true))
+							(id == powerup_type_t::POW_PROXIMITY_WEAPON && (s = secondary_weapon_index::PROXIMITY_INDEX, true)) ||
+							((id == powerup_type_t::POW_HOMING_AMMO_1 || id == powerup_type_t::POW_HOMING_AMMO_4) && (s = secondary_weapon_index::HOMING_INDEX, true)) ||
+							(id == powerup_type_t::POW_SMARTBOMB_WEAPON && (s = secondary_weapon_index::SMART_INDEX, true)) ||
+							(id == powerup_type_t::POW_MEGA_WEAPON && (s = secondary_weapon_index::MEGA_INDEX, true))
 						) && (w = Secondary_weapon_to_weapon_info[s], true)
 					)
 				)

@@ -171,7 +171,7 @@ struct player_info
 	bool lavafall_hiss_playing;
 	uint8_t missile_gun;
 	player_selected_weapon<primary_weapon_index> Primary_weapon;
-	player_selected_weapon<secondary_weapon_index_t> Secondary_weapon;
+	player_selected_weapon<secondary_weapon_index> Secondary_weapon;
 	enum laser_level laser_level;
 	per_secondary_weapon_array<uint8_t>  secondary_ammo; // How much ammo of each type.
 	uint8_t Spreadfire_toggle;

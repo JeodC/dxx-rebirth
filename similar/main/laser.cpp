@@ -2291,7 +2291,7 @@ void release_remote_guided_missile(d_level_unique_object_state &LevelUniqueObjec
 
 //	-------------------------------------------------------------------------------------------
 //changed on 31/3/10 by kreatordxx to distinguish between drop bomb and secondary fire
-void do_missile_firing(const secondary_weapon_index_t weapon, const vmobjptridx_t plrobjidx)
+void do_missile_firing(const secondary_weapon_index weapon, const vmobjptridx_t plrobjidx)
 {
 	int gun_flag{0};
 	fix fire_frame_overhead{0};
@@ -2339,13 +2339,13 @@ void do_missile_firing(const secondary_weapon_index_t weapon, const vmobjptridx_
 			Next_missile_fire_time = GameTime64 + (F1_0/25) - fire_frame_overhead;
 
 		-- secondary_weapon_ammo;
-		if (weapon != secondary_weapon_index_t::CONCUSSION_INDEX)
+		if (weapon != secondary_weapon_index::CONCUSSION_INDEX)
 			maybe_drop_net_powerup(Secondary_weapon_to_powerup[weapon], 1, 0);
 
 #if DXX_BUILD_DESCENT == 1
-		if (weapon == secondary_weapon_index_t::MEGA_INDEX)
+		if (weapon == secondary_weapon_index::MEGA_INDEX)
 #elif DXX_BUILD_DESCENT == 2
-		if (weapon == secondary_weapon_index_t::MEGA_INDEX || weapon == secondary_weapon_index_t::SMISSILE5_INDEX)
+		if (weapon == secondary_weapon_index::MEGA_INDEX || weapon == secondary_weapon_index::SMISSILE5_INDEX)
 #endif
 		{
 			const vms_vector backward_vec{

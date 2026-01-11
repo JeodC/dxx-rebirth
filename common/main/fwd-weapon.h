@@ -84,12 +84,12 @@ extern pig_hamfile_version Piggy_hamfile_version;
 #endif
 
 enum class primary_weapon_index : uint8_t;
-enum class secondary_weapon_index_t : uint8_t;
+enum class secondary_weapon_index : uint8_t;
 
 template <typename T>
 	using per_primary_weapon_array = enumerated_array<T, MAX_PRIMARY_WEAPONS, primary_weapon_index>;
 template <typename T>
-	using per_secondary_weapon_array = enumerated_array<T, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t>;
+	using per_secondary_weapon_array = enumerated_array<T, MAX_SECONDARY_WEAPONS, secondary_weapon_index>;
 extern const per_primary_weapon_array<weapon_id_type> Primary_weapon_to_weapon_info;
 //for each primary weapon, what kind of powerup gives weapon
 extern const per_primary_weapon_array<powerup_type_t> Primary_weapon_to_powerup;
@@ -131,7 +131,7 @@ static constexpr bool is_super_weapon(const primary_weapon_index i)
 	return static_cast<unsigned>(i) >= SUPER_WEAPON;
 }
 
-static constexpr bool is_super_weapon(const secondary_weapon_index_t i)
+static constexpr bool is_super_weapon(const secondary_weapon_index i)
 {
 	return static_cast<unsigned>(i) >= SUPER_WEAPON;
 }
@@ -179,13 +179,13 @@ namespace dsx {
 
 struct player_info;
 void do_primary_weapon_select(player_info &, primary_weapon_index weapon_num);
-void do_secondary_weapon_select(player_info &, secondary_weapon_index_t weapon_num);
+void do_secondary_weapon_select(player_info &, secondary_weapon_index weapon_num);
 void auto_select_primary_weapon(player_info &);
 void auto_select_secondary_weapon(player_info &);
 void set_primary_weapon(player_info &, primary_weapon_index weapon_num);
 void select_primary_weapon(player_info &, const char *weapon_name, primary_weapon_index weapon_num, int wait_for_rearm);
 void set_secondary_weapon_to_concussion(player_info &);
-void select_secondary_weapon(player_info &, const char *weapon_name, secondary_weapon_index_t weapon_num, int wait_for_rearm);
+void select_secondary_weapon(player_info &, const char *weapon_name, secondary_weapon_index weapon_num, int wait_for_rearm);
 
 }
 #endif
@@ -199,12 +199,12 @@ void select_secondary_weapon(player_info &, const char *weapon_name, secondary_w
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 has_primary_weapon_result player_has_primary_weapon(const player_info &, primary_weapon_index weapon_num);
-has_secondary_weapon_result player_has_secondary_weapon(const player_info &, secondary_weapon_index_t weapon_num);
+has_secondary_weapon_result player_has_secondary_weapon(const player_info &, secondary_weapon_index weapon_num);
 
 //called when one of these weapons is picked up
 //when you pick up a secondary, you always get the weapon & ammo for it
 int pick_up_primary(player_info &, primary_weapon_index weapon_index);
-int pick_up_secondary(player_info &, secondary_weapon_index_t weapon_index, int count, const control_info &Controls);
+int pick_up_secondary(player_info &, secondary_weapon_index weapon_index, int count, const control_info &Controls);
 
 //called when a primary weapon is picked up
 //returns true if actually picked up

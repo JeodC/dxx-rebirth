@@ -1647,7 +1647,7 @@ static int maybe_steal_flag_item(object &playerobj, const PLAYER_FLAG flagval)
 }
 
 //	----------------------------------------------------------------------------
-static int maybe_steal_secondary_weapon(object &playerobj, const secondary_weapon_index_t weapon_num)
+static int maybe_steal_secondary_weapon(object &playerobj, const secondary_weapon_index weapon_num)
 {
 	auto &ThiefUniqueState = LevelUniqueObjectState.ThiefState;
 	auto &player_info = playerobj.ctype.player_info;
@@ -1793,7 +1793,7 @@ static int attempt_to_steal_item_3(object &thief, object &player_num)
 	for (int i=MAX_SECONDARY_WEAPONS-1; i>=0; i--) {
 		if (auto r = maybe_steal_primary_weapon(player_num, static_cast<primary_weapon_index>(i)))
 			return r;
-		if (auto r = maybe_steal_secondary_weapon(player_num, static_cast<secondary_weapon_index_t>(i)))
+		if (auto r = maybe_steal_secondary_weapon(player_num, static_cast<secondary_weapon_index>(i)))
 			return r;
 	}
 

@@ -222,7 +222,7 @@ enum class primary_weapon_index : uint8_t
 #endif
 };
 
-enum class secondary_weapon_index_t : uint8_t
+enum class secondary_weapon_index : uint8_t
 {
 	CONCUSSION_INDEX = 0,
 	HOMING_INDEX = 1,
@@ -244,7 +244,7 @@ static constexpr unsigned HAS_PRIMARY_FLAG(const primary_weapon_index w)
 	return 1 << static_cast<unsigned>(w);
 }
 
-static constexpr unsigned HAS_SECONDARY_FLAG(const secondary_weapon_index_t w)
+static constexpr unsigned HAS_SECONDARY_FLAG(const secondary_weapon_index w)
 {
 	return 1 << static_cast<unsigned>(w);
 }
@@ -254,9 +254,9 @@ void delayed_autoselect(player_info &, const control_info &Controls);
 
 //return which bomb will be dropped next time the bomb key is pressed
 #if DXX_BUILD_DESCENT == 1
-static constexpr secondary_weapon_index_t which_bomb(const player_info &)
+static constexpr secondary_weapon_index which_bomb(const player_info &)
 {
-	return secondary_weapon_index_t::PROXIMITY_INDEX;
+	return secondary_weapon_index::PROXIMITY_INDEX;
 }
 
 static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
@@ -264,9 +264,9 @@ static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id
 	return id == primary_weapon_index::VULCAN_INDEX;
 }
 
-static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
+static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
 {
-	return id == secondary_weapon_index_t::PROXIMITY_INDEX;
+	return id == secondary_weapon_index::PROXIMITY_INDEX;
 }
 
 //multiply ammo by this before displaying
@@ -275,17 +275,17 @@ static constexpr unsigned vulcan_ammo_scale(const unsigned v)
 	return (v * 0xcc180u) >> 16;
 }
 #elif DXX_BUILD_DESCENT == 2
-secondary_weapon_index_t which_bomb(player_info &player_info);
-secondary_weapon_index_t which_bomb(const player_info &player_info);
+secondary_weapon_index which_bomb(player_info &player_info);
+secondary_weapon_index which_bomb(const player_info &player_info);
 
 static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
 	return id == primary_weapon_index::VULCAN_INDEX || id == primary_weapon_index::GAUSS_INDEX;
 }
 
-static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
+static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
 {
-	return id == secondary_weapon_index_t::PROXIMITY_INDEX || id == secondary_weapon_index_t::SMART_MINE_INDEX;
+	return id == secondary_weapon_index::PROXIMITY_INDEX || id == secondary_weapon_index::SMART_MINE_INDEX;
 }
 
 //multiply ammo by this before displaying
