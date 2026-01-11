@@ -106,7 +106,7 @@ struct _sockaddr
 #endif
 	};
 	using presentation_buffer = std::array<char, DXX_IPv6(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)>;
-	static constexpr std::integral_constant<int, DXX_IPv6(AF_INET, AF_INET6)> address_family{};
+	static constexpr auto address_family{DXX_IPv6(AF_INET, AF_INET6)};
 #undef DXX_IPv6
 };
 
