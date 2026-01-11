@@ -123,12 +123,12 @@ static constexpr uint8_t SUPER_WEAPON{5};
 
 static constexpr bool is_super_weapon(const primary_weapon_index i)
 {
-	return static_cast<unsigned>(i) >= SUPER_WEAPON;
+	return static_cast<uint8_t>(i) >= SUPER_WEAPON;
 }
 
 static constexpr bool is_super_weapon(const secondary_weapon_index i)
 {
-	return static_cast<unsigned>(i) >= SUPER_WEAPON;
+	return static_cast<uint8_t>(i) >= SUPER_WEAPON;
 }
 
 //flags whether the last time we use this weapon, it was the 'super' version
