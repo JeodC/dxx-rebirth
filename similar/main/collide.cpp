@@ -1866,7 +1866,7 @@ static void collide_player_and_player(const d_robot_info_array &Robot_info, cons
 		auto &last_player_bump = ((get_player_id(player1) == Player_num)
 			? player2
 			: player1)->ctype.player_info.Last_bumped_local_player;
-		if (last_player_bump + (F1_0/Netgame.PacketsPerSec) < GameTime64 || last_player_bump > GameTime64)
+		if ((Netgame.PacketsPerSec && last_player_bump + (F1_0 / Netgame.PacketsPerSec) < GameTime64) || last_player_bump > GameTime64)
 		{
 			last_player_bump = {GameTime64};
 			damage_flag = 1;

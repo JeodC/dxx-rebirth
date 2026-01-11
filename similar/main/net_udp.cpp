@@ -5408,7 +5408,7 @@ void dispatch_table::do_protocol_frame(int force, int listen) const
 		WaitForRefuseAnswer=0;
 
 	// Send positional update either in the regular PPS interval OR if forced
-	if (force || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))))
+	if (force || (Netgame.PacketsPerSec && time >= (last_pdata_time + (F1_0 / Netgame.PacketsPerSec))))
 	{
 		last_pdata_time = time;
 		net_udp_send_pdata();
