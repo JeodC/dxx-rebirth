@@ -190,7 +190,7 @@ static void paging_touch_weapon(const d_vclip_array &Vclip, const weapon_info &w
 
 static void paging_touch_weapon(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const uint_fast32_t weapon_type)
 {
-	if (weapon_type < N_weapon_types)
+	if (weapon_type < N_weapon_types) [[likely]]
 		paging_touch_weapon(Vclip, Weapon_info[weapon_type]);
 }
 
