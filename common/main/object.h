@@ -780,7 +780,6 @@ namespace dcx {
 
 #ifdef DXX_BUILD_DESCENT
 contained_object_type build_contained_object_type_from_untrusted(uint8_t untrusted);
-contained_object_id build_contained_object_id_from_untrusted(contained_object_type, uint8_t untrusted);
 contained_object_parameters build_contained_object_parameters_from_untrusted(uint8_t type, uint8_t id, uint8_t count);
 #endif
 
