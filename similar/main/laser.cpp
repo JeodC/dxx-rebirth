@@ -304,6 +304,8 @@ namespace {
 //creates a weapon object
 static imobjptridx_t create_weapon_object(weapon_id_type weapon_type, const vmsegptridx_t segnum, const vms_vector &position)
 {
+	if (!Weapon_info.valid_index(weapon_type))
+		return object_none;
 	const auto &wi{Weapon_info[weapon_type]};
 	render_type rtype;
 	fix laser_radius;
