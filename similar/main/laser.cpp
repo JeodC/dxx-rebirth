@@ -304,14 +304,15 @@ namespace {
 //creates a weapon object
 static imobjptridx_t create_weapon_object(weapon_id_type weapon_type, const vmsegptridx_t segnum, const vms_vector &position)
 {
+	const auto &wi{Weapon_info[weapon_type]};
 	render_type rtype;
 	fix laser_radius;
 
-	switch(Weapon_info[weapon_type].render)
+	switch (wi.render)
 	{
 		case weapon_info::render_type::blob:
 			rtype = render_type::RT_LASER;			// Render as a laser even if blob (see render code above for explanation)
-			laser_radius = Weapon_info[weapon_type].blob_size;
+			laser_radius = wi.blob_size;
 			break;
 		case weapon_info::render_type::polymodel:
 			laser_radius = 0;	//	Filled in below.
@@ -326,27 +327,27 @@ static imobjptridx_t create_weapon_object(weapon_id_type weapon_type, const vmse
 			break;
 		case weapon_info::render_type::vclip:
 			rtype = render_type::RT_WEAPON_VCLIP;
-			laser_radius = Weapon_info[weapon_type].blob_size;
+			laser_radius = wi.blob_size;
 			break;
 		default:
-			report_invalid_weapon_render_type(weapon_type, Weapon_info[weapon_type].render);
+			report_invalid_weapon_render_type(weapon_type, wi.render);
 	}
 
 	const auto &&obj = obj_weapon_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, Weapon_info, weapon_type, segnum, position, laser_radius, rtype);
 	if (obj == object_none)
 		return object_none;
 
-	if (Weapon_info[weapon_type].render == weapon_info::render_type::polymodel) {
+	if (wi.render == weapon_info::render_type::polymodel) {
 		auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 		obj->rtype.pobj_info.model_num = Weapon_info[get_weapon_id(obj)].model_num;
 		obj->size = fixdiv(Polygon_models[obj->rtype.pobj_info.model_num].rad,Weapon_info[get_weapon_id(obj)].po_len_to_width_ratio);
 	}
 
-	obj->mtype.phys_info.mass = Weapon_info[weapon_type].mass;
-	obj->mtype.phys_info.drag = Weapon_info[weapon_type].drag;
+	obj->mtype.phys_info.mass = wi.mass;
+	obj->mtype.phys_info.drag = wi.drag;
 	obj->mtype.phys_info.thrust = {};
 
-	const auto bounce{Weapon_info[weapon_type].bounce};
+	const auto bounce{wi.bounce};
 	if (bounce == weapon_info::bounce_type::always)
 		obj->mtype.phys_info.flags |= PF_BOUNCE;
 
