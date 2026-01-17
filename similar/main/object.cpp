@@ -2421,8 +2421,11 @@ static unsigned object_is_clearable_weapon(const weapon_info_array &Weapon_info,
 		return 0;
 	const auto weapon_id = get_weapon_id(obj);
 #if DXX_BUILD_DESCENT == 2
-	if (Weapon_info[weapon_id].flags & WIF_PLACABLE)
-		return 0;
+	if (const auto opt_weapon_id{Weapon_info.valid_index(weapon_id)})
+	{
+		if (Weapon_info[*opt_weapon_id].flags & WIF_PLACABLE)
+			return 0;
+	}
 #endif
 	if (clear_all)
 		return clear_all;
