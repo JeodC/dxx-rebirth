@@ -543,9 +543,9 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 			const auto is_weapon_with_inner_model{
 				obj->type == OBJ_WEAPON
 					? ({
-						const auto wid{get_weapon_id(obj)};
-						underlying_value(wid) < Weapon_info.size()
-						? Weapon_info[wid].model_num_inner
+						const auto opt_weapon_id{Weapon_info.valid_index(get_weapon_id(obj))};
+						opt_weapon_id
+						? Weapon_info[*opt_weapon_id].model_num_inner
 						: polygon_model_index::None;
 						})
 				: polygon_model_index::None
