@@ -2415,7 +2415,7 @@ namespace {
 #if DXX_BUILD_DESCENT == 1
 #define object_is_clearable_weapon(W,a,b)	object_is_clearable_weapon(a,b)
 #endif
-static unsigned object_is_clearable_weapon(const weapon_info_array &Weapon_info, const object_base obj, const unsigned clear_all)
+static unsigned object_is_clearable_weapon(const weapon_info_array &Weapon_info, const object_base &obj, const unsigned clear_all)
 {
 	if (!(obj.type == OBJ_WEAPON))
 		return 0;
