@@ -21,6 +21,11 @@
 
 namespace dcx {
 
+#if SDL_MAJOR_VERSION == 2
+extern SDL_Window *g_pRebirthSDLMainWindow;
+extern SDL_GLContext g_pRebirthGLContext;
+#endif
+
 /* GL_ARB_sync */
 bool ogl_have_ARB_sync = false;
 PFNGLFENCESYNCPROC glFenceSyncFunc = NULL;
@@ -102,6 +107,16 @@ static support_mode is_supported(const char *extensions, const std::array<long, 
 
 void ogl_extensions_init()
 {
+#if SDL_MAJOR_VERSION == 2
+	if (g_pRebirthSDLMainWindow && g_pRebirthGLContext)
+	{
+		if (SDL_GL_MakeCurrent(g_pRebirthSDLMainWindow, g_pRebirthGLContext) != 0)
+		{
+			con_printf(CON_URGENT, "DXX-Rebirth: failed to make GL context current before querying extensions: %s", SDL_GetError());
+			return;
+		}
+	}
+#endif
 	const auto version_str = reinterpret_cast<const char *>(glGetString(GL_VERSION));
 	if (!version_str) {
 		con_puts(CON_URGENT, "DXX-Rebirth: no valid OpenGL context when querying GL extensions!");

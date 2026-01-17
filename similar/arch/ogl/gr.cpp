@@ -86,6 +86,7 @@ static DISPMANX_DISPLAY_HANDLE_T dispman_display=DISPMANX_NO_HANDLE;
 static int sdl_video_flags = SDL_OPENGL;
 #elif SDL_MAJOR_VERSION == 2
 SDL_Window *g_pRebirthSDLMainWindow;
+static SDL_GLContext g_pRebirthGLContext;
 static int g_iRebirthWindowX, g_iRebirthWindowY;
 #endif
 #endif
@@ -411,6 +412,20 @@ static int ogl_init_window(int w, int h)
 	const auto SDLWindow{g_pRebirthSDLMainWindow};
 	if (!(SDL_GetWindowFlags(SDLWindow) & SDL_WINDOW_FULLSCREEN))
 		SDL_SetWindowSize(SDLWindow, w, h);
+	/* Ensure a valid GL context is available and current */
+	if (!g_pRebirthGLContext)
+	{
+		const auto GLContext = SDL_GL_CreateContext(SDLWindow);
+		if (!GLContext) {
+			con_printf(CON_URGENT, "Failed to create OpenGL context after resize: %s", SDL_GetError());
+			return -1;
+		}
+		g_pRebirthGLContext = GLContext;
+	}
+	if (SDL_GL_MakeCurrent(SDLWindow, g_pRebirthGLContext) != 0) {
+		con_printf(CON_URGENT, "Failed to make OpenGL context current after resize: %s", SDL_GetError());
+		return -1;
+	}
 #endif
 
 #if DXX_USE_OGLES && SDL_MAJOR_VERSION == 1
@@ -866,7 +881,21 @@ int gr_init()
 		return -1;
 	SDL_GetWindowPosition(SDLWindow, &g_iRebirthWindowX, &g_iRebirthWindowY);
 	g_pRebirthSDLMainWindow = SDLWindow;
-	SDL_GL_CreateContext(SDLWindow);
+	const auto GLContext = SDL_GL_CreateContext(SDLWindow);
+	if (!GLContext) {
+		con_printf(CON_URGENT, "Failed to create OpenGL context: %s", SDL_GetError());
+		SDL_DestroyWindow(SDLWindow);
+		g_pRebirthSDLMainWindow = nullptr;
+		return -1;
+	}
+	if (SDL_GL_MakeCurrent(SDLWindow, GLContext) != 0) {
+		con_printf(CON_URGENT, "Failed to make OpenGL context current: %s", SDL_GetError());
+		SDL_GL_DeleteContext(GLContext);
+		SDL_DestroyWindow(SDLWindow);
+		g_pRebirthSDLMainWindow = nullptr;
+		return -1;
+	}
+	g_pRebirthGLContext = GLContext;
 	if (const auto window_icon = SDL_LoadBMP(DXX_SDL_WINDOW_ICON_BITMAP))
 		SDL_SetWindowIcon(SDLWindow, window_icon);
 #endif
@@ -942,6 +971,14 @@ void gr_close()
 		dispman_display = DISPMANX_NO_HANDLE;
 	}
 #endif
+#endif
+
+#if SDL_MAJOR_VERSION == 2
+	if (g_pRebirthGLContext)
+	{
+		SDL_GL_DeleteContext(g_pRebirthGLContext);
+		g_pRebirthGLContext = nullptr;
+	}
 #endif
 }
 
