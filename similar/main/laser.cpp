@@ -691,7 +691,7 @@ static int is_laser_weapon_type(const weapon_id_type weapon_type)
 // ---------------------------------------------------------------------------------
 // Initializes a laser after Fire is pressed
 //	Returns object number.
-imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &position, const vmsegptridx_t segnum, const vmobjptridx_t parent, weapon_id_type weapon_type, const weapon_sound_flag make_sound)
+imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &position, const vmsegptridx_t segnum, const vmobjptridx_t parent, const weapon_id_type weapon_type, const weapon_sound_flag make_sound)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
@@ -699,8 +699,9 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 
 	if (weapon_type >= N_weapon_types)
 	{
+		[[unlikely]];
 		con_printf(CON_URGENT, DXX_STRINGIZE_FL(__FILE__, __LINE__, "invalid weapon id %u fired by parent %hu (type %u) in segment %hu"), weapon_type, parent.get_unchecked_index(), parent->type, segnum.get_unchecked_index());
-		weapon_type = weapon_id_type::LASER_ID_L1;
+		return object_none;
 	}
 
 	//	Don't let homing blobs make muzzle flash.
