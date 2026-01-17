@@ -533,9 +533,25 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					: alternate_textures{};
 				})
 			};
-			const auto is_weapon_with_inner_model = (obj->type == OBJ_WEAPON && Weapon_info[get_weapon_id(obj)].model_num_inner != polygon_model_index::None);
+			/* If this object is a weapon, and its ID is a valid index in
+			 * `Weapon_info`, then initialize `is_weapon_with_inner_model` to
+			 * the value of `Weapon_info[id].model_num_inner`, which may or may
+			 * not be `polygon_model_index::None`.  If any of those conditions
+			 * are not satisfied, then initialize to
+			 * `polygon_model_index::None`.
+			 */
+			const auto is_weapon_with_inner_model{
+				obj->type == OBJ_WEAPON
+					? ({
+						const auto wid{get_weapon_id(obj)};
+						underlying_value(wid) < Weapon_info.size()
+						? Weapon_info[wid].model_num_inner
+						: polygon_model_index::None;
+						})
+				: polygon_model_index::None
+			};
 			bool draw_simple_model;
-			if (is_weapon_with_inner_model)
+			if (is_weapon_with_inner_model != polygon_model_index::None)
 			{
 				gr_settransblend(canvas, GR_FADE_OFF, gr_blend::additive_a);
 				draw_simple_model = static_cast<fix>(vm_vec_dist_quick(Viewer->pos, obj->pos)) < Simple_model_threshhold_scale * F1_0*2;
@@ -543,7 +559,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 							   obj->orient,
 							   obj->rtype.pobj_info.anim_angles,
-							   Weapon_info[get_weapon_id(obj)].model_num_inner,
+							   is_weapon_with_inner_model,
 							   obj->rtype.pobj_info.subobj_flags,
 							   light,
 							   &engine_glow_value,
@@ -557,7 +573,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					   &engine_glow_value,
 					   alt_textures);
 
-			if (is_weapon_with_inner_model)
+			if (is_weapon_with_inner_model != polygon_model_index::None)
 			{
 				if constexpr (!DXX_USE_OGL) // in software rendering must draw inner model last
 				{
@@ -566,7 +582,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 							   obj->orient,
 							   obj->rtype.pobj_info.anim_angles,
-							   Weapon_info[obj->id].model_num_inner,
+							   is_weapon_with_inner_model,
 							   obj->rtype.pobj_info.subobj_flags,
 							   light,
 							   &engine_glow_value,
