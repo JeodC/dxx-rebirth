@@ -339,8 +339,8 @@ static imobjptridx_t create_weapon_object(weapon_id_type weapon_type, const vmse
 
 	if (wi.render == weapon_info::render_type::polymodel) {
 		auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-		obj->rtype.pobj_info.model_num = Weapon_info[get_weapon_id(obj)].model_num;
-		obj->size = fixdiv(Polygon_models[obj->rtype.pobj_info.model_num].rad,Weapon_info[get_weapon_id(obj)].po_len_to_width_ratio);
+		obj->rtype.pobj_info.model_num = wi.model_num;
+		obj->size = fixdiv(Polygon_models[obj->rtype.pobj_info.model_num].rad,wi.po_len_to_width_ratio);
 	}
 
 	obj->mtype.phys_info.mass = wi.mass;
