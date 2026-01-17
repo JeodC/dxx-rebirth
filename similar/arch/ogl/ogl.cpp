@@ -402,7 +402,7 @@ static void ogl_cache_vclipn_textures(const d_vclip_array &Vclip, const vclip_in
 		ogl_cache_vclip_textures(Vclip[i]);
 }
 
-static void ogl_cache_weapon_textures(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const unsigned weapon_type)
+static void ogl_cache_weapon_textures(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const weapon_id_type weapon_type)
 {
 	if (weapon_type >= Weapon_info.size())
 		return;
@@ -512,7 +512,7 @@ void ogl_cache_level_textures(void)
 				const auto id = get_powerup_id(objp);
 				primary_weapon_index p;
 				secondary_weapon_index s;
-				int w;
+				weapon_id_type w;
 				if (
 					(
 						(
