@@ -2223,7 +2223,7 @@ void bm_read_weapon(char *&arg, int skip, int unused_flag)
 void bm_read_weapon(int skip, int unused_flag)
 #endif
 {
-	int	i,n;
+	int	i;
 	int n_models{0};
 	char 	*equal_ptr;
 	char	*pof_file_inner=NULL;
@@ -2233,7 +2233,7 @@ void bm_read_weapon(int skip, int unused_flag)
 
 	Assert(N_weapon_types < MAX_WEAPON_TYPES);
 
-	n = N_weapon_types;
+	const auto n{N_weapon_types};
 	N_weapon_types++;
 #if DXX_BUILD_DESCENT == 2
 	Assert(N_weapon_types <= MAX_WEAPON_TYPES);
@@ -2258,57 +2258,58 @@ void bm_read_weapon(int skip, int unused_flag)
 	}
 
 	// Initialize weapon array
-	Weapon_info[n].render = weapon_info::render_type::None;		// 0=laser, 1=blob, 2=object
-	Weapon_info[n].bitmap = {};
-	Weapon_info[n].model_num = polygon_model_index::None;
-	Weapon_info[n].model_num_inner = polygon_model_index::None;
-	Weapon_info[n].blob_size = 0x1000;									// size of blob
-	Weapon_info[n].flash_vclip = vclip_index::None;
-	Weapon_info[n].flash_sound = sound_effect::SOUND_LASER_FIRED;
-	Weapon_info[n].flash_size = 0;
-	Weapon_info[n].robot_hit_vclip = vclip_index::None;
-	Weapon_info[n].robot_hit_sound = sound_effect::None;
-	Weapon_info[n].wall_hit_vclip = vclip_index::None;
-	Weapon_info[n].wall_hit_sound = sound_effect::None;
-	Weapon_info[n].impact_size = 0;
-	for (auto &i : Weapon_info[n].strength)
+	auto &wi{Weapon_info[static_cast<weapon_id_type>(n)]};
+	wi.render = weapon_info::render_type::None;		// 0=laser, 1=blob, 2=object
+	wi.bitmap = {};
+	wi.model_num = polygon_model_index::None;
+	wi.model_num_inner = polygon_model_index::None;
+	wi.blob_size = 0x1000;									// size of blob
+	wi.flash_vclip = vclip_index::None;
+	wi.flash_sound = sound_effect::SOUND_LASER_FIRED;
+	wi.flash_size = 0;
+	wi.robot_hit_vclip = vclip_index::None;
+	wi.robot_hit_sound = sound_effect::None;
+	wi.wall_hit_vclip = vclip_index::None;
+	wi.wall_hit_sound = sound_effect::None;
+	wi.impact_size = 0;
+	for (auto &i : wi.strength)
 		i = F1_0;
-	for (auto &i : Weapon_info[n].speed)
+	for (auto &i : wi.speed)
 		i = F1_0*10;
-	Weapon_info[n].mass = F1_0;
-	Weapon_info[n].thrust = 0;
-	Weapon_info[n].drag = 0;
-	Weapon_info[n].persistent = weapon_info::persistence_flag::terminate_on_impact;
+	wi.mass = F1_0;
+	wi.thrust = 0;
+	wi.drag = 0;
+	wi.persistent = weapon_info::persistence_flag::terminate_on_impact;
 
-	Weapon_info[n].energy_usage = 0;					//	How much fuel is consumed to fire this weapon.
-	Weapon_info[n].ammo_usage = 0;					//	How many units of ammunition it uses.
-	Weapon_info[n].fire_wait = F1_0/4;				//	Time until this weapon can be fired again.
-	Weapon_info[n].fire_count = 1;					//	Number of bursts fired from EACH GUN per firing.  For weapons which fire from both sides, 3*fire_count shots will be fired.
-	Weapon_info[n].damage_radius = 0;				//	Radius of damage for missiles, not lasers.  Does damage to objects within this radius of hit point.
-//--01/19/95, mk--	Weapon_info[n].damage_force = 0;					//	Force (movement) due to explosion
-	Weapon_info[n].destroyable = 1;					//	Weapons default to destroyable
-	Weapon_info[n].matter = weapon_info::matter_flag::energy;							//	Weapons default to not being constructed of matter (they are energy!)
-	Weapon_info[n].bounce = weapon_info::bounce_type::never;							//	Weapons default to not bouncing off walls
+	wi.energy_usage = 0;					//	How much fuel is consumed to fire this weapon.
+	wi.ammo_usage = 0;					//	How many units of ammunition it uses.
+	wi.fire_wait = F1_0/4;				//	Time until this weapon can be fired again.
+	wi.fire_count = 1;					//	Number of bursts fired from EACH GUN per firing.  For weapons which fire from both sides, 3*fire_count shots will be fired.
+	wi.damage_radius = 0;				//	Radius of damage for missiles, not lasers.  Does damage to objects within this radius of hit point.
+//--01/19/95, mk--	wi.damage_force = 0;					//	Force (movement) due to explosion
+	wi.destroyable = 1;					//	Weapons default to destroyable
+	wi.matter = weapon_info::matter_flag::energy;							//	Weapons default to not being constructed of matter (they are energy!)
+	wi.bounce = weapon_info::bounce_type::never;							//	Weapons default to not bouncing off walls
 
 #if DXX_BUILD_DESCENT == 2
-	Weapon_info[n].flags = 0;
+	wi.flags = 0;
 #endif
 
-	Weapon_info[n].lifetime = WEAPON_DEFAULT_LIFETIME;					//	Number of bursts fired from EACH GUN per firing.  For weapons which fire from both sides, 3*fire_count shots will be fired.
+	wi.lifetime = WEAPON_DEFAULT_LIFETIME;					//	Number of bursts fired from EACH GUN per firing.  For weapons which fire from both sides, 3*fire_count shots will be fired.
 
-	Weapon_info[n].po_len_to_width_ratio = F1_0*10;
+	wi.po_len_to_width_ratio = F1_0*10;
 
-	Weapon_info[n].picture = {};
+	wi.picture = {};
 #if DXX_BUILD_DESCENT == 2
-	Weapon_info[n].hires_picture = {};
+	wi.hires_picture = {};
 #endif
-	Weapon_info[n].homing_flag = 0;
+	wi.homing_flag = 0;
 
 #if DXX_BUILD_DESCENT == 2
-	Weapon_info[n].flash = 0;
-	Weapon_info[n].multi_damage_scale = F1_0;
-	Weapon_info[n].afterburner_size = 0;
-	Weapon_info[n].children = weapon_id_type::unspecified;
+	wi.flash = 0;
+	wi.multi_damage_scale = F1_0;
+	wi.afterburner_size = 0;
+	wi.children = weapon_id_type::unspecified;
 #endif
 
 	// Process arguments
@@ -2317,7 +2318,7 @@ void bm_read_weapon(int skip, int unused_flag)
 	lighted = 1;			//assume first texture is lighted
 
 #if DXX_BUILD_DESCENT == 2
-	Weapon_info[n].speedvar = 128;
+	wi.speedvar = 128;
 #endif
 
 	while (arg!=NULL)	{
@@ -2329,24 +2330,24 @@ void bm_read_weapon(int skip, int unused_flag)
 			if (!d_stricmp( arg, "laser_bmp" ))	{
 				// Load bitmap with name equal_ptr
 
-				Weapon_info[n].bitmap = bm_load_sub(skip, equal_ptr);		//load_polymodel_bitmap(equal_ptr);
-				Weapon_info[n].render = weapon_info::render_type::laser;
+				wi.bitmap = bm_load_sub(skip, equal_ptr);		//load_polymodel_bitmap(equal_ptr);
+				wi.render = weapon_info::render_type::laser;
 
 			} else if (!d_stricmp( arg, "blob_bmp" ))	{
 				// Load bitmap with name equal_ptr
 
-				Weapon_info[n].bitmap = bm_load_sub(skip, equal_ptr);		//load_polymodel_bitmap(equal_ptr);
-				Weapon_info[n].render = weapon_info::render_type::blob;
+				wi.bitmap = bm_load_sub(skip, equal_ptr);		//load_polymodel_bitmap(equal_ptr);
+				wi.render = weapon_info::render_type::blob;
 
 			} else if (!d_stricmp( arg, "weapon_vclip" ))	{
 				// Set vclip to play for this weapon.
-				Weapon_info[n].bitmap = {};
-				Weapon_info[n].render = weapon_info::render_type::vclip;
-				Weapon_info[n].weapon_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
+				wi.bitmap = {};
+				wi.render = weapon_info::render_type::vclip;
+				wi.weapon_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
 
 			} else if (!d_stricmp( arg, "none_bmp" )) {
-				Weapon_info[n].bitmap = bm_load_sub(skip, equal_ptr);
-				Weapon_info[n].render = weapon_info::render_type::None;
+				wi.bitmap = bm_load_sub(skip, equal_ptr);
+				wi.render = weapon_info::render_type::None;
 
 			} else if (!d_stricmp( arg, "weapon_pof" ))	{
 				// Load pof file
@@ -2365,7 +2366,7 @@ void bm_read_weapon(int skip, int unused_flag)
 				// Load pof file
 				pof_file_inner = equal_ptr;
 			} else if (!d_stricmp( arg, "strength" )) {
-				for (auto &i : unchecked_partial_range(Weapon_info[n].strength, Weapon_info[n].strength.size() - 1))
+				for (auto &i : unchecked_partial_range(wi.strength, wi.strength.size() - 1))
 				{
 #if DXX_BUILD_DESCENT == 1
 					i = i2f(atoi(equal_ptr));
@@ -2374,95 +2375,95 @@ void bm_read_weapon(int skip, int unused_flag)
 #endif
 					equal_ptr = strtok(NULL, space_tab);
 				}
-				Weapon_info[n].strength.back() = i2f(atoi(equal_ptr));
+				wi.strength.back() = i2f(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "mass" )) {
-				Weapon_info[n].mass = fl2f(atof(equal_ptr));
+				wi.mass = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "drag" )) {
-				Weapon_info[n].drag = fl2f(atof(equal_ptr));
+				wi.drag = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "thrust" )) {
-				Weapon_info[n].thrust = fl2f(atof(equal_ptr));
+				wi.thrust = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "matter" )) {
-				Weapon_info[n].matter = static_cast<weapon_info::matter_flag>(atoi(equal_ptr));
+				wi.matter = static_cast<weapon_info::matter_flag>(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "bounce" )) {
-				Weapon_info[n].bounce = static_cast<weapon_info::bounce_type>(atoi(equal_ptr));
+				wi.bounce = static_cast<weapon_info::bounce_type>(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "speed" )) {
-				for (auto &i : unchecked_partial_range(Weapon_info[n].speed, Weapon_info[n].speed.size() - 1))
+				for (auto &i : unchecked_partial_range(wi.speed, wi.speed.size() - 1))
 				{
 					i = i2f(atoi(equal_ptr));
 					equal_ptr = strtok(NULL, space_tab);
 				}
-				Weapon_info[n].speed.back() = i2f(atoi(equal_ptr));
+				wi.speed.back() = i2f(atoi(equal_ptr));
 			}
 #if DXX_BUILD_DESCENT == 2
 			else if (!d_stricmp( arg, "speedvar" ))	{
-				Weapon_info[n].speedvar = (atoi(equal_ptr) * 128) / 100;
+				wi.speedvar = (atoi(equal_ptr) * 128) / 100;
 			}
 #endif
 			else if (!d_stricmp( arg, "flash_vclip" ))	{
-				Weapon_info[n].flash_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
+				wi.flash_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "flash_sound" ))	{
-				Weapon_info[n].flash_sound = static_cast<sound_effect>(atoi(equal_ptr));
+				wi.flash_sound = static_cast<sound_effect>(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "flash_size" ))	{
-				Weapon_info[n].flash_size = fl2f(atof(equal_ptr));
+				wi.flash_size = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "blob_size" ))	{
-				Weapon_info[n].blob_size = fl2f(atof(equal_ptr));
+				wi.blob_size = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "robot_hit_vclip" ))	{
-				Weapon_info[n].robot_hit_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
+				wi.robot_hit_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "robot_hit_sound" ))	{
-				Weapon_info[n].robot_hit_sound = static_cast<sound_effect>(atoi(equal_ptr));
+				wi.robot_hit_sound = static_cast<sound_effect>(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "wall_hit_vclip" ))	{
-				Weapon_info[n].wall_hit_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
+				wi.wall_hit_vclip = build_vclip_index_from_untrusted(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "wall_hit_sound" ))	{
-				Weapon_info[n].wall_hit_sound = static_cast<sound_effect>(atoi(equal_ptr));
+				wi.wall_hit_sound = static_cast<sound_effect>(atoi(equal_ptr));
 			} else if (!d_stricmp( arg, "impact_size" ))	{
-				Weapon_info[n].impact_size = fl2f(atof(equal_ptr));
+				wi.impact_size = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "lighted" ))	{
 				lighted = atoi(equal_ptr);
 			} else if (!d_stricmp( arg, "lw_ratio" ))	{
-				Weapon_info[n].po_len_to_width_ratio = fl2f(atof(equal_ptr));
+				wi.po_len_to_width_ratio = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "lightcast" ))	{
-				Weapon_info[n].light = fl2f(atof(equal_ptr));
+				wi.light = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp( arg, "persistent" ))	{
-				Weapon_info[n].persistent = atoi(equal_ptr) ? weapon_info::persistence_flag::persistent : weapon_info::persistence_flag::terminate_on_impact;
+				wi.persistent = atoi(equal_ptr) ? weapon_info::persistence_flag::persistent : weapon_info::persistence_flag::terminate_on_impact;
 			} else if (!d_stricmp(arg, "energy_usage" )) {
-				Weapon_info[n].energy_usage = fl2f(atof(equal_ptr));
+				wi.energy_usage = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp(arg, "ammo_usage" )) {
-				Weapon_info[n].ammo_usage = atoi(equal_ptr);
+				wi.ammo_usage = atoi(equal_ptr);
 			} else if (!d_stricmp(arg, "fire_wait" )) {
-				Weapon_info[n].fire_wait = fl2f(atof(equal_ptr));
+				wi.fire_wait = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp(arg, "fire_count" )) {
-				Weapon_info[n].fire_count = atoi(equal_ptr);
+				wi.fire_count = atoi(equal_ptr);
 			} else if (!d_stricmp(arg, "damage_radius" )) {
-				Weapon_info[n].damage_radius = fl2f(atof(equal_ptr));
+				wi.damage_radius = fl2f(atof(equal_ptr));
 //--01/19/95, mk--			} else if (!d_stricmp(arg, "damage_force" )) {
-//--01/19/95, mk--				Weapon_info[n].damage_force = fl2f(atof(equal_ptr));
+//--01/19/95, mk--				wi.damage_force = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp(arg, "lifetime" )) {
-				Weapon_info[n].lifetime = fl2f(atof(equal_ptr));
+				wi.lifetime = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp(arg, "destroyable" )) {
-				Weapon_info[n].destroyable = atoi(equal_ptr);
+				wi.destroyable = atoi(equal_ptr);
 			} else if (!d_stricmp(arg, "picture" )) {
-				Weapon_info[n].picture = bm_load_sub(skip, equal_ptr);
+				wi.picture = bm_load_sub(skip, equal_ptr);
 			}
 #if DXX_BUILD_DESCENT == 2
 			else if (!d_stricmp(arg, "hires_picture" )) {
-				Weapon_info[n].hires_picture = bm_load_sub(skip, equal_ptr);
+				wi.hires_picture = bm_load_sub(skip, equal_ptr);
 			}
 #endif
 			else if (!d_stricmp(arg, "homing" )) {
-				Weapon_info[n].homing_flag = !!atoi(equal_ptr);
+				wi.homing_flag = !!atoi(equal_ptr);
 			}
 #if DXX_BUILD_DESCENT == 2
 			else if (!d_stricmp(arg, "flash" )) {
-				Weapon_info[n].flash = atoi(equal_ptr);
+				wi.flash = atoi(equal_ptr);
 			} else if (!d_stricmp(arg, "multi_damage_scale" )) {
-				Weapon_info[n].multi_damage_scale = fl2f(atof(equal_ptr));
+				wi.multi_damage_scale = fl2f(atof(equal_ptr));
 			} else if (!d_stricmp(arg, "afterburner_size" )) {
-				Weapon_info[n].afterburner_size = f2i(16*fl2f(atof(equal_ptr)));
+				wi.afterburner_size = f2i(16*fl2f(atof(equal_ptr)));
 			} else if (!d_stricmp(arg, "children" )) {
-				Weapon_info[n].children = static_cast<weapon_id_type>(atoi(equal_ptr));
+				wi.children = static_cast<weapon_id_type>(atoi(equal_ptr));
 			} else if (!d_stricmp(arg, "placable" )) {
 				if (atoi(equal_ptr)) {
-					Weapon_info[n].flags |= WIF_PLACABLE;
+					wi.flags |= WIF_PLACABLE;
 				}
 			} else {
 				Int3();
@@ -2495,8 +2496,8 @@ void bm_read_weapon(int skip, int unused_flag)
 		const auto model_num = load_polygon_model(model_name[i],n_textures,first_bitmap_num[i],NULL);
 
 		if (i==0) {
-			Weapon_info[n].render = weapon_info::render_type::polymodel;
-			Weapon_info[n].model_num = model_num;
+			wi.render = weapon_info::render_type::polymodel;
+			wi.model_num = model_num;
 		}
 		else
 			Polygon_models.front().simpler_model = build_polygon_simpler_model_index_from_polygon_model_index(model_num);
@@ -2504,7 +2505,7 @@ void bm_read_weapon(int skip, int unused_flag)
 
 	if ( pof_file_inner )	{
 		Assert(n_models);
-		Weapon_info[n].model_num_inner = load_polygon_model(pof_file_inner,first_bitmap_num[1]-first_bitmap_num[0],first_bitmap_num[0],NULL);
+		wi.model_num_inner = load_polygon_model(pof_file_inner,first_bitmap_num[1]-first_bitmap_num[0],first_bitmap_num[0],NULL);
 	}
 }
 
