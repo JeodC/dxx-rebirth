@@ -166,14 +166,18 @@ namespace dcx {
 
 namespace {
 
-static powerup_type_t build_contained_object_powerup_id_from_untrusted(const uint8_t untrusted)
+constexpr powerup_type_t build_contained_object_powerup_id_from_untrusted(const uint8_t untrusted)
 {
-	return untrusted < MAX_POWERUP_TYPES ? powerup_type_t{untrusted} : powerup_type_t{};
+	if (untrusted < MAX_POWERUP_TYPES) [[likely]]
+		return powerup_type_t{untrusted};
+	return powerup_type_t{};
 }
 
-static robot_id build_contained_object_robot_id_from_untrusted(const uint8_t untrusted)
+constexpr robot_id build_contained_object_robot_id_from_untrusted(const uint8_t untrusted)
 {
-	return untrusted < MAX_ROBOT_TYPES ? robot_id{untrusted} : robot_id{};
+	if (untrusted < MAX_ROBOT_TYPES) [[likely]]
+		return robot_id{untrusted};
+	return robot_id{};
 }
 
 }
@@ -202,6 +206,7 @@ contained_object_type build_contained_object_type_from_untrusted(const uint8_t u
 		case object_type_t::OBJ_ROBOT:
 			return contained_object_type{untrusted};
 		default:
+			[[unlikely]];
 			return contained_object_type::None;
 	}
 }
@@ -209,12 +214,15 @@ contained_object_type build_contained_object_type_from_untrusted(const uint8_t u
 contained_object_parameters build_contained_object_parameters_from_untrusted(const uint8_t untrusted_type, const uint8_t untrusted_id, const uint8_t untrusted_contains_count)
 {
 	if (untrusted_contains_count > 4)
+	{
 		/* This is an arbitrary cap, chosen to match GOODY_COUNT_MAX.  Any
 		 * value higher than this is likely an error, so force the object to
 		 * contain nothing instead.
 		 */
+		[[unlikely]];
 		return {};
-	switch (const auto type = build_contained_object_type_from_untrusted(untrusted_type))
+	}
+	switch (const auto type{build_contained_object_type_from_untrusted(untrusted_type)})
 	{
 		case contained_object_type::powerup:
 			return {
@@ -229,6 +237,7 @@ contained_object_parameters build_contained_object_parameters_from_untrusted(con
 				.count = untrusted_contains_count,
 			};
 		default:
+			[[unlikely]];
 			return {};
 	}
 }
