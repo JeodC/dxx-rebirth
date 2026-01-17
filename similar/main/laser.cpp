@@ -302,7 +302,7 @@ namespace dsx {
 namespace {
 
 //creates a weapon object
-static imobjptridx_t create_weapon_object(int weapon_type,const vmsegptridx_t segnum, const vms_vector &position)
+static imobjptridx_t create_weapon_object(weapon_id_type weapon_type, const vmsegptridx_t segnum, const vms_vector &position)
 {
 	render_type rtype;
 	fix laser_radius;
