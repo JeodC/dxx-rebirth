@@ -92,10 +92,12 @@ static constexpr int f2ir(const fix &f)
 #define F0_1 	f0_1
 
 //multiply two fixes, return a fix(64)
+[[gnu::const]]
 [[nodiscard]]
 fix64 fixmul64 (fix a, fix b);
 
 /* On x86/amd64 for Windows/Linux, truncating fix64->fix is free. */
+[[gnu::const]]
 [[nodiscard]]
 static inline fix fixmul(fix a, fix b)
 {
@@ -103,36 +105,41 @@ static inline fix fixmul(fix a, fix b)
 }
 
 //divide two fixes, return a fix
+[[gnu::const]]
 [[nodiscard]]
 fix fixdiv (fix a, fix b);
 
 //multiply two fixes, then divide by a third, return a fix
+[[gnu::const]]
 [[nodiscard]]
 fix fixmuldiv (fix a, fix b, fix c);
 
 //multiply two fixes, and add 64-bit product to a quadint
 [[nodiscard]]
-static inline quadint fixmulaccum(const quadint q, const fix &a, const fix &b)
+constexpr quadint fixmulaccum(const quadint q, const auto a, const auto b)
 {
 	return quadint{static_cast<int64_t>(q) + (int64_t{a} * int64_t{b})};
 }
 
 //extract a fix from a quadint product
 [[nodiscard]]
-static inline fix fixquadadjust(const quadint q)
+constexpr fix fixquadadjust(const quadint q)
 {
 	return static_cast<fix>(static_cast<int64_t>(q) >> 16);
 }
 
 //computes the square root of a long, returning a short
+[[gnu::const]]
 [[nodiscard]]
 ushort long_sqrt (int32_t a);
 
 //computes the square root of a quadint, returning a long
+[[gnu::const]]
 [[nodiscard]]
 uint32_t quad_sqrt (quadint);
 
 //computes the square root of a fix, returning a fix
+[[gnu::const]]
 [[nodiscard]]
 fix fix_sqrt (fix a);
 
@@ -141,25 +148,31 @@ struct fix_sincos_result
 	fix sin, cos;
 };
 
+[[gnu::const]]
 [[nodiscard]]
 fix_sincos_result fix_sincos(fixang);
 
 //compute sine and cosine of an angle, filling in the variables
 //either of the pointers can be NULL
 
+[[gnu::const]]
 [[nodiscard]]
 fix fix_sin(fixang a);
 
+[[gnu::const]]
 [[nodiscard]]
 fix fix_cos(fixang a);
 
+[[gnu::const]]
 [[nodiscard]]
 fix fix_fastsin(fixang a);	//no interpolation
 
 //compute inverse sine & cosine
+[[gnu::const]]
 [[nodiscard]]
 fixang fix_asin (fix v);
 
+[[gnu::const]]
 [[nodiscard]]
 fixang fix_acos (fix v);
 
@@ -168,6 +181,7 @@ fixang fix_acos (fix v);
 //equal the ratio of the actual cos & sin for the result angle, but the parms 
 //need not be the actual cos & sin.  
 //NOTE: this is different from the standard C atan2, since it is left-handed.
+[[gnu::const]]
 [[nodiscard]]
 fixang fix_atan2 (fix cos, fix sin);
 
@@ -178,18 +192,5 @@ extern const std::array<uint8_t, 256> guess_table;
 extern const std::array<int16_t, 256> sincos_table;
 extern const std::array<ushort, 258> asin_table;
 extern const std::array<ushort, 258> acos_table;
-
-static inline void clamp_fix_lh(fix& f, const fix& low, const fix& high)
-{
-	if (f < low)
-		f = low;
-	else if (high < f)
-		f = high;
-}
-
-static inline void clamp_fix_symmetric(fix& f, const fix& bound)
-{
-	clamp_fix_lh(f, -bound, bound);
-}
 
 }

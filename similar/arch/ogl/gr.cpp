@@ -99,6 +99,18 @@ static int sdl_no_modeswitch;
 enum { sdl_no_modeswitch = 0 };
 #endif
 
+namespace {
+
+#if DXX_USE_STEREOSCOPIC_RENDER
+void gr_set_stereo_mode_sync()
+{
+	// calc stereo mode sync interval for above/below format
+	VR_sync_width = (VR_sync_param * SHEIGHT) / 480; // normalized for 640x480
+}
+#endif
+
+}
+
 }
 
 namespace dsx {
@@ -730,6 +742,10 @@ int gr_set_mode(screen_mode mode)
 	gamefont_choose_game_font(w,h);
 	gr_remap_color_fonts();
 
+#if DXX_USE_STEREOSCOPIC_RENDER
+	gr_set_stereo_mode_sync();
+#endif
+
 	return 0;
 }
 
@@ -869,6 +885,19 @@ int gr_init()
 	gr_set_current_canvas(grd_curscreen->sc_canvas);
 
 	ogl_init_pixel_buffers(256, 128);       // for gamefont_init
+
+#if DXX_USE_STEREOSCOPIC_RENDER
+	// stereo display options
+	if (CGameArg.OglStereo)
+		VR_stereo = StereoFormat::QuadBuffers;
+	if (CGameArg.OglStereoView > static_cast<uint8_t>(StereoFormat::HighestFormat)) {
+		VR_sync_param = CGameArg.OglStereoView;
+		CGameArg.OglStereoView = static_cast<uint8_t>(StereoFormat::AboveBelowSync);
+	}
+	if (CGameArg.OglStereoView)
+		VR_stereo = static_cast<StereoFormat>(CGameArg.OglStereoView);
+	gr_set_stereo_mode_sync();
+#endif
 
 	gr_installed = 1;
 

@@ -171,11 +171,14 @@ class Git(StaticSubprocess):
 	def __pcall_found_git(cls, args: list[str], stderr=None, _pcall=StaticSubprocess.pcall):
 		return _pcall(cls.__path_git + args, stderr=stderr)
 	@classmethod
-	def pcall(cls, args: list[str], stderr=None):
+	def build_path(cls):
 		git = cls.__path_git
 		if git is None:
 			cls.__path_git = git = cls.shlex_split(os.environ.get('GIT', 'git'))
-		cls.pcall = f = cls.__pcall_found_git if git else cls.__pcall_missing_git
+		return git
+	@classmethod
+	def pcall(cls, args: list[str], stderr=None):
+		cls.pcall = f = cls.__pcall_found_git if cls.build_path() else cls.__pcall_missing_git
 		return f(args, stderr)
 	def spcall(cls, args: list[str], stderr=None):
 		g = cls.pcall(args, stderr)
@@ -297,10 +300,10 @@ class ConfigureTests:
 		std: int = 20
 	class CxxRequiredFeatures:
 		__slots__ = ('features', 'main', 'text')
-		features: list['CxxRequiredFeature']
+		features: tuple['CxxRequiredFeature']
 		main: str
 		text: str
-		def __init__(self, features: list['CxxRequiredFeature']):
+		def __init__(self, features: tuple['CxxRequiredFeature']):
 			self.features = features
 			s = '/* C++{} {} */\n{}'.format
 			self.main = '\n'.join((s(f.std, f.name, f.main) for f in features if f.main))
@@ -471,7 +474,7 @@ class ConfigureTests:
 	custom_tests = _custom_test.tests
 	comment_not_supported = '/* not supported */'
 	__python_import_struct = None
-	__cxx_std_required_features = CxxRequiredFeatures([
+	__cxx_std_required_features = CxxRequiredFeatures((
 		# As of this writing, <gcc-12 is already unsupported, but some
 		# platforms, such as Ubuntu 22.04, still try to use gcc-11 by default.
 		# Use this test both to verify that Class Template Argument Deduction
@@ -837,7 +840,7 @@ I%(N)s a%(N)s()
 	(void)i;
 '''
 ),
-])
+))
 	def __init__(self,msgprefix,user_settings,platform_settings):
 		self.msgprefix = msgprefix
 		self.user_settings = user_settings
@@ -853,8 +856,6 @@ I%(N)s a%(N)s()
 		# Force all tests to be Link tests when LTO is enabled.
 		self.Compile = self.Link if user_settings.lto else self._Compile
 		self.custom_tests = tuple(t for t in self.custom_tests if all(predicate(user_settings) for predicate in t.predicate))
-	def _quote_macro_value(v: str) -> str:
-		return v.strip().replace('\n', ' \\\n')
 	def _check_sconf_forced(self, calling_function: str) -> tuple:
 		return self._check_forced(calling_function), self._check_expected(calling_function)
 	@staticmethod
@@ -959,6 +960,22 @@ help:assume C++ compiler works
 		# some tests in _check_cxx_works rely on its original value.
 		cenv['CXXCOM'] = cenv._dxx_cxxcom_no_prefix
 		self._check_cxx_conformance_level(context)
+	def _show_git_version(self, context):
+		if not self.user_settings.git_describe_version:
+			return
+		Display = context.Display
+		tool = Git.build_path()
+		if not tool:
+			Display(f'{self.msgprefix}: checking version of git {tool!r} ... check disabled by blank $GIT\n')
+			return
+		Display(f'{self.msgprefix}: checking version of git {tool!r} ... ')
+		try:
+			v = Git.pcall(['--version'], stderr=subprocess.STDOUT)
+		except OSError as e:
+			if e.errno == errno.ENOENT or e.errno == errno.EACCES:
+				Display(f'error: {e.strerror}\n')
+			return
+		Display(f'failed, error code {v.returncode}\n' if v.returncode else f'{v.out.splitlines()[0]!r}\n')
 	def _show_tool_version(self, context, tool: str, desc: str, save_tool_version: bool = True):
 		# These version results are not used for anything, but are
 		# collected here so that users who post only a build log will
@@ -1029,6 +1046,7 @@ struct test_virtual_function_supported
 void test_virtual_function_supported::a() {}
 '''
 		if user_settings.show_tool_version:
+			self._show_git_version(context)
 			CXX = cenv['CXX']
 			self._show_tool_version(context, CXX, 'C++ compiler')
 			if user_settings.show_assembler_version:
@@ -1039,6 +1057,8 @@ void test_virtual_function_supported::a() {}
 				self._show_tool_version(context, use_distcc, 'distcc', False)
 			if use_ccache:
 				self._show_tool_version(context, use_ccache, 'ccache', False)
+			if user_settings.host_platform == 'win32':
+				self._show_tool_version(context, cenv['RC'], 'Windows Resource Compiler', False)
 		# Use C++ single line comment so that it is guaranteed to extend
 		# to the end of the line.  repr ensures that embedded newlines
 		# will be escaped and that the final character will not be a
@@ -2538,8 +2558,8 @@ where the cast is useless.
 		self.Compile(context, text='#include <cstring>', main=main, msg='for strcasecmp', successflags=_successflags)
 
 	@_custom_test
-	def check_getaddrinfo_present(self,context,_successflags={'CPPDEFINES' : ['DXX_HAVE_GETADDRINFO']}):
-		self.Compile(context, text='''
+	def check_getaddrinfo_present(self,context,_successflags_windows={'LIBS': ['ws2_32']}):
+		if not self.Link(context, text='''
 #ifdef WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -2562,24 +2582,25 @@ where the cast is useless.
 	(void)i;
 	freeaddrinfo(res);
 	return 0;
-''', msg='for getaddrinfo', successflags=_successflags)
+''', msg='for getaddrinfo', successflags=(_successflags_windows if self.user_settings.host_platform == 'win32' else {})):
+			raise SCons.Errors.StopError("getaddrinfo support is required, but was not found: upgrade headers and libraries to support getaddrinfo.")
 
 	@_guarded_test_windows
-	def check_inet_ntop_present(self,context,_successflags={'CPPDEFINES' : ['DXX_HAVE_INET_NTOP']}):
+	def check_inet_ntop_present(self,context,_successflags={'CPPDEFINES' : ['DXX_HAVE_INET_NTOP'], 'LIBS': ['ws2_32']}):
 		# Linux and OS X have working inet_ntop on all supported
 		# platforms.  Only Windows sometimes lacks support for this
 		# function.
-		if self.Compile(context, text='''
+		if self.Link(context, text='''
 #include <winsock2.h>
 #include <ws2tcpip.h>
 ''', main='''
-	struct sockaddr_in sai;
+	struct sockaddr_in sai{};
 	char dbuf[64];
 	return inet_ntop(AF_INET, &sai.sin_addr, dbuf, sizeof(dbuf)) ? 0 : 1;
 ''', msg='for inet_ntop', successflags=_successflags):
 			return
 		if self.user_settings.ipv6:
-			raise SCons.Errors.StopError("IPv6 enabled and inet_ntop not available: disable IPv6 or upgrade headers to support inet_ntop.")
+			raise SCons.Errors.StopError("IPv6 enabled and inet_ntop not available: disable IPv6 or upgrade headers and libraries to support inet_ntop.")
 
 	@_custom_test
 	def check_timespec_present(self,context,_successflags={'CPPDEFINES' : ['DXX_HAVE_STRUCT_TIMESPEC']}):
@@ -2714,8 +2735,8 @@ unsigned g(unsigned i)
 		# Support for option '-fstrict-flex-arrays':
 		# <=gcc-12: no
 		# >=gcc-13: yes
-		# <=clang-16: no
-		# >=clang-17: untested
+		# <=clang-20: no
+		# >=clang-21: untested
 		'-fstrict-flex-arrays',
 		'-fvisibility=hidden',
 		'-Wduplicated-branches',
@@ -2872,7 +2893,7 @@ ConfigureTests.register_preferred_compiler_options()
 @dataclass(eq=False, slots=True)
 class LazyObjectConstructor:
 	class LazyObjectState:
-		def __init__(self, sources: collections.abc.Sequence[str], transform_env=None, StaticObject_hook=None, transform_target=None):
+		def __init__(self, sources: collections.abc.Sequence[str], transform_env=None, StaticObject_wrapper: collections.abc.Callable = None, transform_target: collections.abc.Callable[['cls', str], str] = None):
 			# `sources` must be non-empty, since it would have no use if
 			# it was empty.
 			#
@@ -2883,7 +2904,7 @@ class LazyObjectConstructor:
 			assert([s.encode for s in sources]), "sources must be a non-empty list of strings"
 			self.sources = sources
 			self.transform_env = transform_env
-			self.StaticObject_hook = StaticObject_hook
+			self.StaticObject_wrapper = StaticObject_wrapper
 			# If transform_target is not used, let references to
 			# `self.transform_target` fall through to
 			# `cls.transform_target`.
@@ -2891,7 +2912,7 @@ class LazyObjectConstructor:
 				self.transform_target = transform_target
 
 		@staticmethod
-		def transform_target(_, name, _splitext=os.path.splitext):
+		def transform_target(_, name: str, _splitext: collections.abc.Callable[[str], str] = os.path.splitext) -> str:
 			return _splitext(name)[0]
 
 	def __lazy_objects(self, source: collections.abc.Sequence[LazyObjectState],
@@ -2912,16 +2933,21 @@ class LazyObjectConstructor:
 			for s in source:
 				transform_target = s.transform_target
 				transform_env = s.transform_env
-				StaticObject_hook = s.StaticObject_hook
+				StaticObject_wrapper = s.StaticObject_wrapper
 				StaticObject_kwargs = {} if transform_env is None else transform_env(self, env)
+				if StaticObject_wrapper is not None:
+					# Currently, only one caller uses StaticObject_wrapper, and
+					# that caller does not use transform_env.  Therefore,
+					# transform_env is ignored for users of
+					# StaticObject_wrapper.  This assert will trip if future
+					# changes add a caller that uses both.
+					assert transform_env is None
 				for srcname in s.sources:
 					target = builddir.File(prepare_target_name(transform_target(self, srcname), OBJSUFFIX))
 					s = StaticObject(target=target, source=srcname,
 							**StaticObject_kwargs
-							)
+							) if StaticObject_wrapper is None else StaticObject_wrapper(self, env, StaticObject, target, srcname)
 					append(s)
-					if StaticObject_hook is not None:
-						StaticObject_hook(self, env, srcname, target, s)
 			# Convert to a tuple so that attempting to modify a cached
 			# result raises an error.
 			cache[name] = value = tuple(value)
@@ -3547,14 +3573,75 @@ class DXXCommon(LazyObjectConstructor):
 		default_OGLES_LIB: str = 'GLESv1_CM'
 		default_EGL_LIB: str = 'EGL'
 		_default_prefix: str = '/usr/local'
+		_lto_builddir_decoration: bool | None = None
 		__stdout_is_not_a_tty: bool | None = None
 		__has_git_dir: bool | None = None
+		def convert_user_lto(self) -> None:
+			if self._lto_builddir_decoration is not None:
+				# This function was already called on this object.  Reuse the
+				# previous results.
+				return
+			if self.lto is not None:
+				if self.lto == 'assume-enabled':
+					self._lto_builddir_decoration = True
+					return
+				elif self.lto == 'assume-disabled':
+					self._lto_builddir_decoration = False
+					self.lto = 0
+					return
+				try:
+					self.lto = int(self.lto)
+					if self.lto < 0:
+						# Delegate to the ValueError exception handler, to avoid
+						# repeating the error text.
+						raise ValueError
+				except ValueError:
+					raise SCons.Errors.UserError(f'Invalid value for option lto: {self.lto}.  Valid values are one of: "assume-enabled", "assume-disabled", 0 to direct SConstruct to disable LTO, or a positive integer to direct SConstruct to enable LTO.')
+			else:
+				# Otherwise, the user did not make a choice for the `lto` setting.
+				# Scan CXXFLAGS to try to guess whether the user has enabled LTO.
+				_lto_effective = None
+				if self.CXXFLAGS:
+					for cxxflag in shlex.split(self.CXXFLAGS):
+						if cxxflag == '-fno-lto':
+							_lto_effective = False
+						elif cxxflag == '-flto' or cxxflag.startswith('-flto='):
+							_lto_effective = True
+					if _lto_effective is not None:
+						# CXXFLAGS explicitly set whether to use lto or not.  Record
+						# that for decorative purposes, and respect the user's choice.
+						self._lto_builddir_decoration = _lto_effective
+						return
+				# Otherwise, the user did not set lto via the setting or via
+				# CXXFLAGS.  Pick a default for the user.
+				# Since clang rejects the `=N` syntax, prefer the safe path of only
+				# setting a bare `-flto`.  Users who want `=N` can set it
+				# explicitly via the setting or via CXXFLAGS.
+				self.lto = 1
+			self._lto_builddir_decoration = self.lto > 0
+			# clang does not support `=N` syntax, so use the bare form `-flto`
+			# for `user_settings.lto=1`.  This allows `lto=1` to do the right
+			# thing for clang users.  gcc effectively treats `-flto` as
+			# `-flto=1`.
+			#
+			# Users who set `user_settings.lto=2` (or higher) need a compiler that
+			# understands the `=N` syntax.  This script makes no attempt to
+			# detect whether the compiler understands that syntax.
+			lto_option = (f' -flto={self.lto}' if self.lto > 1 else ' -flto') if self.lto else ' -fno-lto'
+			if self.CXXFLAGS:
+				self.CXXFLAGS += lto_option
+			else:
+				self.CXXFLAGS = lto_option[1:]
 		def default_poison(self):
 			return 'overwrite' if self.debug else 'none'
 		def default_builddir(self):
 			builddir_prefix = self.builddir_prefix
 			builddir_suffix = self.builddir_suffix
 			if builddir_prefix is not None or builddir_suffix is not None:
+				# The choice of whether to use LTO influences the generated
+				# build directory name, so the user's choice must be examined
+				# here.
+				self.convert_user_lto()
 				fields = [
 					self.host_platform,
 					os.path.basename(self.CXX) if self.CXX else None,
@@ -3579,7 +3666,7 @@ class DXXCommon(LazyObjectConstructor):
 				fields.append(''.join(a[1] if getattr(self, a[0]) else (a[2] if len(a) > 2 else '')
 				for a in (
 					('debug', 'dbg'),
-					('lto', 'lto'),
+					('_lto_builddir_decoration', 'lto'),
 					('editor', 'ed'),
 					('opengl', 'ogl', 'sdl'),
 					('opengles', 'es'),
@@ -3619,6 +3706,8 @@ class DXXCommon(LazyObjectConstructor):
 				return True
 			return False
 		def default_use_stereo_render(self):
+			if self.host_platform != 'linux':
+				return False
 			return self.opengl and not self.opengles
 		def selected_OGLES_LIB(self):
 			if self.raspberrypi == 'yes':
@@ -3737,12 +3826,12 @@ class DXXCommon(LazyObjectConstructor):
 					('egl_lib', self.selected_EGL_LIB, 'name of the OpenGL ES Graphics Library to link against'),
 					('prefix', self._default_prefix, 'installation prefix directory (Linux only)'),
 					('sharepath', self.__default_DATA_DIR, 'directory for shared game data'),
+					('lto', None, 'enable link time optimization (choices: "assume-enabled", "assume-disabled", 0 to explicitly disable LTO, positive integer to explicitly enable LTO, or unset to detect based on effective CXXFLAGS)'),
 				),
 			},
 			{
 				'variable': self.UIntVariable,
 				'arguments': (
-					('lto', 0, 'enable gcc link time optimization'),
 					('pch', None, 'pre-compile own headers used at least this many times'),
 					('syspch', None, 'pre-compile system headers used at least this many times'),
 					('max_joysticks', 8, 'maximum number of usable joysticks'),
@@ -3769,7 +3858,7 @@ class DXXCommon(LazyObjectConstructor):
 					# be left enabled.
 					('sdlimage', True, None),
 					('sdlmixer', True, 'build with SDL_Mixer support for sound and music (includes external music support)'),
-					('ipv6', False, 'enable UDP/IPv6 for multiplayer'),
+					('ipv6', True, 'enable UDP/IPv6 for multiplayer'),
 					('use_udp', True, 'enable UDP support'),
 					('use_tracker', True, 'enable Tracker support (requires UDP)'),
 					('verbosebuild', self.default_verbosebuild, 'print out all compiler/linker messages during building'),
@@ -4493,19 +4582,6 @@ class DXXCommon(LazyObjectConstructor):
 			'-Wmissing-declarations',
 			'-Wvla',
 			]
-		if self.user_settings.lto:
-			# clang does not support `=N` syntax, so use the bare form `-flto`
-			# for `user_settings.lto=1`.  This allows `lto=1` to do the right
-			# thing for clang users.  gcc effectively treats `-flto` as
-			# `-flto=1`.
-			#
-			# Users who set `user_settings.lto=2` (or higher) need a compiler that
-			# understands the `=N` syntax.  This script makes no attempt to
-			# detect whether the compiler understands that syntax.
-			#
-			# The list of flags is prepended to the compiler options, so a
-			# user-specified CXXFLAGS can override `-flto` later, if needed.
-			cxxflags.append(f'-flto={self.user_settings.lto}' if self.user_settings.lto > 1 else '-flto')
 		env.Prepend(CXXFLAGS = cxxflags)
 		env.Append(
 			CXXFLAGS = ['-funsigned-char'],
@@ -4531,6 +4607,10 @@ class DXXCommon(LazyObjectConstructor):
 		if user_settings.editor:
 			add_flags['CPPPATH'].append('common/include/editor')
 		CLVar = SCons.Util.CLVar
+		# If the user did not use a generated build directory name, then
+		# convert_user_lto has not yet been called.  Call it now, to update
+		# CXXFLAGS if needed.
+		self.user_settings.convert_user_lto()
 		for flags in ('CPPFLAGS', 'CXXFLAGS', 'LIBS', 'LINKFLAGS'):
 			value = getattr(self.user_settings, flags)
 			if value is not None:
@@ -4694,6 +4774,7 @@ class DXXArchive(DXXCommon):
 'common/2d/canvas.cpp',
 'common/2d/circle.cpp',
 'common/2d/disc.cpp',
+'common/2d/font.cpp',
 'common/2d/gpixel.cpp',
 'common/2d/line.cpp',
 'common/2d/palette.cpp',
@@ -4845,6 +4926,7 @@ class DXXArchive(DXXCommon):
 			clean=False,
 			help=False
 		)
+		message(self, f'SConf log will be written to {log_file!s}')
 		self.configure_added_environment_flags = tests.successful_flags
 		self.configure_pch_flags = None
 		if not conf.env:
@@ -4911,7 +4993,7 @@ SConf test results
 
 class DXXProgram(DXXCommon):
 	LazyObjectState = DXXCommon.LazyObjectState
-	def _generate_kconfig_ui_table(program, env, source: typing.Final[str], target, kconfig_static_object: 'StaticObject') -> None:
+	def _generate_kconfig_ui_table(program, env, StaticObject, target, source) -> 'StaticObject':
 			builddir = program.builddir.Dir(program.target)
 			# Bypass ccache, if any, since this is a preprocess only
 			# call.
@@ -4930,20 +5012,37 @@ class DXXProgram(DXXCommon):
 					# file.
 					('kc_item', 'kc_item'),
 					))
-			cpp_kconfig_udlr = env._rebirth_nopch_StaticObject(target=str(target)[:-1] + 'ui-table.i', source=source[:-3] + 'ui-table.cpp', CPPDEFINES=CPPDEFINES, CXXCOM=env._dxx_cxxcom_no_ccache_prefix, CXXFLAGS=CXXFLAGS)
+			cpp_kconfig_udlr = env._rebirth_nopch_StaticObject(target=builddir.File('kconfig.ui-table.i'), source=source[:-3] + 'ui-table.cpp', CPPDEFINES=CPPDEFINES, CXXCOM=env._dxx_cxxcom_no_ccache_prefix, CXXFLAGS=CXXFLAGS)
 			generated_udlr_header = builddir.File('kconfig.udlr.h')
 			generate_kconfig_udlr = env.File('similar/main/generate-kconfig-udlr.py')
 			env.Command(generated_udlr_header, [cpp_kconfig_udlr, generate_kconfig_udlr], [[sys.executable, generate_kconfig_udlr, '$SOURCE', '$TARGET']])
+			CPPFLAGS = env['CPPFLAGS']
+			CPPFLAGS = CPPFLAGS.copy() if CPPFLAGS else []
+			CPPFLAGS.extend((
+				'-include',
+				str(generated_udlr_header)
+				))
+			kconfig_static_object = StaticObject(target=target, source=source, CPPFLAGS=CPPFLAGS)
 			env.Depends(kconfig_static_object, generated_udlr_header)
+			return kconfig_static_object
 
 	static_archive_construction = {}
 
-	def _apply_target_name(self,name):
-		return os.path.join(os.path.dirname(name), f'.{self.target}.{os.path.splitext(os.path.basename(name))[0]}')
+	# Take a pathname as input.  Return a pathname referring to the same
+	# directory, but with the value of `self.target` and a dot prefixed to the
+	# filename in that directory.  This is used for object files that will be
+	# built for both games, so that the D1 and D2 versions get unique names.
+	def _apply_target_name(self, name: str, os_path_split = os.path.split, os_path_join = os.path.join, os_path_splitext = os.path.splitext) -> str:
+		p = os_path_split(name)
+		return os_path_join(p[0], f'{self.target}.{os_path_splitext(p[1])[0]}')
 
-	def _apply_env_version_seq(self,env,_empty={}):
+	def _apply_env_version_seq(self, env, _empty: dict[str, collections.abc.Sequence[tuple]] = {}) -> dict[str, collections.abc.Sequence[tuple]]:
 		if self.user_settings.pch:
+			# When PCH is used, DXX_VERSION_SEQ is defined in a header file and
+			# visible everywhere.
 			return _empty
+		# When PCH is not used, DXX_VERSION_SEQ is defined on the command
+		# line of the files that need it.
 		CPPDEFINES = env['CPPDEFINES']
 		CPPDEFINES = CPPDEFINES.copy() if CPPDEFINES else []
 		CPPDEFINES.append(('DXX_VERSION_SEQ', self.DXX_VERSION_SEQ))
@@ -4971,7 +5070,6 @@ class DXXProgram(DXXCommon):
 	),
 	))
 	__get_objects_common = DXXCommon.create_lazy_object_states_getter((LazyObjectState(sources=(
-'similar/2d/font.cpp',
 'similar/2d/palette.cpp',
 'similar/2d/pcx.cpp',
 'similar/3d/interp.cpp',
@@ -5050,7 +5148,7 @@ class DXXProgram(DXXCommon):
 	), LazyObjectState(sources=(
 'similar/main/kconfig.cpp',
 ),
-		StaticObject_hook=_generate_kconfig_ui_table,
+		StaticObject_wrapper=_generate_kconfig_ui_table,
 		transform_target=_apply_target_name,
 	), LazyObjectState(sources=(
 'similar/misc/physfsx.cpp',
@@ -5192,9 +5290,9 @@ class DXXProgram(DXXCommon):
 	# Run `init()`, but decorate any exception that occurs with a description
 	# of the profile for this instance.  This allows the user to see which
 	# profile triggered the exception.
-	def init_with_decoration(self, substenv):
+	def init_with_decoration(self, substenv) -> str:
 		try:
-			self.init(substenv)
+			return self.init(substenv)
 		except Exception as e:
 			# Patch the exception's arguments instead of using Python exception
 			# chaining.  Using `raise Exception('') from e` causes SCons not to
@@ -5203,7 +5301,7 @@ class DXXProgram(DXXCommon):
 			e.args = (f'Failed to initialize profile {self._argument_prefix_list!r}{f": {a[0]}" if a else ""}',) + a[1:]
 			raise
 
-	def init(self,substenv):
+	def init(self,substenv) -> str:
 		user_settings = self.user_settings
 		user_settings.read_variables(self, self.variables, substenv)
 		archive = DXXProgram.static_archive_construction.get(user_settings.builddir, None)
@@ -5665,6 +5763,8 @@ def main(register_program,_d1xp=D1XProgram,_d2xp=D2XProgram):
 	unknown.pop('dxx', None)
 	unknown.pop('site', None)
 	ignore_unknown_variables = unknown.pop('ignore_unknown_variables', '0')
+	argument_keys = ARGUMENTS.keys()
+	unknown = {k for k in unknown if k in argument_keys}
 	if unknown:
 		# Protect user from misspelled options by reporting an error.
 		# Provide a way for the user to override the check, which might
@@ -5676,7 +5776,7 @@ def main(register_program,_d1xp=D1XProgram,_d2xp=D2XProgram):
 			ignore_unknown_variables = False
 		j = f'''Unknown values specified on command line.{
 	''.join((f"""
-	{k}""" for k in unknown.keys()))
+	{k}""" for k in unknown))
 }'''
 		if not ignore_unknown_variables:
 			raise SCons.Errors.StopError(j +

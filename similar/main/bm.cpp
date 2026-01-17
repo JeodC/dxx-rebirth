@@ -89,8 +89,8 @@ static void bm_free_extra_objbitmaps();
 #endif
 
 Textures_array Textures;		// All textures.
-//for each model, a model number for dying & dead variants, or -1 if none
-enumerated_array<polygon_model_index, MAX_POLYGON_MODELS, polygon_model_index> Dying_modelnums, Dead_modelnums;
+//for each model, a model number for dying & dead variants, or polygon_model_index::None if none
+per_polygon_model_array<polygon_model_index> Dying_modelnums, Dead_modelnums;
 }
 
 //right now there's only one player ship, but we can have another by
@@ -116,7 +116,7 @@ int             First_multi_bitmap_num=-1;
 
 namespace dsx {
 
-enumerated_array<bitmap_index, N_COCKPIT_BITMAPS, cockpit_bitmap_index> cockpit_bitmap;
+cockpit_bitmap_array cockpit_bitmap;
 enumerated_array<bitmap_index, MAX_OBJ_BITMAPS, object_bitmap_index> ObjBitmaps;
 std::array<object_bitmap_index, MAX_OBJ_BITMAPS> ObjBitmapPtrs;     // These point back into ObjBitmaps, since some are used twice.
 
@@ -267,7 +267,7 @@ void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoSt
 #if DXX_USE_EDITOR
         //Build tmaplist
 	auto &&effect_range = partial_const_range(Effects, Num_effects);
-	LevelUniqueTmapInfoState.Num_tmaps = TextureEffects + std::count_if(effect_range.begin(), effect_range.end(), [](const eclip &e) { return e.changing_wall_texture >= 0; });
+	LevelUniqueTmapInfoState.Num_tmaps = TextureEffects + std::count_if(effect_range.begin(), effect_range.end(), [](const eclip &e) { return e.changing_wall_texture < MAX_TEXTURES; });
         #endif
 }
 #elif DXX_BUILD_DESCENT == 2
@@ -281,7 +281,8 @@ static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
 	ti.lighting = PHYSFSX_readFix(fp);
 	ti.damage = PHYSFSX_readFix(fp);
 	ti.eclip_num = PHYSFSX_readSLE16(fp);
-	ti.destroyed = PHYSFSX_readSLE16(fp);
+	const auto destroyed{PHYSFSX_readULE16(fp)};
+	ti.destroyed = (destroyed < Textures.size()) ? texture_index{destroyed} : texture_index{UINT16_MAX};
 	ti.slide_u = PHYSFSX_readSLE16(fp);
 	ti.slide_v = PHYSFSX_readSLE16(fp);
 }

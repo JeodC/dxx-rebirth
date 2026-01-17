@@ -179,19 +179,26 @@ static void transfer_energy_to_shield(object &plrobj)
 
 	auto &player_info = plrobj.ctype.player_info;
 	auto &shields = plrobj.shields;
+	if (shields >= MAX_SHIELDS)
+	{
+		/* Usually, players will only invoke the transfer if it will succeed,
+		 * so reporting that it is unusable is unlikely.
+		 */
+		[[unlikely]];
+		HUD_init_message_literal(HM_DEFAULT, "No transfer: Shields already at max");
+		return;
+	}
 	auto &energy = player_info.energy;
+	if (energy <= INITIAL_ENERGY)
+	{
+		[[unlikely]];
+		HUD_init_message(HM_DEFAULT, "No transfer: Need more than %i energy to enable transfer", f2i(INITIAL_ENERGY));
+		return;
+	}
 	//how much energy gets transfered
 	const fix e = min(min(FrameTime*CONVERTER_RATE, energy - INITIAL_ENERGY), (MAX_SHIELDS - shields) * CONVERTER_SCALE);
-
 	if (e <= 0) {
-
-		if (energy <= INITIAL_ENERGY) {
-			HUD_init_message(HM_DEFAULT, "Need more than %i energy to enable transfer", f2i(INITIAL_ENERGY));
-		}
-		else if (shields >= MAX_SHIELDS)
-		{
-			HUD_init_message_literal(HM_DEFAULT, "No transfer: Shields already at max");
-		}
+		[[unlikely]];
 		return;
 	}
 
@@ -979,20 +986,14 @@ static window_event_result HandleSystemKey(int key)
 #endif
 
 #if DXX_USE_STEREOSCOPIC_RENDER
-#if 0
-			/* These conflict with the drop-primary and drop-secondary
-			 * keybindings.  Dropping items is more common than using VR, so
-			 * disable these.
-			 */
-		case KEY_SHIFTED + KEY_F5:
+		case KEY_ALTED + KEY_F5:
 			VR_eye_offset -= 1;
 			reset_cockpit();
 			break;
-		case KEY_SHIFTED + KEY_F6:
+		case KEY_ALTED + KEY_F6:
 			VR_eye_offset += 1;
 			reset_cockpit();
 			break;
-#endif
 		case KEY_SHIFTED + KEY_ALTED + KEY_F5:
 			VR_eye_width -= (F1_0/10); //*= 10/11;
 			reset_cockpit();
@@ -1001,13 +1002,11 @@ static window_event_result HandleSystemKey(int key)
 			VR_eye_width += (F1_0/10); //*= 11/10;
 			reset_cockpit();
 			break;
-		case KEY_SHIFTED + KEY_F7:
 		case KEY_SHIFTED + KEY_ALTED + KEY_F7:
 			VR_eye_width = F1_0;
 			VR_eye_offset = 0;
 			reset_cockpit();
 			break;
-		case KEY_SHIFTED + KEY_F8:
 		case KEY_SHIFTED + KEY_ALTED + KEY_F8:
 			VR_stereo = static_cast<StereoFormat>((static_cast<unsigned>(VR_stereo) + 1) % (static_cast<unsigned>(StereoFormat::HighestFormat) + 1));
 			init_stereo();

@@ -44,14 +44,56 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "ogl_init.h"
 #endif
 
+namespace dcx {
+
 namespace {
 
 struct TEXTURE_CACHE {
+	enum class cache_key : uint32_t
+	{
+	};
+	static constexpr cache_key build_cache_key(const bitmap_index bottom, const bitmap_index top, const texture2_rotation_low orient)
+	{
+		/* All valid values for `bottom` and `top` are below
+		 * `MAX_BITMAP_FILES`, so each of them can be packed into a field
+		 * `std::bit_width(MAX_BITMAP_FILES)` bits wide.  If an invalid value
+		 * were passed for `bottom` or `top`, then that value could influence
+		 * bits outside its slice of the cache key.  However, if an invalid
+		 * value were passed, the caller would suffer undefined behavior when
+		 * it indexed outside GameBitmaps, and likely crash soon after.
+		 * Therefore, there is no need to check for invalid values or clamp the
+		 * inputs to valid values.
+		 *
+		 * `std::bit_width(d1x::MAX_BITMAP_FILES)` = 11
+		 * `std::bit_width(d2x::MAX_BITMAP_FILES)` = 12
+		 * Use 12u in both games, since 11u does not save enough space to allow
+		 * use of a smaller integer for the key.
+		 */
+		constexpr unsigned bitmap_shift_width{12u};
+		static_assert(MAX_BITMAP_FILES < (1u << bitmap_shift_width));
+		return cache_key{
+			uint32_t{underlying_value(bottom)} |
+			(uint32_t{underlying_value(top)} << bitmap_shift_width) |
+			(uint32_t{underlying_value(orient)} << (2 * bitmap_shift_width)) |
+			/* There are 4 valid values for `texture2_rotation_low`, so
+			 * allocate 2 bits for it.
+			 *
+			 * Enable a fixed `1` here, so that `build_cache_key(0, 0, 0)` is
+			 * distinct from `cache_key{}`.  Construction will have set all
+			 * cache keys to `cache_key{}`.  The program should not try to
+			 * composite `bitmap_index{0}` with itself, but if it did and this
+			 * line were absent, then the cache system would consider a
+			 * value-initialized record to match, and would return it.  Avoid
+			 * that by ensuring that no combination of inputs to
+			 * `build_cache_key` can generate a result that compares equal to
+			 * `cache_key{}`.
+			 */
+			(uint32_t{1} << (2 + (2 * bitmap_shift_width)))
+		};
+	}
+	cache_key key{};
 	grs_bitmap_ptr bitmap;
-	grs_bitmap * bottom_bmp;
-	grs_bitmap * top_bmp;
-	texture2_rotation_high orient;
-	fix64		last_time_used;
+	fix64		last_time_used{};
 };
 
 /* Helper classes merge_texture_0 through merge_texture_3 correspond to
@@ -139,23 +181,25 @@ static void merge_textures_case(const unsigned wh, const uint8_t *const top_data
  * for each byte processed.
  */
 template <typename texture_transform>
-static void merge_textures(const texture2_rotation_high orient, const grs_bitmap &expanded_bottom_bmp, const grs_bitmap &expanded_top_bmp, uint8_t *const dest_data)
+static void merge_textures(const unsigned wh, const uint8_t *const top_data, const uint8_t *const bottom_data, uint8_t *const dest_data, const texture2_rotation_low orient)
 {
-	const auto &top_data = expanded_top_bmp.bm_data;
-	const auto &bottom_data = expanded_bottom_bmp.bm_data;
-	const auto wh = expanded_bottom_bmp.bm_w;
 	switch (orient)
 	{
-		case texture2_rotation_high::Normal:
+		default:
+			/* The default label should be unreachable.  Define it equal to
+			 * `Normal` so that the compiler is free to let that path run the
+			 * normal case instead of needing a jump to bypass all cases.
+			 */
+		case texture2_rotation_low::Normal:
 			merge_textures_case<texture_transform, merge_texture_0>(wh, top_data, bottom_data, dest_data);
 			break;
-		case texture2_rotation_high::_1:
+		case texture2_rotation_low::_1:
 			merge_textures_case<texture_transform, merge_texture_1>(wh, top_data, bottom_data, dest_data);
 			break;
-		case texture2_rotation_high::_2:
+		case texture2_rotation_low::_2:
 			merge_textures_case<texture_transform, merge_texture_2>(wh, top_data, bottom_data, dest_data);
 			break;
-		case texture2_rotation_high::_3:
+		case texture2_rotation_low::_3:
 			merge_textures_case<texture_transform, merge_texture_3>(wh, top_data, bottom_data, dest_data);
 			break;
 	}
@@ -170,26 +214,12 @@ static int cache_misses = 0;
 
 //----------------------------------------------------------------------
 
-int texmerge_init()
-{
-	range_for (auto &i, Cache)
-	{
-		i.bitmap = NULL;
-		i.last_time_used = -1;
-		i.top_bmp = NULL;
-		i.bottom_bmp = NULL;
-	}
-
-	return 1;
-}
-
 void texmerge_flush()
 {
 	range_for (auto &i, Cache)
 	{
-		i.last_time_used = -1;
-		i.top_bmp = NULL;
-		i.bottom_bmp = NULL;
+		i.last_time_used = {};
+		i.key = {};
 	}
 }
 
@@ -203,31 +233,29 @@ void texmerge_close()
 	}
 }
 
-//--unused-- int info_printed = 0;
+}
 
-grs_bitmap &texmerge_get_cached_bitmap(const texture1_value tmap_bottom, const texture2_value tmap_top)
+namespace dsx {
+
+grs_bitmap &texmerge_get_cached_bitmap(GameBitmaps_array &GameBitmaps, const Textures_array &Textures, const texture1_value tmap_bottom, const texture2_value tmap_top)
 {
-	grs_bitmap *bitmap_top, *bitmap_bottom;
-	int lowest_time_used;
-
-	auto &texture_top = Textures[get_texture_index(tmap_top)];
-	bitmap_top = &GameBitmaps[texture_top];
-	auto &texture_bottom = Textures[get_texture_index(tmap_bottom)];
-	bitmap_bottom = &GameBitmaps[texture_bottom];
+	const auto texture_top{Textures[get_texture_index(tmap_top)]};
+	const auto texture_bottom{Textures[get_texture_index(tmap_bottom)]};
 	
-	const auto orient = get_texture_rotation_high(tmap_top);
+	const auto orient{get_texture_rotation_low(tmap_top)};
 
-	lowest_time_used = Cache[0].last_time_used;
 	auto least_recently_used = &Cache.front();
+	auto lowest_time_used{least_recently_used->last_time_used};
+	const auto cache_lookup_key{TEXTURE_CACHE::build_cache_key(texture_bottom, texture_top, orient)};
 	range_for (auto &i, Cache)
 	{
-		if ( (i.last_time_used > -1) && (i.top_bmp==bitmap_top) && (i.bottom_bmp==bitmap_bottom) && (i.orient==orient ))	{
+		if (i.key == cache_lookup_key)	{
 			cache_hits++;
 			i.last_time_used = timer_query();
 			return *i.bitmap.get();
 		}	
 		if ( i.last_time_used < lowest_time_used )	{
-			lowest_time_used = i.last_time_used;
+			lowest_time_used = {i.last_time_used};
 			least_recently_used = &i;
 		}
 	}
@@ -237,38 +265,62 @@ grs_bitmap &texmerge_get_cached_bitmap(const texture1_value tmap_bottom, const t
 
 	// Make sure the bitmaps are paged in...
 
+	const auto &bitmap_top{GameBitmaps[texture_top]};
+	const auto &bitmap_bottom{GameBitmaps[texture_bottom]};
 	PIGGY_PAGE_IN(texture_top);
 	PIGGY_PAGE_IN(texture_bottom);
-	if (bitmap_bottom->bm_w != bitmap_bottom->bm_h || bitmap_top->bm_w != bitmap_top->bm_h)
-		Error("Texture width != texture height!\nbottom tmap = %u; bottom bitmap = %u; bottom width = %u; bottom height = %u\ntop tmap = %hu; top bitmap = %u; top width=%u; top height=%u", underlying_value(tmap_bottom), underlying_value(texture_bottom), bitmap_bottom->bm_w, bitmap_bottom->bm_h, underlying_value(tmap_top), underlying_value(texture_top), bitmap_top->bm_w, bitmap_top->bm_h);
-	if (bitmap_bottom->bm_w != bitmap_top->bm_w || bitmap_bottom->bm_h != bitmap_top->bm_h)
-		Error("Top and Bottom textures have different size!\nbottom tmap = %u; bottom bitmap = %u; bottom width = %u; bottom height = %u\ntop tmap = %hu; top bitmap = %u; top width=%u; top height=%u", underlying_value(tmap_bottom), underlying_value(texture_bottom), bitmap_bottom->bm_w, bitmap_bottom->bm_h, underlying_value(tmap_top), underlying_value(texture_top), bitmap_top->bm_w, bitmap_top->bm_h);
+	if (bitmap_bottom.bm_w != bitmap_bottom.bm_h || bitmap_top.bm_w != bitmap_top.bm_h)
+		Error("Texture width != texture height!\nbottom tmap = %u; bottom bitmap = %u; bottom width = %u; bottom height = %u\ntop tmap = %hu; top bitmap = %u; top width=%u; top height=%u", underlying_value(tmap_bottom), underlying_value(texture_bottom), bitmap_bottom.bm_w, bitmap_bottom.bm_h, underlying_value(tmap_top), underlying_value(texture_top), bitmap_top.bm_w, bitmap_top.bm_h);
+	if (bitmap_bottom.bm_w != bitmap_top.bm_w || bitmap_bottom.bm_h != bitmap_top.bm_h)
+		Error("Top and Bottom textures have different size!\nbottom tmap = %u; bottom bitmap = %u; bottom width = %u; bottom height = %u\ntop tmap = %hu; top bitmap = %u; top width=%u; top height=%u", underlying_value(tmap_bottom), underlying_value(texture_bottom), bitmap_bottom.bm_w, bitmap_bottom.bm_h, underlying_value(tmap_top), underlying_value(texture_top), bitmap_top.bm_w, bitmap_top.bm_h);
 
-	least_recently_used->bitmap = gr_create_bitmap(bitmap_bottom->bm_w,  bitmap_bottom->bm_h);
+	auto merged_bitmap{gr_create_bitmap(bitmap_bottom.bm_w, bitmap_bottom.bm_h)};
+	auto &mb{*merged_bitmap.get()};
 #if DXX_USE_OGL
-	ogl_freebmtexture(*least_recently_used->bitmap.get());
+	ogl_freebmtexture(mb);
 #endif
 
-	auto &expanded_top_bmp = *rle_expand_texture(*bitmap_top);
-	auto &expanded_bottom_bmp = *rle_expand_texture(*bitmap_bottom);
-	if (bitmap_top->get_flag_mask(BM_FLAG_SUPER_TRANSPARENT))
+	auto &expanded_top_bmp{*rle_expand_texture(bitmap_top)};
+	auto &expanded_bottom_bmp{*rle_expand_texture(bitmap_bottom)};
+	if (bitmap_top.get_flag_mask(BM_FLAG_SUPER_TRANSPARENT))
 	{
-		merge_textures<merge_transform_super_xparent>(orient, expanded_bottom_bmp, expanded_top_bmp, least_recently_used->bitmap->get_bitmap_data());
-		gr_set_bitmap_flags(*least_recently_used->bitmap.get(), BM_FLAG_TRANSPARENT);
+		merge_textures<merge_transform_super_xparent>(expanded_bottom_bmp.bm_w, expanded_top_bmp.bm_data, expanded_bottom_bmp.bm_data, mb.get_bitmap_data(), orient);
+		gr_set_bitmap_flags(mb, BM_FLAG_TRANSPARENT);
 #if !DXX_USE_OGL
-		least_recently_used->bitmap->avg_color = bitmap_top->avg_color;
+		mb.avg_color = bitmap_top.avg_color;
 #endif
 	} else	{
-		merge_textures<merge_transform_new>(orient, expanded_bottom_bmp, expanded_top_bmp, least_recently_used->bitmap->get_bitmap_data());
-		least_recently_used->bitmap->set_flags(bitmap_bottom->get_flag_mask(~BM_FLAG_RLE));
+		merge_textures<merge_transform_new>(expanded_bottom_bmp.bm_w, expanded_top_bmp.bm_data, expanded_bottom_bmp.bm_data, mb.get_bitmap_data(), orient);
+		mb.set_flags(bitmap_bottom.get_flag_mask(~BM_FLAG_RLE));
 #if !DXX_USE_OGL
-		least_recently_used->bitmap->avg_color = bitmap_bottom->avg_color;
+		mb.avg_color = bitmap_bottom.avg_color;
 #endif
 	}
 
-	least_recently_used->top_bmp = bitmap_top;
-	least_recently_used->bottom_bmp = bitmap_bottom;
+	least_recently_used->key = cache_lookup_key;
+	least_recently_used->bitmap = std::move(merged_bitmap);
 	least_recently_used->last_time_used = timer_query();
-	least_recently_used->orient = orient;
-	return *least_recently_used->bitmap.get();
+	return mb;
+}
+
+tmapinfo_flags get_side_combined_tmapinfo_flags(const d_level_unique_tmap_info_state::TmapInfo_array &TmapInfo, const unique_side &uside)
+{
+	const auto texture1_index{get_texture_index(uside.tmap_num)};
+	if (texture1_index >= TmapInfo.size()) [[unlikely]]
+		return tmapinfo_flags{};
+	const auto tmap1_flags{TmapInfo[texture1_index].flags};
+	if (const auto tmap_num2{uside.tmap_num2}; tmap_num2 != texture2_value::None)
+	{
+		const auto texture2_index{get_texture_index(tmap_num2)};
+		if (texture2_index >= TmapInfo.size()) [[unlikely]]
+			return tmap1_flags;
+		/* No other call site needs to combine two sets of tmapinfo_flags, so there
+		 * is no overloaded operator to handle this.  Use the casts to allow it
+		 * here.
+		 */
+		return static_cast<tmapinfo_flags>(underlying_value(tmap1_flags) | underlying_value(TmapInfo[texture2_index].flags));
+	}
+	return tmap1_flags;
+}
+
 }

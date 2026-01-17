@@ -63,7 +63,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "vclip.h"
 #include "compiler-range_for.h"
 #include "d_levelstate.h"
-#include "partial_range.h"
 #include <utility>
 
 using std::min;
@@ -562,6 +561,8 @@ static CockpitWeaponBoxFrameBitmaps WinBoxOverlay;
 
 }
 
+namespace dsx {
+
 #if DXX_BUILD_DESCENT == 1
 #define PAGE_IN_GAUGE(x,g)	PAGE_IN_GAUGE(x)
 std::array<bitmap_index, MAX_GAUGE_BMS_MAC> Gauges; // Array of all gauge bitmaps.
@@ -571,7 +572,6 @@ std::array<bitmap_index, MAX_GAUGE_BMS> Gauges,   // Array of all gauge bitmaps.
 	Gauges_hires;   // hires gauges
 #endif
 
-namespace dsx {
 namespace {
 static inline void PAGE_IN_GAUGE(int x, const local_multires_gauge_graphic multires_gauge_graphic)
 {
@@ -678,9 +678,9 @@ enum class gauge_hud_type : uint_fast32_t
 };
 
 constexpr enumerated_array<
-		enumerated_array<
-			enumerated_array<gauge_box, 2, gauge_hud_type>,
-		2, gauge_inset_window_view>,
+		per_gauge_inset_window_view_array<
+			enumerated_array<gauge_box, 2, gauge_hud_type>
+		>,
 	2, gauge_screen_resolution> gauge_boxes = {{{
 	{{{
 	{{{
@@ -887,7 +887,7 @@ struct gauge_inset_window
 #endif
 };
 
-enumerated_array<gauge_inset_window, 2, gauge_inset_window_view> inset_window;
+per_gauge_inset_window_view_array<gauge_inset_window> inset_window;
 
 static inline void hud_bitblt_free(grs_canvas &canvas, const unsigned x, const unsigned y, const unsigned w, const unsigned h, grs_bitmap &bm)
 {
@@ -2461,18 +2461,20 @@ static void draw_afterburner_bar(const hud_draw_context_hs_mr hudctx, const int 
 	auto &multires_gauge_graphic = hudctx.multires_gauge_graphic;
 	const auto afterburner_gauge_x{AFTERBURNER_GAUGE_X};
 	const auto afterburner_gauge_y{AFTERBURNER_GAUGE_Y};
-	const auto [table_data, table_size] = multires_gauge_graphic.is_hires()
-		? std::make_pair(afterburner_bar_table_hires.data(), afterburner_bar_table_hires.size())
-		: std::make_pair(afterburner_bar_table.data(), afterburner_bar_table.size());
 	hud_gauge_bitblt(hudctx, afterburner_gauge_x, afterburner_gauge_y, GAUGE_AFTERBURNER);
-	const unsigned not_afterburner = fixmul(f1_0 - afterburner, table_size);
-	if (not_afterburner > table_size)
+	const auto table_span{
+		multires_gauge_graphic.is_hires()
+			? std::span<const lr>(afterburner_bar_table_hires)
+			: std::span<const lr>(afterburner_bar_table)
+	};
+	const unsigned not_afterburner = fixmul(f1_0 - afterburner, table_span.size());
+	if (not_afterburner > table_span.size())
 		return;
 	const uint8_t color = BM_XRGB(0, 0, 0);
 	const int base_top = hudctx.yscale(afterburner_gauge_y - 1);
 	const int base_bottom = hudctx.yscale(afterburner_gauge_y);
 	int y{0};
-	for (auto &ab : unchecked_partial_range(table_data, not_afterburner))
+	for (auto &ab : table_span.first(not_afterburner))
 	{
 		const int left = hudctx.xscale(afterburner_gauge_x + ab.l);
 		const int right = hudctx.xscale(afterburner_gauge_x + ab.r + 1);
@@ -3263,7 +3265,10 @@ void show_reticle(grs_canvas &canvas, const player_info &player_info, enum retic
 	if (primary_bm_num && Primary_weapon == primary_weapon_index_t::LASER_INDEX && (player_info.powerup_flags & PLAYER_FLAGS_QUAD_LASERS))
 		primary_bm_num++;
 
-	if (Secondary_weapon_to_gun_num[Secondary_weapon] == player_gun_number::_7)
+	const auto opt_secondary_weapon_num{Secondary_weapon_to_gun_num.valid_index(Secondary_weapon)};
+	if (!opt_secondary_weapon_num) [[unlikely]]
+		return;
+	if (Secondary_weapon_to_gun_num[*opt_secondary_weapon_num] == player_gun_number::_7)
 		secondary_bm_num += 3;		//now value is 0,1 or 3,4
 	else if (secondary_bm_num && !(player_info.missile_gun & 1))
 			secondary_bm_num++;
@@ -4069,13 +4074,24 @@ void do_cockpit_window_view(grs_canvas &canvas, const gauge_inset_window_view wi
 	const hud_draw_context_hs_mr hudctx(window_canv, grd_curscreen->get_screen_width(), grd_curscreen->get_screen_height(), multires_gauge_graphic);
 	if (PlayerCfg.CockpitMode[1] == cockpit_mode_t::full_screen)
 	{
-		const unsigned w = HUD_SCALE_AR(hudctx.xscale, hudctx.yscale)(multires_gauge_graphic.get(106, 44));
-		const unsigned h = w;
+		int w = HUD_SCALE_AR(hudctx.xscale, hudctx.yscale)(multires_gauge_graphic.get(106, 44));
+		int h = w;
 
 		const int dx = (win == gauge_inset_window_view::primary) ? -(w + (w / 10)) : (w / 10);
 
 		window_x = grd_curscreen->get_screen_width() / 2 + dx;
 		window_y = grd_curscreen->get_screen_height() - h - (SHEIGHT / 15);
+
+#if DXX_USE_STEREOSCOPIC_RENDER
+		if (VR_stereo != StereoFormat::None)
+		{
+			const auto &&[vx, vy, vw, vh]{gr_build_stereo_viewport_window(VR_stereo, window_x, window_y, w, h)};
+			window_x = vx;
+			window_y = vy;
+			w = vw;
+			h = vh;
+		}
+#endif
 
 		gr_init_sub_canvas(window_canv, canvas, window_x, window_y, w, h);
 	}
@@ -4091,7 +4107,15 @@ void do_cockpit_window_view(grs_canvas &canvas, const gauge_inset_window_view wi
 
 	gr_set_current_canvas(window_canv);
 
-	render_frame(window_canv, 0, window);
+#if DXX_USE_STEREOSCOPIC_RENDER
+	if (VR_stereo != StereoFormat::None) {
+		render_frame(window_canv, -VR_eye_width, window);
+		render_frame(window_canv,  VR_eye_width, window);
+		goto abort;
+	}
+	else
+#endif
+		render_frame(window_canv, 0, window);
 
 	//	HACK! If guided missile, wake up robots as necessary.
 	if (viewer.type == OBJ_WEAPON) {

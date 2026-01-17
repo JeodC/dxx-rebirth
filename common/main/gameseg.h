@@ -40,13 +40,9 @@ namespace dcx {
 
 struct segmasks
 {
-   short facemask;     //which faces sphere pokes through (12 bits)
+   uint16_t facemask;     //which faces sphere pokes through (12 bits)
    sidemask_t sidemask;     //which sides sphere pokes through (6 bits)
    sidemask_t centermask;   //which sides center point is on back of (6 bits)
-};
-
-struct segment_depth_array_t : public enumerated_array<uint8_t, MAX_SEGMENTS, segnum_t>
-{
 };
 
 struct side_vertnum_list_t : std::array<vertnum_t, 4> {};
@@ -57,7 +53,7 @@ enum class vertex_array_side_type : bool
 	triangle,
 };
 
-#if DXX_BUILD_DESCENT == 2 || DXX_USE_EDITOR
+#if (defined(DXX_BUILD_DESCENT) && DXX_BUILD_DESCENT == 2) || DXX_USE_EDITOR
 #define DXX_internal_feature_lighting_hack	1
 enum class lighting_hack : bool
 {
@@ -103,6 +99,7 @@ side_vertnum_list_t get_side_verts(const shared_segment &segnum, sidenum_t siden
 
 enum class wall_is_doorway_mask : uint8_t;
 
+#ifdef DXX_BUILD_DESCENT
 #if DXX_USE_EDITOR
 //      Create all vertex lists (1 or 2) for faces on a side.
 //      Sets:
@@ -171,6 +168,7 @@ void validate_segment_side(fvcvertptr &, vmsegptridx_t sp, sidenum_t sidenum);
 
 [[nodiscard]]
 vms_vector pick_random_point_in_seg(fvcvertptr &vcvertptr, const shared_segment &sp, std::minstd_rand r);
+#endif
 
 }
 
@@ -181,6 +179,7 @@ bool get_side_is_quad(const shared_side &sidep);
 
 //returns 3 different bitmasks with info telling if this sphere is in
 //this segment.  See segmasks structure for info on fields
+[[nodiscard]]
 segmasks get_seg_masks(fvcvertptr &, const vms_vector &checkp, const shared_segment &segnum, fix rad);
 int check_segment_connections();
 
@@ -189,19 +188,21 @@ int check_segment_connections();
 namespace dsx {
 
 #if DXX_internal_feature_lighting_hack
+#define DXX_lighting_hack_decl_parameter	, const lighting_hack Doing_lighting_hack_flag
+#define DXX_lighting_hack_pass_parameter	, Doing_lighting_hack_flag
 extern lighting_hack Doing_lighting_hack_flag;
+#else
+#define DXX_lighting_hack_decl_parameter	/* empty */
+#define DXX_lighting_hack_pass_parameter	/* empty */
 #endif
-
-//this macro returns true if the segnum for an object is correct
-#define check_obj_seg(vcvertptr, obj) (get_seg_masks(vcvertptr, (obj)->pos, vcsegptr((obj)->segnum), 0).centermask == 0)
 
 //Tries to find a segment for a point, in the following way:
 // 1. Check the given segment
 // 2. Recursively trace through attached segments
 // 3. Check all the segmentns
-//Returns segnum if found, or -1
-imsegptridx_t find_point_seg(const d_level_shared_segment_state &, d_level_unique_segment_state &, const vms_vector &p, imsegptridx_t segnum);
-icsegptridx_t find_point_seg(const d_level_shared_segment_state &, const vms_vector &p, icsegptridx_t segnum);
+//Returns segnum if found, or segment_none
+imsegptridx_t find_point_seg(const d_level_shared_segment_state &, d_level_unique_segment_state &, const vms_vector &p, imsegptridx_t segnum DXX_lighting_hack_decl_parameter);
+icsegptridx_t find_point_seg(const d_level_shared_segment_state &, const vms_vector &p, icsegptridx_t segnum DXX_lighting_hack_decl_parameter);
 
 //      ----------------------------------------------------------------------------------------------------------
 //      Determine whether seg0 and seg1 are reachable using wid_flag to go through walls.

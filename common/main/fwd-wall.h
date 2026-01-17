@@ -28,11 +28,6 @@ DXX_VALPTRIDX_DECLARE_SUBTYPE(dcx::, active_door, actdoornum_t, MAX_DOORS);
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
-#if DXX_BUILD_DESCENT == 1
-constexpr std::integral_constant<std::size_t, 30> MAX_WALL_ANIMS{};		// Maximum different types of doors
-#elif DXX_BUILD_DESCENT == 2
-constexpr std::integral_constant<std::size_t, 60> MAX_WALL_ANIMS{};  // Maximum different types of doors
-#endif
 
 enum wall_type_t : uint8_t
 {
@@ -66,11 +61,6 @@ constexpr fix DOOR_WAIT_TIME = i2f(5);      // How long before auto door closes
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
-#if DXX_BUILD_DESCENT == 1
-constexpr std::integral_constant<std::size_t, 20> MAX_CLIP_FRAMES{};
-#elif DXX_BUILD_DESCENT == 2
-constexpr std::integral_constant<std::size_t, 50> MAX_CLIP_FRAMES{};
-#endif
 }
 
 namespace dcx {
@@ -106,7 +96,7 @@ typedef unsigned wall_clip_flag_t;
 constexpr std::integral_constant<wall_clip_flag_t, 1> WCF_EXPLODES{};       //door explodes when opening
 constexpr std::integral_constant<wall_clip_flag_t, 2> WCF_BLASTABLE{};       //this is a blastable wall
 constexpr std::integral_constant<wall_clip_flag_t, 4> WCF_TMAP1{};       //this uses primary tmap, not tmap2
-constexpr std::integral_constant<wall_clip_flag_t, 8> WCF_HIDDEN{};       //this uses primary tmap, not tmap2
+constexpr std::integral_constant<wall_clip_flag_t, 8> WCF_HIDDEN{};      // This door is hidden from the buddy and is not drawn as a door on the map.
 }
 
 namespace dsx {
@@ -118,12 +108,11 @@ constexpr std::integral_constant<std::size_t, 20> MAX_CLIP_FRAMES_D1{};
 #if DXX_BUILD_DESCENT == 2
 namespace dsx {
 struct cloaking_wall;
-constexpr std::integral_constant<std::size_t, 10> MAX_CLOAKING_WALLS{};
 enum class clwallnum_t : uint8_t
 {
 };
 }
-DXX_VALPTRIDX_DECLARE_SUBTYPE(dsx::, cloaking_wall, clwallnum_t, dsx::MAX_CLOAKING_WALLS);
+DXX_VALPTRIDX_DECLARE_SUBTYPE(dsx::, cloaking_wall, clwallnum_t, /* MAX_CLOAKING_WALLS = */ 10);
 namespace dsx {
 DXX_VALPTRIDX_DEFINE_SUBTYPE_TYPEDEFS(cloaking_wall, clwall);
 }
@@ -132,6 +121,13 @@ DXX_VALPTRIDX_DEFINE_SUBTYPE_TYPEDEFS(cloaking_wall, clwall);
 DXX_VALPTRIDX_DECLARE_SUBTYPE(dsx::, wall, wallnum_t, dcx::MAX_WALLS);
 namespace dsx {
 DXX_VALPTRIDX_DEFINE_SUBTYPE_TYPEDEFS(wall, wall);
+#if DXX_BUILD_DESCENT == 1
+constexpr std::size_t MAX_CLIP_FRAMES{20};	// D1
+constexpr std::size_t MAX_WALL_ANIMS{30};	// D1: Maximum different types of doors
+#elif DXX_BUILD_DESCENT == 2
+constexpr std::size_t MAX_CLIP_FRAMES{50};	// D2
+constexpr std::size_t MAX_WALL_ANIMS{60};	// D2: Maximum different types of doors
+#endif
 using wall_animations_array = std::array<wclip, MAX_WALL_ANIMS>;
 constexpr valptridx<wall>::magic_constant<wallnum_t{0xffffu}> wall_none{};
 }

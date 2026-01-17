@@ -391,7 +391,7 @@ multi_level_inv MultiLevelInv;
 }
 
 namespace dcx {
-const enumerated_array<char[16], 10, netplayer_info::player_rank> RankStrings{{{
+constexpr rank_strings_type RankStrings{{{
 	"(unpatched)",
 	"Cadet",
 	"Ensign",
@@ -3383,7 +3383,7 @@ void update_item_state::process_powerup(const d_vclip_array &Vclip, fvmsegptridx
 class accumulate_object_count
 {
 protected:
-	using array_reference = enumerated_array<uint32_t, MAX_POWERUP_TYPES, powerup_type_t> &;
+	using array_reference = per_powerup_type_array<uint32_t> &;
 	array_reference current;
 	accumulate_object_count(array_reference a) : current(a)
 	{
@@ -3573,7 +3573,7 @@ texture_index find_goal_texture(const d_level_unique_tmap_info_state &LevelUniqu
 		return (i.flags & tmi_flag);
 	};
 	const auto begin = r.begin();
-	return std::distance(begin, std::ranges::find_if(begin, r.end(), predicate));
+	return static_cast<texture_index>(std::distance(begin, std::ranges::find_if(begin, r.end(), predicate)));
 }
 
 const tmap_info &find_required_goal_texture(const d_level_unique_tmap_info_state &LevelUniqueTmapInfoState, const tmapinfo_flag tmi_flag)
@@ -5670,7 +5670,7 @@ void init_hoard_data(d_vclip_array &Vclip)
 	const auto goal_eclip = Num_effects++;
 	assert(goal_eclip < Effects.size());
 	Effects[goal_eclip] = Effects[94];        //copy from blue goal
-	Effects[goal_eclip].changing_wall_texture = NumTextures;
+	Effects[goal_eclip].changing_wall_texture = static_cast<texture_index>(NumTextures);
 	Effects[goal_eclip].vc.num_frames=n_goal_frames;
 
 	TmapInfo[NumTextures] = find_required_goal_texture(LevelUniqueTmapInfoState, tmapinfo_flag::goal_blue);
@@ -6121,8 +6121,8 @@ void multi_object_to_object_rw(const object &obj, object_rw *obj_rw)
 		{
 			obj_rw->ctype.ai_info.behavior               = static_cast<uint8_t>(obj.ctype.ai_info.behavior);
 			obj_rw->ctype.ai_info.flags[0] = underlying_value(obj.ctype.ai_info.CURRENT_GUN);
-			obj_rw->ctype.ai_info.flags[1] = obj.ctype.ai_info.CURRENT_STATE;
-			obj_rw->ctype.ai_info.flags[2] = obj.ctype.ai_info.GOAL_STATE;
+			obj_rw->ctype.ai_info.flags[1] = underlying_value(obj.ctype.ai_info.CURRENT_STATE);
+			obj_rw->ctype.ai_info.flags[2] = underlying_value(obj.ctype.ai_info.GOAL_STATE);
 			obj_rw->ctype.ai_info.flags[3] = obj.ctype.ai_info.PATH_DIR;
 #if DXX_BUILD_DESCENT == 1
 			obj_rw->ctype.ai_info.flags[4] = obj.ctype.ai_info.SUBMODE;
@@ -6306,15 +6306,15 @@ void multi_object_rw_to_object(const object_rw *const obj_rw, object &obj)
 				const uint8_t gun_num = obj_rw->ctype.ai_info.flags[0];
 				obj.ctype.ai_info.CURRENT_GUN = (gun_num < MAX_GUNS) ? robot_gun_number{gun_num} : robot_gun_number{};
 			}
-			obj.ctype.ai_info.CURRENT_STATE = build_ai_state_from_untrusted(obj_rw->ctype.ai_info.flags[1]).value();
-			obj.ctype.ai_info.GOAL_STATE = build_ai_state_from_untrusted(obj_rw->ctype.ai_info.flags[2]).value();
+			obj.ctype.ai_info.CURRENT_STATE = build_ai_state_from_untrusted(obj_rw->ctype.ai_info.flags[1]).value_or(ai_static_state::AIS_NONE);
+			obj.ctype.ai_info.GOAL_STATE = build_ai_state_from_untrusted(obj_rw->ctype.ai_info.flags[2]).value_or(ai_static_state::AIS_NONE);
 			obj.ctype.ai_info.PATH_DIR = obj_rw->ctype.ai_info.flags[3];
 #if DXX_BUILD_DESCENT == 1
 			obj.ctype.ai_info.SUBMODE = obj_rw->ctype.ai_info.flags[4];
 #elif DXX_BUILD_DESCENT == 2
 			obj.ctype.ai_info.SUB_FLAGS = obj_rw->ctype.ai_info.flags[4];
 #endif
-			obj.ctype.ai_info.GOALSIDE = build_sidenum_from_untrusted(obj_rw->ctype.ai_info.flags[5]).value();
+			obj.ctype.ai_info.GOALSIDE = build_sidenum_from_untrusted(obj_rw->ctype.ai_info.flags[5]).value_or(sidenum_t::WLEFT);
 			obj.ctype.ai_info.CLOAKED = obj_rw->ctype.ai_info.flags[6];
 			obj.ctype.ai_info.SKIP_AI_COUNT = obj_rw->ctype.ai_info.flags[7];
 			obj.ctype.ai_info.REMOTE_OWNER = obj_rw->ctype.ai_info.flags[8];
@@ -6387,7 +6387,10 @@ void multi_object_rw_to_object(const object_rw *const obj_rw, object &obj)
 				obj.rtype.pobj_info.anim_angles[i] = build_native_endian_angvec_from_little_endian(obj_rw->rtype.pobj_info.anim_angles[i]);
 			}
 			obj.rtype.pobj_info.subobj_flags             = INTEL_INT(obj_rw->rtype.pobj_info.subobj_flags);
-			obj.rtype.pobj_info.tmap_override            = INTEL_INT(obj_rw->rtype.pobj_info.tmap_override);
+			{
+				const auto t{INTEL_INT(obj_rw->rtype.pobj_info.tmap_override)};
+				obj.rtype.pobj_info.tmap_override = t < Textures.size() ? static_cast<texture_index>(t) : texture_index{UINT16_MAX};
+			}
 			obj.rtype.pobj_info.alt_textures             = INTEL_INT(obj_rw->rtype.pobj_info.alt_textures);
 			break;
 		}

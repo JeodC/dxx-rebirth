@@ -77,6 +77,10 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #define DEFAULT_SNDFILE ((Piggy_hamfile_version < pig_hamfile_version::_3) ? DEFAULT_HAMFILE_SHAREWARE : (GameArg.SndDigiSampleRate == sound_sample_rate::_22k) ? "descent2.s22" : "descent2.s11")
 
+namespace dsx {
+
+namespace {
+
 enum class pigfile_size : uint32_t
 {
 	mac_alien1_pigsize = 5013035,
@@ -87,7 +91,9 @@ enum class pigfile_size : uint32_t
 	mac_water_pigsize = 4832403,
 };
 
-namespace dsx {
+uint8_t Pigfile_initialized;
+
+}
 
 #if DXX_USE_EDITOR
 unsigned Num_aliases;
@@ -95,7 +101,6 @@ std::array<alias, MAX_ALIASES> alias_list;
 #endif
 
 pig_hamfile_version Piggy_hamfile_version;
-uint8_t Pigfile_initialized;
 
 char descent_pig_basename[]{D1_PIGFILE};
 
@@ -118,7 +123,7 @@ namespace {
 #endif
 hashtable AllBitmapsNames;
 hashtable AllDigiSndNames;
-enumerated_array<pig_bitmap_offset, MAX_BITMAP_FILES, bitmap_index> GameBitmapOffset;
+per_bitmap_index_array<pig_bitmap_offset> GameBitmapOffset;
 #if DXX_BUILD_DESCENT == 2
 static std::unique_ptr<uint8_t[]> Bitmap_replacement_data;
 static std::array<char, FILENAME_LEN> Current_pigfile;
@@ -129,6 +134,7 @@ unsigned Num_bitmap_files;
 
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
+grs_bitmap bogus_bitmap;
 bool MacPig;	// using the Macintosh pigfile?
 bool PCSharePig; // using PC Shareware pigfile?
 #endif
@@ -142,7 +148,7 @@ GameBitmaps_array GameBitmaps;
 static char default_pigfile_registered[]{DEFAULT_PIGFILE_REGISTERED};
 static
 #endif
-enumerated_array<BitmapFile, MAX_BITMAP_FILES, bitmap_index> AllBitmaps;
+per_bitmap_index_array<BitmapFile> AllBitmaps;
 namespace {
 static std::array<SoundFile, MAX_SOUND_FILES> AllSounds;
 
@@ -151,8 +157,8 @@ static std::array<SoundFile, MAX_SOUND_FILES> AllSounds;
 static int Piggy_bitmap_cache_size;
 static int Piggy_bitmap_cache_next;
 static uint8_t *Piggy_bitmap_cache_data;
-static enumerated_array<uint8_t, MAX_BITMAP_FILES, bitmap_index> GameBitmapFlags;
-static enumerated_array<bitmap_index, MAX_BITMAP_FILES, bitmap_index> GameBitmapXlat;
+static per_bitmap_index_array<uint8_t> GameBitmapFlags;
+static per_bitmap_index_array<bitmap_index> GameBitmapXlat;
 static RAIINamedPHYSFS_File Piggy_fp;
 }
 
@@ -169,7 +175,6 @@ ubyte bogus_bitmap_initialized{0};
 std::array<uint8_t, 64 * 64> bogus_data;
 
 #if DXX_BUILD_DESCENT == 1
-grs_bitmap bogus_bitmap;
 namespace {
 static std::array<int, MAX_SOUND_FILES> SoundCompressed;
 }
@@ -222,7 +227,7 @@ static void piggy_bitmap_page_out_all();
  * "Textures" looks up a d2 bitmap index given a d2 tmap_num.
  * "d1_tmap_nums" looks up a d1 tmap_num given a d1 bitmap. "-1" means "None".
  */
-using d1_tmap_nums_t = std::array<short, 1630>; // 1621 in descent.pig Mac registered
+using d1_tmap_nums_t = std::array<texture_index, 1630>; // 1621 in descent.pig Mac registered
 static std::unique_ptr<d1_tmap_nums_t> d1_tmap_nums;
 
 static void free_d1_tmap_nums()
@@ -282,6 +287,17 @@ static DiskSoundHeader DiskSoundHeader_read(const NamedPHYSFS_File fp)
 	dsh.data_length = PHYSFSX_readInt(fp);
 	dsh.offset = PHYSFSX_readInt(fp);
 	return dsh;
+}
+
+void initialize_array_bogus_data()
+{
+	bogus_data.fill(gr_find_closest_color(0, 0, 63));	// blue
+	// Make a big red X !
+	for (const auto c{gr_find_closest_color(63, 0, 0)}; const auto i : constant_xrange<std::size_t, 0, 64u>{})
+	{
+		bogus_data[i*64+i] = c;
+		bogus_data[i*64+(63-i)] = c;
+	}
 }
 
 }
@@ -462,17 +478,8 @@ properties_init_result properties_init(d_level_shared_robot_info_state &LevelSha
 	}
 
 	if ( !bogus_bitmap_initialized )	{
-		ubyte c;
 		bogus_bitmap_initialized = 1;
-		c = gr_find_closest_color( 0, 0, 63 );
-		bogus_data.fill(c);
-		c = gr_find_closest_color( 63, 0, 0 );
-		// Make a big red X !
-		range_for (const unsigned i, xrange(64u))
-		{
-			bogus_data[i*64+i] = c;
-			bogus_data[i*64+(63-i)] = c;
-		}
+		initialize_array_bogus_data();
 		gr_init_bitmap(bogus_bitmap, bm_mode::linear, 0, 0, 64, 64, 64, bogus_data.data());
 		piggy_register_bitmap(bogus_bitmap, "bogus", 1);
 #ifdef ALLEGRO
@@ -1131,18 +1138,8 @@ properties_init_result properties_init(d_level_shared_robot_info_state &LevelSha
 	}
 
 	if ( !bogus_bitmap_initialized )        {
-		ubyte c;
-
 		bogus_bitmap_initialized = 1;
-		c = gr_find_closest_color( 0, 0, 63 );
-		bogus_data.fill(c);
-		c = gr_find_closest_color( 63, 0, 0 );
-		// Make a big red X !
-		range_for (const unsigned i, xrange(64u))
-		{
-			bogus_data[i*64+i] = c;
-			bogus_data[i*64+(63-i)] = c;
-		}
+		initialize_array_bogus_data();
 		const bitmap_index bi{static_cast<uint16_t>(Num_bitmap_files)};
 		gr_init_bitmap(GameBitmaps[bi], bm_mode::linear, 0, 0, 64, 64, 64, bogus_data.data());
 		piggy_register_bitmap(GameBitmaps[bi], "bogus", 1);
@@ -1924,17 +1921,15 @@ static std::span<uint8_t> bitmap_read_d1(grs_bitmap *bitmap, /* read into this b
 
 static void bm_read_d1_tmap_nums(const NamedPHYSFS_File d1pig)
 {
-	int i;
-
 	PHYSFS_seek(d1pig, 8);
 	d1_tmap_nums = std::make_unique<d1_tmap_nums_t>();
 	auto &t = *d1_tmap_nums.get();
-	t.fill(-1);
-	for (i = 0; i < D1_MAX_TEXTURES; i++) {
-		const uint16_t d1_index = PHYSFSX_readSLE16(d1pig);
-		if (d1_index >= std::size(t))
+	t.fill(texture_index{UINT16_MAX});
+	for (uint16_t i = 0; i < D1_MAX_TEXTURES; i++) {
+		const uint16_t d1_index{PHYSFSX_readULE16(d1pig)};
+		if (d1_index >= t.size())
 			break;
-		t[d1_index] = i;
+		t[d1_index] = texture_index{i};
 		if (PHYSFS_eof(d1pig))
 			break;
 	}
@@ -1963,7 +1958,7 @@ static void read_d1_tmap_nums_from_hog(const NamedPHYSFS_File d1_pig)
 {
 #define LINEBUF_SIZE 600
 	int reading_textures{0};
-	short texture_count{0};
+	uint16_t texture_count{0};
 	int bitmaps_tbl_is_binary{0};
 
 	auto &&[bitmaps, physfserr] = PHYSFSX_openReadBuffered("bitmaps.tbl");
@@ -1980,7 +1975,7 @@ static void read_d1_tmap_nums_from_hog(const NamedPHYSFS_File d1_pig)
 
 	d1_tmap_nums = std::make_unique<d1_tmap_nums_t>();
 	auto &t = *d1_tmap_nums.get();
-	t.fill(-1);
+	t.fill(texture_index{UINT16_MAX});
 
 	for (PHYSFSX_gets_line_t<LINEBUF_SIZE> inputline; PHYSFSX_fgets (inputline, bitmaps);)
 	{
@@ -2024,7 +2019,7 @@ static void read_d1_tmap_nums_from_hog(const NamedPHYSFS_File d1_pig)
 						const uint32_t d1_index = get_d1_bm_index(arg, d1_pig);
 						if (d1_index < std::size(t))
 						{
-							t[d1_index] = texture_count;
+							t[d1_index] = texture_index{texture_count};
 							//int d2_index = d2_index_for_d1_index(d1_index);
 						}
 				}
@@ -2051,7 +2046,7 @@ static bitmap_index d2_index_for_d1_index(short d1_index)
 	if (d1_index >= std::size(t))
 		return bitmap_index::None;
 	const auto i = t[d1_index];
-	if (i == -1 || !d1_tmap_num_unique(i))
+	if (i == texture_index{UINT16_MAX} || !d1_tmap_num_unique(i))
 		return bitmap_index::None;
 	return Textures[convert_d1_tmap_num(i)];
 }

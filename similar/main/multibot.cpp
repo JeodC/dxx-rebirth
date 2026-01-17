@@ -172,13 +172,13 @@ void multi_check_robot_timeout()
 		lastcheck = {GameTime64};
 		for (i = 0; i < MAX_ROBOTS_CONTROLLED; i++) 
 		{
-			if (robot_controlled[i] != object_none && robot_last_send_time[i] + ROBOT_TIMEOUT < GameTime64)
+			if (const auto robot_controlled_i{robot_controlled[i]}; robot_controlled_i != object_none && robot_last_send_time[i] + ROBOT_TIMEOUT < GameTime64)
 			{
-				const auto &&robot_objp = vmobjptridx(robot_controlled[i]);
+				const auto &&robot_objp{vmobjptridx(robot_controlled_i)};
 				if (robot_objp->ctype.ai_info.REMOTE_OWNER != Player_num)
 				{		
-					robot_controlled[i] = object_none;
 					Int3(); // Non-terminal but Rob is interesting, step over please...
+					robot_controlled[i] = object_none;
 					return;
 				}
 				if (robot_send_pending[i] != multi_send_robot_position_priority::_0)
@@ -867,15 +867,6 @@ void multi_do_robot_position(const playernum_t pnum, const multiplayer_rspan<mul
 	extract_quaternionpos(Objects.vmptr, vmsegptr, robot, qpp);
 }
 
-}
-
-static inline vms_vector calc_gun_point(const robot_info &robptr, const object_base &obj, const robot_gun_number gun_num)
-{
-	vms_vector v;
-	return calc_gun_point(robptr, v, obj, gun_num), v;
-}
-
-namespace dsx {
 void multi_do_robot_fire(const multiplayer_rspan<multiplayer_command_t::MULTI_ROBOT_FIRE> buf)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;

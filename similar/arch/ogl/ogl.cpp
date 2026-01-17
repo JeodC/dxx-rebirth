@@ -18,6 +18,7 @@
 #include <windows.h>
 #include <stddef.h>
 #endif
+#include "ogl_init.h"
 #if defined(__APPLE__) && defined(__MACH__)
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -27,6 +28,7 @@
 #else
 #include <GL/gl.h>
 #include <GL/glu.h>
+#include <GL/glext.h>
 #endif
 #endif
 #include <string.h>
@@ -431,7 +433,7 @@ void ogl_cache_level_textures(void)
 	range_for (auto &ec, partial_const_range(Effects, Num_effects))
 	{
 		ogl_cache_vclipn_textures(Vclip, ec.dest_vclip);
-		if (ec.changing_wall_texture == -1 && ec.changing_object_texture == object_bitmap_index::None)
+		if (ec.changing_wall_texture == texture_index{UINT16_MAX} && ec.changing_object_texture == object_bitmap_index::None)
 			continue;
 		if (ec.vc.num_frames>max_efx)
 			max_efx=ec.vc.num_frames;
@@ -440,7 +442,7 @@ void ogl_cache_level_textures(void)
 	for (ef=0;ef<max_efx;ef++){
 		range_for (eclip &ec, partial_range(Effects, Num_effects))
 		{
-			if (ec.changing_wall_texture == -1 && ec.changing_object_texture == object_bitmap_index::None)
+			if (ec.changing_wall_texture == texture_index{UINT16_MAX} && ec.changing_object_texture == object_bitmap_index::None)
 				continue;
 			ec.time_left=-1;
 		}
@@ -458,16 +460,28 @@ void ogl_cache_level_textures(void)
 					//				tmap1=0;
 					continue;
 				}
-				const auto texture1 = Textures[tmap1idx];
+				if (tmap1idx >= Textures.size()) [[unlikely]]
+					/* This should be impossible, since
+					 * `NumTextures <= Textures.size()` should always be true.
+					 */
+					continue;
+				const auto texture1{Textures[tmap1idx]};
+				if (!GameBitmaps.valid_index(texture1)) [[unlikely]]
+					continue;
 				PIGGY_PAGE_IN(texture1);
 				grs_bitmap *bm = &GameBitmaps[texture1];
 				if (tmap2 != texture2_value::None)
 				{
-					const auto texture2 = Textures[get_texture_index(tmap2)];
+					const auto tmap2idx{get_texture_index(tmap2)};
+					if (tmap2idx >= Textures.size()) [[unlikely]]
+						continue;
+					const auto texture2{Textures[tmap2idx]};
+					if (!GameBitmaps.valid_index(texture2))
+						continue;
 					PIGGY_PAGE_IN(texture2);
 					auto &bm2 = GameBitmaps[texture2];
 					if (CGameArg.DbgUseOldTextureMerge || bm2.get_flag_mask(BM_FLAG_SUPER_TRANSPARENT))
-						bm = &texmerge_get_cached_bitmap( tmap1, tmap2 );
+						bm = &texmerge_get_cached_bitmap(GameBitmaps, Textures, tmap1, tmap2);
 					else {
 						ogl_loadbmtexture(bm2, 1);
 					}
@@ -530,13 +544,15 @@ void ogl_cache_level_textures(void)
 					ogl_cache_vclipn_textures(Vclip, ri.exp2_vclip_num);
 					ogl_cache_weapon_textures(Vclip, Weapon_info, ri.weapon_type);
 				}
-				if (objp->rtype.pobj_info.tmap_override != -1)
+				if (const auto tmap_override{objp->rtype.pobj_info.tmap_override}; tmap_override < Textures.size())
 				{
-					const auto t = Textures[objp->rtype.pobj_info.tmap_override];
+					const auto t{Textures[tmap_override]};
+					if (!GameBitmaps.valid_index(t)) [[unlikely]]
+						continue;
 					PIGGY_PAGE_IN(t);
 					ogl_loadbmtexture(GameBitmaps[t], 1);
 				}
-				else
+				else if (tmap_override == texture_index{UINT16_MAX}) [[likely]]
 					ogl_cache_polymodel_textures(objp->rtype.pobj_info.model_num);
 			}
 		}
@@ -1306,13 +1322,14 @@ void ogl_stereo_frame(const bool left_eye, const int xoff)
 				// center unsqueezed side-by-side format
 				switch (VR_stereo) {
 					case StereoFormat::None:
+					case StereoFormat::QuadBuffers:
 						/* Not reached */
 					case StereoFormat::AboveBelow:
 					case StereoFormat::SideBySideFullHeight:
 						/* No modification needed */
 						return;
 					case StereoFormat::SideBySideHalfHeight:
-						ogl_stereo_viewport[1] -= ogl_stereo_viewport[3] / 2;		// y = h/4
+						ogl_stereo_viewport[1] -= SHEIGHT/4;	// y = h/4
 						break;
 					case StereoFormat::AboveBelowSync:
 						{
@@ -1338,20 +1355,21 @@ void ogl_stereo_frame(const bool left_eye, const int xoff)
 			glGetIntegerv(GL_VIEWPORT, ogl_stereo_viewport.data());
 			switch (VR_stereo) {
 				case StereoFormat::None:
+				case StereoFormat::QuadBuffers:
 					/* Not reached */
 					break;
 					// center unsqueezed side-by-side format
 				case StereoFormat::SideBySideHalfHeight:
-					ogl_stereo_viewport[1] -= ogl_stereo_viewport[3] / 2;		// y = h/4
+					ogl_stereo_viewport[1] -= SHEIGHT/4;	// y = h/4
 					[[fallthrough]];
 					// half-width viewports for side-by-side format
 				case StereoFormat::SideBySideFullHeight:
-					ogl_stereo_viewport[0] += ogl_stereo_viewport[2];		// x = w/2
+					ogl_stereo_viewport[0] += SWIDTH/2;		// x = w/2
 					break;
 					// half-height viewports for above/below format
 				case StereoFormat::AboveBelowSync:
 				case StereoFormat::AboveBelow:
-					ogl_stereo_viewport[1] -= ogl_stereo_viewport[3];		// y = h/2
+					ogl_stereo_viewport[1] -= SHEIGHT/2;	// y = h/2
 					if (VR_stereo == StereoFormat::AboveBelowSync)
 						ogl_stereo_viewport[3] -= VR_sync_width / 2;
 					break;
@@ -1362,8 +1380,12 @@ void ogl_stereo_frame(const bool left_eye, const int xoff)
 		stereo_transform_dxoff = dxoff;		// xoff < 0
 		gl_buffer = GL_BACK_RIGHT;
 	}
+#if !DXX_USE_OGLES
 	if (ogl_stereo_enabled)
 		glDrawBuffer(gl_buffer);
+#else
+	(void)gl_buffer;
+#endif
 	glMatrixMode(GL_PROJECTION);
 	std::array<GLfloat, 16> ogl_stereo_transform;
 	glGetFloatv(GL_PROJECTION_MATRIX, ogl_stereo_transform.data());
@@ -1949,7 +1971,7 @@ const ogl_colors::array_type &ogl_colors::init_palette(const unsigned c)
 bool ogl_ubitmapm_cs(grs_canvas &canvas, int x, int y,int dw, int dh, grs_bitmap &bm, int c)
 {
 	ogl_colors color;
-	return ogl_ubitmapm_cs(canvas, x, y, dw, dh, bm, color.init(c));
+	return ogl_ubitmapm_cs(canvas, x, y, dw, dh, bm, color.init(c), true);
 }
 
 /*
@@ -2021,6 +2043,63 @@ bool ogl_ubitmapm_cs(grs_canvas &canvas, const int entry_x, const int entry_y, c
 	glTexCoordPointer(2, GL_FLOAT, 0, texcoord_array.data());
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);//replaced GL_QUADS
 	return 0;
+}
+
+bool ogl_ubitmapm_cs(grs_canvas &canvas, int x0, int y0, int dw, int dh, grs_bitmap &bm, const ogl_colors::array_type &color_array, bool fill)
+{
+#if DXX_USE_STEREOSCOPIC_RENDER
+	// blit bitmap 2x for stereo viewport formats
+	if (VR_stereo != StereoFormat::None) {
+		int x = x0, y = y0;
+		int w = (dw < 0) ? canvas.cv_bitmap.bm_w : (dw == 0) ? bm.bm_w : dw;
+		int h = (dh < 0) ? canvas.cv_bitmap.bm_h : (dh == 0) ? bm.bm_h : dh;
+		if (fill) {
+			const auto &&[rw, rh]{gr_build_stereo_viewport_size(VR_stereo, w, h)};
+			w = rw;
+			h = rh;
+			y = gr_build_stereo_viewport_offset_left_eye(VR_stereo, y);
+		}
+#if !DXX_USE_OGLES
+		if (VR_stereo == StereoFormat::QuadBuffers)
+			glDrawBuffer(GL_BACK_LEFT);
+#endif
+		ogl_ubitmapm_cs(canvas, x, y, w, h, bm, color_array);
+		const auto &&[vx, vy]{gr_build_stereo_viewport_offset_right_eye(VR_stereo, x, y, 1)};
+		x = vx;
+		y = vy;
+#if !DXX_USE_OGLES
+		if (VR_stereo == StereoFormat::QuadBuffers)
+			glDrawBuffer(GL_BACK_RIGHT);
+#endif
+		ogl_ubitmapm_cs(canvas, x, y, w, h, bm, color_array);
+		return 0;
+	}
+#else
+	(void)fill;
+#endif
+	return ogl_ubitmapm_cs(canvas, x0, y0, dw, dh, bm, color_array);
+}
+
+// blit rectangular region from screen
+bool ogl_ubitblt_cs(grs_canvas &canvas, int dw, int dh, int dx, int dy, int sx, int sy)
+{
+#if DXX_USE_STEREOSCOPIC_RENDER
+	dy = canvas.cv_bitmap.bm_h - (dy + dh);	// GL y flip
+	sy = canvas.cv_bitmap.bm_h - (sy + dh);	// GL y flip
+#if !DXX_USE_OGLES
+	if (VR_stereo == StereoFormat::QuadBuffers) {
+		glReadBuffer(GL_BACK_LEFT);
+		glDrawBuffer(GL_BACK_RIGHT);
+	}
+	glWindowPos2i(dx, dy);
+	glCopyPixels(sx, sy, dw, dh, GL_COLOR);
+#else
+	(void)dx, (void)dy, (void)sx, (void)sy, (void)dw, (void)dh;
+#endif
+	return 0;
+#else
+	return ogl_ubitblt(dw, dh, dx, dy, sx, sy, canvas.cv_bitmap, canvas.cv_bitmap);
+#endif
 }
 
 }

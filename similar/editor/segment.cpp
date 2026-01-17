@@ -581,7 +581,7 @@ static void compress_segments(void)
 //	Combine duplicate vertices.
 //	If two vertices have the same coordinates, within some small tolerance, then assign
 //	the same vertex number to the two vertices, freeing up one of the vertices.
-void med_combine_duplicate_vertices(enumerated_array<uint8_t, MAX_VERTICES, vertnum_t> &vlp)
+void med_combine_duplicate_vertices(per_vertex_array<uint8_t> &vlp)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
@@ -1374,7 +1374,7 @@ void med_create_new_segment(const vms_vector &scale)
 		child = segment_none;
 		ss.wall_num = wall_none;
 		create_walls_on_side(vcvertptr, sp, static_cast<sidenum_t>(s));
-		us.tmap_num = build_texture1_value(1);					// assign some stupid old tmap to this side.
+		us.tmap_num = build_texture1_value(texture_index{1});					// assign some stupid old tmap to this side.
 		us.tmap_num2 = texture2_value::None;
 	}
 
@@ -1527,7 +1527,7 @@ void warn_if_concave_segment(const vmsegptridx_t s)
 //	If not found, return an empty optional.
 std::optional<std::pair<vmsegptridx_t, sidenum_t>> med_find_adjacent_segment_side(const vmsegptridx_t sp, sidenum_t side)
 {
-	enumerated_array<vertnum_t, 4, side_relative_vertnum> abs_verts;
+	per_side_relative_vertnum_array<vertnum_t> abs_verts;
 
 	//	Stuff abs_verts[4] array with absolute vertex indices
 	for (const auto v : MAX_VERTICES_PER_SIDE)

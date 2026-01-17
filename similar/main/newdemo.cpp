@@ -794,7 +794,8 @@ static void nd_read_object(const vmobjptridx_t obj)
 			int i;
 			nd_read_int(&i);
 			obj->rtype.pobj_info.model_num = static_cast<polygon_model_index>(i);
-			nd_read_int(&(obj->rtype.pobj_info.subobj_flags));
+			nd_read_int(&i);
+			obj->rtype.pobj_info.subobj_flags = i;
 		}
 
 		if ((obj->type != OBJ_PLAYER) && (obj->type != OBJ_DEBRIS))
@@ -808,15 +809,17 @@ static void nd_read_object(const vmobjptridx_t obj)
 		nd_read_int(&tmo);
 
 #if !DXX_USE_EDITOR
-		obj->rtype.pobj_info.tmap_override = tmo;
+		obj->rtype.pobj_info.tmap_override = static_cast<texture_index>(tmo);
 #else
 		if (tmo==-1)
-			obj->rtype.pobj_info.tmap_override = -1;
+			obj->rtype.pobj_info.tmap_override = texture_index{UINT16_MAX};
 		else {
-			int xlated_tmo = tmap_xlate_table[tmo];
-			if (xlated_tmo < 0) {
-				Int3();
-				xlated_tmo = 0;
+			auto xlated_tmo{tmap_xlate_table[tmo]};
+			if (xlated_tmo >= Textures.size())
+			{
+				[[unlikely]];
+				con_printf(CON_URGENT, "Invalid texture override in demo: tmo=%i, xlated_tmo=%hu; setting xlated_tmo=0", tmo, underlying_value(xlated_tmo));
+				xlated_tmo = {};
 			}
 			obj->rtype.pobj_info.tmap_override = xlated_tmo;
 		}

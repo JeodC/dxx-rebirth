@@ -80,7 +80,7 @@ namespace dcx {
 
 namespace {
 
-using savegame_pof_names_type = enumerated_array<char[FILENAME_LEN], MAX_POLYGON_MODELS, polygon_model_index>;
+using savegame_pof_names_type = per_polygon_model_array<char[FILENAME_LEN]>;
 constexpr uint16_t GAME_COMPATIBLE_VERSION{22};
 
 }
@@ -161,11 +161,13 @@ static int convert_wclip(int wc) {
 
 }
 
-int convert_tmap(int tmap)
+texture_index convert_tmap(texture_index tmap)
 {
-	if (tmap == -1)
+	if (tmap == texture_index{UINT16_MAX})
 		return tmap;
-    return (tmap >= NumTextures) ? tmap % NumTextures : tmap;
+	if (tmap >= NumTextures) [[unlikely]]
+		return static_cast<texture_index>(tmap % NumTextures);
+	return tmap;
 }
 
 namespace {
@@ -456,15 +458,15 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 				const uint8_t gun_num = ai_info_flags[0];
 				obj->ctype.ai_info.CURRENT_GUN = (gun_num < MAX_GUNS) ? robot_gun_number{gun_num} : robot_gun_number{};
 			}
-			obj->ctype.ai_info.CURRENT_STATE = build_ai_state_from_untrusted(ai_info_flags[1]).value();
-			obj->ctype.ai_info.GOAL_STATE = build_ai_state_from_untrusted(ai_info_flags[2]).value();
+			obj->ctype.ai_info.CURRENT_STATE = build_ai_state_from_untrusted(ai_info_flags[1]).value_or(ai_static_state::AIS_REST);
+			obj->ctype.ai_info.GOAL_STATE = build_ai_state_from_untrusted(ai_info_flags[2]).value_or(ai_static_state::AIS_REST);
 			obj->ctype.ai_info.PATH_DIR = ai_info_flags[3];
 #if DXX_BUILD_DESCENT == 1
 			obj->ctype.ai_info.SUBMODE = ai_info_flags[4];
 #elif DXX_BUILD_DESCENT == 2
 			obj->ctype.ai_info.SUB_FLAGS = ai_info_flags[4];
 #endif
-			obj->ctype.ai_info.GOALSIDE = build_sidenum_from_untrusted(ai_info_flags[5]).value();
+			obj->ctype.ai_info.GOALSIDE = build_sidenum_from_untrusted(ai_info_flags[5]).value_or(static_cast<sidenum_t>(0));
 			obj->ctype.ai_info.CLOAKED = ai_info_flags[6];
 			obj->ctype.ai_info.SKIP_AI_COUNT = ai_info_flags[7];
 			obj->ctype.ai_info.REMOTE_OWNER = ai_info_flags[8];
@@ -569,8 +571,6 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 
 		case render_type::RT_MORPH:
 		case render_type::RT_POLYOBJ: {
-			int tmo;
-
 			obj->rtype.pobj_info.model_num = build_polygon_model_index_from_untrusted(
 #if DXX_BUILD_DESCENT == 1
 				convert_polymod(LevelSharedPolygonModelState.N_polygon_models, PHYSFSX_readInt(f))
@@ -584,26 +584,39 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 
 			obj->rtype.pobj_info.subobj_flags	= PHYSFSX_readInt(f);
 
-			tmo = PHYSFSX_readInt(f);
-
-#if !DXX_USE_EDITOR
-#if DXX_BUILD_DESCENT == 1
-			obj->rtype.pobj_info.tmap_override	= convert_tmap(tmo);
-#elif DXX_BUILD_DESCENT == 2
-			obj->rtype.pobj_info.tmap_override	= tmo;
-#endif
-			#else
-			if (tmo==-1)
-				obj->rtype.pobj_info.tmap_override	= -1;
-			else {
-				int xlated_tmo = tmap_xlate_table[tmo];
-				if (xlated_tmo < 0)	{
-					Int3();
-					xlated_tmo = 0;
+			obj->rtype.pobj_info.tmap_override = [raw_tmap_override = PHYSFSX_readInt(f)]() -> texture_index {
+				if (raw_tmap_override == -1) [[likely]]
+					/* Most objects do not use a texture override. */
+					return texture_index{UINT16_MAX};
+				const std::size_t unsigned_tmap_override = raw_tmap_override;
+#if DXX_USE_EDITOR
+				if (unsigned_tmap_override >= tmap_xlate_table.size()) [[unlikely]]
+				{
+					/* Most overrides are a valid index.  Only ill-formed
+					 * inputs should reach this block.
+					 */
+					con_printf(CON_URGENT, "Invalid texture override on object: tmo=%i; setting xlated_tmo=None", raw_tmap_override);
+					return texture_index{UINT16_MAX};
 				}
-				obj->rtype.pobj_info.tmap_override	= xlated_tmo;
-			}
-			#endif
+				const auto xlated_tmo{tmap_xlate_table[unsigned_tmap_override]};
+				if (xlated_tmo < Textures.size()) [[unlikely]]
+				{
+					con_printf(CON_URGENT, "Invalid texture override on object: tmo=%i, xlated_tmo=%hu; setting xlated_tmo=None", raw_tmap_override, underlying_value(xlated_tmo));
+					return texture_index{UINT16_MAX};
+				}
+				return xlated_tmo;
+#else
+				if (unsigned_tmap_override >= Textures.size()) [[unlikely]]
+				{
+					/* Most overrides are a valid index.  Only ill-formed
+					 * inputs should reach this block.
+					 */
+					con_printf(CON_URGENT, "Invalid texture override on object: tmo=%i; ignoring", raw_tmap_override);
+					return texture_index{UINT16_MAX};
+				}
+				return static_cast<texture_index>(unsigned_tmap_override);
+#endif
+			}();
 
 			obj->rtype.pobj_info.alt_textures	= 0;
 
@@ -726,8 +739,8 @@ static void write_object(const object &obj, short version, PHYSFS_File *f)
 
 			std::array<int8_t, 11> ai_info_flags{};
 			ai_info_flags[0] = underlying_value(obj.ctype.ai_info.CURRENT_GUN);
-			ai_info_flags[1] = obj.ctype.ai_info.CURRENT_STATE;
-			ai_info_flags[2] = obj.ctype.ai_info.GOAL_STATE;
+			ai_info_flags[1] = underlying_value(obj.ctype.ai_info.CURRENT_STATE);
+			ai_info_flags[2] = underlying_value(obj.ctype.ai_info.GOAL_STATE);
 			ai_info_flags[3] = obj.ctype.ai_info.PATH_DIR;
 #if DXX_BUILD_DESCENT == 1
 			ai_info_flags[4] = obj.ctype.ai_info.SUBMODE;

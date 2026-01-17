@@ -59,7 +59,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 //	Convert primary weapons to indices in Weapon_info array.
 #if DXX_BUILD_DESCENT == 1
 namespace dsx {
-const enumerated_array<weapon_id_type, MAX_PRIMARY_WEAPONS, primary_weapon_index_t> Primary_weapon_to_weapon_info{{
+constexpr per_primary_weapon_array<weapon_id_type> Primary_weapon_to_weapon_info{{
 	{
 		weapon_id_type::LASER_ID,
 		weapon_id_type::VULCAN_ID,
@@ -68,7 +68,7 @@ const enumerated_array<weapon_id_type, MAX_PRIMARY_WEAPONS, primary_weapon_index
 		weapon_id_type::FUSION_ID
 	}
 }};
-const enumerated_array<weapon_id_type, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t> Secondary_weapon_to_weapon_info{{
+constexpr per_secondary_weapon_array<weapon_id_type> Secondary_weapon_to_weapon_info{{
 	{
 		weapon_id_type::CONCUSSION_ID,
 		weapon_id_type::HOMING_ID,
@@ -83,7 +83,7 @@ const enumerated_array<weapon_id_type, MAX_SECONDARY_WEAPONS, secondary_weapon_i
 #include "fvi.h"
 
 namespace dsx {
-const enumerated_array<weapon_id_type, MAX_PRIMARY_WEAPONS, primary_weapon_index_t> Primary_weapon_to_weapon_info{{
+constexpr per_primary_weapon_array<weapon_id_type> Primary_weapon_to_weapon_info{{
 	{
 		weapon_id_type::LASER_ID,
 		weapon_id_type::VULCAN_ID,
@@ -97,7 +97,7 @@ const enumerated_array<weapon_id_type, MAX_PRIMARY_WEAPONS, primary_weapon_index
 		weapon_id_type::OMEGA_ID
 	}
 }};
-const enumerated_array<weapon_id_type, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t> Secondary_weapon_to_weapon_info{{
+constexpr per_secondary_weapon_array<weapon_id_type> Secondary_weapon_to_weapon_info{{
 	{
 		weapon_id_type::CONCUSSION_ID,
 		weapon_id_type::HOMING_ID,
@@ -158,7 +158,7 @@ static T get_alternate_weapon(const T current_weapon, const T base_weapon)
 namespace dsx {
 
 //for each Secondary weapon, which gun it fires out of
-const enumerated_array<player_gun_number, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t> Secondary_weapon_to_gun_num{{{
+constexpr per_secondary_weapon_array<player_gun_number> Secondary_weapon_to_gun_num{{{
 	player_gun_number::_4,
 	player_gun_number::_4,
 	player_gun_number::_7,
@@ -173,7 +173,7 @@ const enumerated_array<player_gun_number, MAX_SECONDARY_WEAPONS, secondary_weapo
 #endif
 }}};
 
-const enumerated_array<uint8_t, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t> Secondary_ammo_max{{
+constexpr per_secondary_weapon_array<uint8_t> Secondary_ammo_max{{
 	{
 		20, 10, 10, 5, 5,
 #if DXX_BUILD_DESCENT == 2
@@ -183,7 +183,7 @@ const enumerated_array<uint8_t, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t>
 }};
 
 //for each primary weapon, what kind of powerup gives weapon
-const enumerated_array<powerup_type_t, MAX_PRIMARY_WEAPONS, primary_weapon_index_t> Primary_weapon_to_powerup{{
+constexpr per_primary_weapon_array<powerup_type_t> Primary_weapon_to_powerup{{
 	{
 		powerup_type_t::POW_LASER,
 		powerup_type_t::POW_VULCAN_WEAPON,
@@ -201,7 +201,7 @@ const enumerated_array<powerup_type_t, MAX_PRIMARY_WEAPONS, primary_weapon_index
 }};
 
 //for each Secondary weapon, what kind of powerup gives weapon
-const enumerated_array<powerup_type_t, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t> Secondary_weapon_to_powerup{{
+constexpr per_secondary_weapon_array<powerup_type_t> Secondary_weapon_to_powerup{{
 	{
 		powerup_type_t::POW_MISSILE_1,
 		powerup_type_t::POW_HOMING_AMMO_1,
@@ -361,62 +361,62 @@ static primary_weapon_index_t get_mapped_weapon_index(const player_info &player_
 namespace dsx {
 has_primary_weapon_result player_has_primary_weapon(const player_info &player_info, primary_weapon_index_t weapon_num)
 {
-	//	Hack! If energy goes negative, you can't fire a weapon that doesn't require energy.
-	//	But energy should not go negative (but it does), so find out why it does!
-	auto &energy = player_info.energy;
-
-	const auto weapon_index = Primary_weapon_to_weapon_info[weapon_num];
-
 	if (!(player_info.primary_weapon_flags & HAS_PRIMARY_FLAG(weapon_num)))
 	{
+		/* If the weapon is absent, return no bits set. */
 		return has_primary_weapon_result{};
 	}
+	/* Otherwise, return a result indicating the player has the weapon, and
+	 * whether the player can fire that weapon.
+	 */
 
-		// Special case: Gauss cannon uses vulcan ammo.
-		if (weapon_index_uses_vulcan_ammo(weapon_num)) {
-			if (Weapon_info[weapon_index].ammo_usage <= player_info.vulcan_ammo)
-				return has_primary_weapon_result::weapon | has_primary_weapon_result::ammo | has_primary_weapon_result::energy;
-			return has_primary_weapon_result::weapon | has_primary_weapon_result::energy;
-		}
 	/* reject_unusable_primary_weapon_select checks
 	 * has_primary_weapon_result::ammo for all weapons.  Report ammo as present
 	 * for energy weapons to prevent a spurious "You don't have ammo for the"
 	 * error message. */
-	auto return_value = has_primary_weapon_result::weapon | has_primary_weapon_result::ammo;
+	constexpr auto result_has_weapon_ammo{has_primary_weapon_result::weapon | has_primary_weapon_result::ammo};
 
+	auto &energy{player_info.energy};
 #if DXX_BUILD_DESCENT == 1
 		//added on 1/21/99 by Victor Rachels... yet another hack
 		//fusion has 0 energy usage, HAS_ENERGY_FLAG was always true
 		if(weapon_num == primary_weapon_index_t::FUSION_INDEX)
 		{
 			if (energy >= F1_0*2)
-				return_value |= has_primary_weapon_result::energy;
+				return result_has_weapon_ammo | has_primary_weapon_result::energy;
+			return result_has_weapon_ammo;
 		}
 #elif DXX_BUILD_DESCENT == 2
 		if (weapon_num == primary_weapon_index_t::OMEGA_INDEX) {	// Hack: Make sure player has energy to omega
 			if (energy > 0 || player_info.Omega_charge)
-				return_value |= has_primary_weapon_result::energy;
+				return result_has_weapon_ammo | has_primary_weapon_result::energy;
+			return result_has_weapon_ammo;
 		}
 #endif
-		else
-		{
-			const auto energy_usage = Weapon_info[weapon_index].energy_usage;
-			/* The test for `energy_usage <= 0` should not be needed.
-			 * However, a Parallax comment suggests that players
-			 * sometimes get negative energy.  Use this test in
-			 * preference to coercing negative player energy to zero.
-			 */
-			if (energy_usage <= 0 || energy_usage <= energy)
-				return_value |= has_primary_weapon_result::energy;
-		}
-	return return_value;
+	const auto opt_weapon_num{Primary_weapon_to_weapon_info.valid_index(weapon_num)};
+	if (!opt_weapon_num) [[unlikely]]
+		return has_primary_weapon_result{};
+	const auto &weapon_info{Weapon_info[Primary_weapon_to_weapon_info[*opt_weapon_num]]};
+
+	// Special case: Gauss cannon uses vulcan ammo.
+	if (weapon_index_uses_vulcan_ammo(weapon_num))
+	{
+		if (weapon_info.ammo_usage <= player_info.vulcan_ammo) [[likely]]
+			return result_has_weapon_ammo | has_primary_weapon_result::energy;
+		return has_primary_weapon_result::weapon | has_primary_weapon_result::energy;
+	}
+	if (weapon_info.energy_usage <= energy) [[likely]]
+		return result_has_weapon_ammo | has_primary_weapon_result::energy;
+	return result_has_weapon_ammo;
 }
 
 has_secondary_weapon_result player_has_secondary_weapon(const player_info &player_info, const secondary_weapon_index_t weapon_num)
 {
-	const auto secondary_ammo = player_info.secondary_ammo[weapon_num];
-	const auto weapon_index = Secondary_weapon_to_weapon_info[weapon_num];
-	if (secondary_ammo && Weapon_info[weapon_index].ammo_usage <= secondary_ammo)
+	const auto opt_weapon_num{Secondary_weapon_to_weapon_info.valid_index(weapon_num)};
+	if (!opt_weapon_num) [[unlikely]]
+		return has_secondary_weapon_result::absent;
+	const auto secondary_ammo{player_info.secondary_ammo[*opt_weapon_num]};
+	if (secondary_ammo > 0 && Weapon_info[Secondary_weapon_to_weapon_info[*opt_weapon_num]].ammo_usage <= secondary_ammo)
 		return has_secondary_weapon_result::present;
 	return has_secondary_weapon_result::absent;
 }
@@ -1814,7 +1814,7 @@ void do_seismic_stuff(void)
 namespace serial {
 
 template <typename T>
-class is_cxx_array<enumerated_array<T, NDL, Difficulty_level_type>> : public is_cxx_array<std::array<T, NDL>>
+class is_cxx_array<per_difficulty_level_array<T>> : public is_cxx_array<std::array<T, NDL>>
 {
 };
 

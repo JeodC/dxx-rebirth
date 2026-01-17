@@ -94,6 +94,10 @@ namespace dcx {
 
 namespace {
 
+struct segment_depth_array_t : public per_segment_array<uint8_t>
+{
+};
+
 struct Edge_info
 {
 	std::array<vertnum_t, 2> verts;     // 8  bytes
@@ -106,6 +110,7 @@ struct Edge_info
 
 struct automap : ::dcx::window
 {
+	static constexpr fix ZOOM_DEFAULT{i2f(20 * 10)};
 	using ::dcx::window::window;
 	fix64			entry_time;
 	fix64			t1, t2;
@@ -135,7 +140,7 @@ struct automap : ::dcx::window
 	vms_vector		view_position;
 	fix			farthest_dist{(F1_0 * 20 * 50)}; // 50 segments away
 	vms_matrix		viewMatrix;
-	fix			viewDist{};
+	fix viewDist{ZOOM_DEFAULT};
 
 	segment_depth_array_t depth_array;
 	color_t			wall_normal_color;
@@ -212,6 +217,13 @@ struct automap : ::dcx::automap
 
 static void init_automap_subcanvas(grs_subcanvas &view, grs_canvas &container)
 {
+#if DXX_USE_STEREOSCOPIC_RENDER
+	if (VR_stereo != StereoFormat::None) {
+		const auto &&[x, y, w, h]{gr_build_stereo_viewport_window(VR_stereo, (SWIDTH / 23), (SHEIGHT / 6), (SWIDTH / 1.1), (SHEIGHT / 1.45))};
+		gr_init_sub_canvas(view, container, x, y, w, h);
+		return;
+	}
+#endif
 #if DXX_BUILD_DESCENT == 1
 	if (MacHog)
 		gr_init_sub_canvas(view, container, 38*(SWIDTH/640.0), 77*(SHEIGHT/480.0), 564*(SWIDTH/640.0), 381*(SHEIGHT/480.0));
@@ -387,9 +399,6 @@ void init_automap_colors(automap &am)
 
 // Map movement defines
 #define PITCH_DEFAULT 9000
-#define ZOOM_DEFAULT i2f(20*10)
-#define ZOOM_MIN_VALUE i2f(20*5)
-#define ZOOM_MAX_VALUE i2f(20*100)
 
 }
 
@@ -721,7 +730,7 @@ constexpr char system_name[][17] = {
 			"Omega System"};
 #endif
 
-static void name_frame(grs_canvas &canvas, automap &am)
+static void name_frame(grs_canvas &canvas, automap &am, int dx = 0, int dy = 0)
 {
 	gr_set_fontcolor(canvas, am.green_31, -1);
 	char		name_level_left[128];
@@ -737,7 +746,7 @@ static void name_frame(grs_canvas &canvas, automap &am)
 	else
 		name_level = Current_level_name;
 
-	gr_string(canvas, game_font, (SWIDTH / 64), (SHEIGHT / 48), name_level);
+	gr_string(canvas, game_font, dx + (SWIDTH / 64), dy + (SHEIGHT / 48), name_level);
 #elif DXX_BUILD_DESCENT == 2
 	char	name_level_right[128];
 	if (Current_level_num > 0)
@@ -751,9 +760,9 @@ static void name_frame(grs_canvas &canvas, automap &am)
 	else
 		snprintf(name_level_right, sizeof(name_level_right), " %s", current_level_name);
 
-	gr_string(canvas, game_font, (SWIDTH / 64), (SHEIGHT / 48), name_level_left);
+	gr_string(canvas, game_font, dx + (SWIDTH / 64), dy + (SHEIGHT / 48), name_level_left);
 	const auto &&[wr, h]{gr_get_string_size(game_font, name_level_right)};
-	gr_string(canvas, game_font, canvas.cv_bitmap.bm_w - wr - (SWIDTH / 64), (SHEIGHT / 48), name_level_right, wr, h);
+	gr_string(canvas, game_font, dx + canvas.cv_bitmap.bm_w - wr - (SWIDTH / 64), dy + (SHEIGHT / 48), name_level_right, wr, h);
 #endif
 }
 
@@ -769,7 +778,7 @@ static void automap_apply_input(automap &am, const vms_matrix &plrorient, const 
 			// Reset orientation
 			am.controls.state.fire_primary = 0;
 			am.viewMatrix = plrorient;
-			am.view_position = vm_vec_scale_add(plrpos, am.viewMatrix.fvec, -ZOOM_DEFAULT);
+			am.view_position = vm_vec_scale_add(plrpos, am.viewMatrix.fvec, -am.ZOOM_DEFAULT);
 		}
 		
 		if (am.controls.pitch_time || am.controls.heading_time || am.controls.bank_time)
@@ -785,16 +794,26 @@ static void automap_apply_input(automap &am, const vms_matrix &plrorient, const 
 			check_and_fix_matrix(am.viewMatrix);
 		}
 		
-		if (am.controls.forward_thrust_time || am.controls.vertical_thrust_time || am.controls.sideways_thrust_time)
+		if (const auto forward_thrust_time{am.controls.forward_thrust_time}, vertical_thrust_time{am.controls.vertical_thrust_time}, sideways_thrust_time{am.controls.sideways_thrust_time}; forward_thrust_time || vertical_thrust_time || sideways_thrust_time)
 		{
-			vm_vec_scale_add2(am.view_position, am.viewMatrix.fvec, am.controls.forward_thrust_time * ZOOM_SPEED_FACTOR);
-			vm_vec_scale_add2(am.view_position, am.viewMatrix.uvec, am.controls.vertical_thrust_time * SLIDE_SPEED);
-			vm_vec_scale_add2(am.view_position, am.viewMatrix.rvec, am.controls.sideways_thrust_time * SLIDE_SPEED);
+			auto view_position{am.view_position};
+			/* If the thrust time is 0, then `vm_vec_scale_add2` degrades to
+			 * multiplying the second term by 0 and adding the 0 result to the
+			 * first term.  Avoid the wasted multiply+write by checking for a
+			 * zero thrust time.
+			 */
+			if (forward_thrust_time)
+				vm_vec_scale_add2(view_position, am.viewMatrix.fvec, forward_thrust_time * ZOOM_SPEED_FACTOR);
+			if (vertical_thrust_time)
+				vm_vec_scale_add2(view_position, am.viewMatrix.uvec, vertical_thrust_time * SLIDE_SPEED);
+			if (sideways_thrust_time)
+				vm_vec_scale_add2(view_position, am.viewMatrix.rvec, sideways_thrust_time * SLIDE_SPEED);
 			
 			// Crude wrapping check
-			clamp_fix_symmetric(am.view_position.x, F1_0*32000);
-			clamp_fix_symmetric(am.view_position.y, F1_0*32000);
-			clamp_fix_symmetric(am.view_position.z, F1_0*32000);
+			constexpr fix upper_bound{F1_0 * 32000}, lower_bound{-upper_bound};
+			am.view_position.x = std::clamp(view_position.x, lower_bound, upper_bound);
+			am.view_position.y = std::clamp(view_position.y, lower_bound, upper_bound);
+			am.view_position.z = std::clamp(view_position.z, lower_bound, upper_bound);
 		}
 	}
 	else
@@ -802,7 +821,7 @@ static void automap_apply_input(automap &am, const vms_matrix &plrorient, const 
 		if (am.controls.state.fire_primary)
 		{
 			// Reset orientation
-			am.viewDist = ZOOM_DEFAULT;
+			am.viewDist = am.ZOOM_DEFAULT;
 			am.tangles.p = PITCH_DEFAULT;
 			am.tangles.h  = 0;
 			am.tangles.b  = 0;
@@ -810,7 +829,12 @@ static void automap_apply_input(automap &am, const vms_matrix &plrorient, const 
 			am.controls.state.fire_primary = 0;
 		}
 
-		am.viewDist -= am.controls.forward_thrust_time * ZOOM_SPEED_FACTOR;
+		if (am.controls.forward_thrust_time)
+		{
+			constexpr fix ZOOM_MIN_VALUE{i2f(20*5)};
+			constexpr fix ZOOM_MAX_VALUE{i2f(20*100)};
+			am.viewDist = std::clamp(am.viewDist - (am.controls.forward_thrust_time * ZOOM_SPEED_FACTOR), ZOOM_MIN_VALUE, ZOOM_MAX_VALUE);
+		}
 		am.tangles.p += fixdiv(am.controls.pitch_time, ROT_SPEED_DIVISOR);
 		am.tangles.h += fixdiv(am.controls.heading_time, ROT_SPEED_DIVISOR);
 		am.tangles.b += fixdiv(am.controls.bank_time, ROT_SPEED_DIVISOR * 2);
@@ -829,20 +853,39 @@ static void automap_apply_input(automap &am, const vms_matrix &plrorient, const 
 
 		const auto &&tempm{vm_angles_2_matrix(am.tangles)};
 		vm_matrix_x_matrix(am.viewMatrix, plrorient, tempm);
-
-		clamp_fix_lh(am.viewDist, ZOOM_MIN_VALUE, ZOOM_MAX_VALUE);
 	}
 }
 
-static void draw_automap(fvcobjptr &vcobjptr, automap &am)
+static void draw_automap(fvcobjptr &vcobjptr, automap &am, fix eye = 0)
 {
+#if DXX_USE_STEREOSCOPIC_RENDER
+	int sw = SWIDTH;
+	int sh = SHEIGHT;
+	const auto &&[dx, dy]{[](const StereoFormat stereo, const int eye) -> std::pair<int, int> {
+		// left eye viewport origin
+		if (eye <= 0) {
+			return {0, gr_build_stereo_viewport_offset_left_eye(stereo, 0)};
+		}
+		return gr_build_stereo_viewport_offset_right_eye(stereo, 0, 0, eye);
+	}(VR_stereo, eye)};
+	const auto &&[dw, dh]{gr_build_stereo_viewport_size(VR_stereo, sw, sh)};
+	#define SCREEN_SIZE_STEREO 	grd_curscreen->set_screen_width_height(dw, dh)
+	#define SCREEN_SIZE_NORMAL 	grd_curscreen->set_screen_width_height(sw, sh)
+#else
+	#define SCREEN_SIZE_STEREO 	// no-op
+	#define SCREEN_SIZE_NORMAL 	// no-op
+	const int dx = 0, dy = 0;	// no x,y adjust
+#endif
+
 	if ( am.leave_mode==0 && am.controls.state.automap && (timer_query()-am.entry_time)> /* LEAVE_TIME = */ 0x4000)
 		am.leave_mode = 1;
 
 	{
 		auto &canvas{am.w_canv};
-		show_fullscr(canvas, am.automap_background);
+		if (eye <= 0)
+			show_fullscr(canvas, am.automap_background);
 		gr_set_fontcolor(canvas, BM_XRGB(20, 20, 20), -1);
+		SCREEN_SIZE_STEREO;
 	{
 		int x, y;
 #if DXX_BUILD_DESCENT == 1
@@ -851,6 +894,7 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 	else
 #endif
 			x = SWIDTH / 8, y = SHEIGHT / 16;
+		x += dx, y += dy;
 		gr_string(canvas, *HUGE_FONT, x, y, TXT_AUTOMAP);
 	}
 	{
@@ -882,6 +926,7 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 		y1 = SHEIGHT / 1.083;
 		y2 = SHEIGHT / 1.043;
 #endif
+		x += dx, y0 += dy, y1 += dy, y2 += dy;
 		auto &game_font{*GAME_FONT};
 		gr_string(canvas, game_font, x, y0, TXT_TURN_SHIP);
 		gr_string(canvas, game_font, x, y1, s1);
@@ -889,16 +934,25 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 	}
 
 	}
+	SCREEN_SIZE_NORMAL;
 	auto &canvas{am.automap_view};
 
-	gr_clear_canvas(canvas, BM_XRGB(0,0,0));
+	if (eye == 0)
+		gr_clear_canvas(canvas, BM_XRGB(0,0,0));
 
 	g3_start_frame(canvas);
 	render_start_frame();
 
+#if DXX_USE_STEREOSCOPIC_RENDER
+	// select stereo viewport/transform/buffer per left/right eye
+	if (VR_stereo != StereoFormat::None)
+		g3_stereo_frame(eye, VR_eye_offset);
+#endif
+
 	if (!PlayerCfg.AutomapFreeFlight)
 		am.view_position = vm_vec_scale_add(am.view_target, am.viewMatrix.fvec, -am.viewDist);
 
+	am.view_position.x += eye;	// stereo viewpoint offset
 	g3_set_view_matrix(am.view_position,am.viewMatrix,am.zoom);
 
 	draw_all_edges(am);
@@ -972,7 +1026,9 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am)
 
 	g3_end_frame();
 
-	name_frame(canvas, am);
+	SCREEN_SIZE_STEREO;
+	name_frame(canvas, am, dx, dy);
+	SCREEN_SIZE_NORMAL;
 
 #if DXX_BUILD_DESCENT == 2
 	{
@@ -1205,6 +1261,13 @@ window_event_result automap::event_handler(const d_event &event)
 				auto &plrobj{get_local_plrobj()};
 				automap_apply_input(*this, plrobj.orient, plrobj.pos);
 			}
+#if DXX_USE_STEREOSCOPIC_RENDER
+			if (VR_stereo != StereoFormat::None) {
+				draw_automap(vcobjptr, *this, -VR_eye_width);
+				draw_automap(vcobjptr, *this,  VR_eye_width);
+			}
+			else
+#endif
 			draw_automap(vcobjptr, *this);
 			break;
 		case event_type::window_close:
@@ -1269,9 +1332,6 @@ void do_automap()
 
 	gr_set_default_canvas();
 
-	if ( am->viewDist==0 )
-		am->viewDist = ZOOM_DEFAULT;
-
 	auto &plrobj{get_local_plrobj()};
 	am->viewMatrix = plrobj.orient;
 	am->tangles.p = PITCH_DEFAULT;
@@ -1280,7 +1340,7 @@ void do_automap()
 	am->view_target = plrobj.pos;
 	
 	if (PlayerCfg.AutomapFreeFlight)
-		am->view_position = vm_vec_scale_add(plrobj.pos, am->viewMatrix.fvec, -ZOOM_DEFAULT);
+		am->view_position = vm_vec_scale_add(plrobj.pos, am->viewMatrix.fvec, -am->ZOOM_DEFAULT);
 
 	am->t1 = am->entry_time = timer_query();
 	am->t2 = am->t1;

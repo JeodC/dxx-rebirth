@@ -34,6 +34,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "wall.h"
 #include "d_underlying_value.h"
 #include <optional>
+#include <tuple>
+#include <utility>
 
 namespace dcx {
 
@@ -157,9 +159,119 @@ enum class StereoFormat : uint8_t
 	SideBySideFullHeight,
 	SideBySideHalfHeight,
 	AboveBelowSync,
-	HighestFormat = AboveBelowSync
+	QuadBuffers,
+	HighestFormat = QuadBuffers
 };
-#endif
+
+// stereo viewport adjustments
+[[nodiscard]]
+constexpr std::pair<unsigned, unsigned> gr_build_stereo_viewport_size(const StereoFormat stereo, unsigned w, unsigned h)
+{
+	switch (stereo) {
+		case StereoFormat::None:
+		case StereoFormat::QuadBuffers:
+		default:
+			break;
+		case StereoFormat::AboveBelowSync:
+			h -= VR_sync_width;
+			[[fallthrough]];
+		case StereoFormat::AboveBelow:
+			h /= 2;
+			break;
+		case StereoFormat::SideBySideHalfHeight:
+			h /= 2;
+			[[fallthrough]];
+		case StereoFormat::SideBySideFullHeight:
+			w /= 2;
+			break;
+	}
+	return {w, h};
+}
+
+/* The left eye always retains its original x coordinate.  The y coordinate can
+ * change in one stereo mode, and is otherwise retained unmodified.
+ */
+[[nodiscard]]
+static inline int gr_build_stereo_viewport_offset_left_eye(const StereoFormat stereo, const int y)
+{
+	if (stereo == StereoFormat::SideBySideHalfHeight) [[unlikely]]
+	{
+		/* This function should never be called when the screen is not
+		 * available.  However, check it is available before loading the screen
+		 * height.
+		 */
+		if (grd_curscreen) [[likely]]
+			return y + (SHEIGHT / 4);
+	}
+	return y;
+}
+
+[[nodiscard]]
+static inline std::pair<int, int> gr_build_stereo_viewport_offset_right_eye(const StereoFormat stereo, int x, int y, const int eye)
+{
+	switch (stereo) {
+		case StereoFormat::None:
+		case StereoFormat::QuadBuffers:
+		default:
+			[[likely]];
+			return {x, y};
+		case StereoFormat::AboveBelowSync:
+		case StereoFormat::AboveBelow:
+		case StereoFormat::SideBySideHalfHeight:
+		case StereoFormat::SideBySideFullHeight:
+			if (!grd_curscreen) [[unlikely]]
+				return {x, y};
+	}
+	switch (stereo) {
+		case StereoFormat::None:
+		case StereoFormat::QuadBuffers:
+		default:
+			// unreachable due to first switch
+			break;
+		case StereoFormat::AboveBelowSync:
+			y += VR_sync_width/2;
+			[[fallthrough]];
+		case StereoFormat::AboveBelow:
+			y += SHEIGHT/2;
+			break;
+		case StereoFormat::SideBySideHalfHeight:
+			if (y == 0 && eye > F0_1)	// for automap 2nd pass
+				y += SHEIGHT/4;
+			[[fallthrough]];
+		case StereoFormat::SideBySideFullHeight:
+			x += SWIDTH/2;
+			break;
+	}
+	return {x, y};
+}
+
+[[nodiscard]]
+constexpr std::tuple<int /* x */, int /* y */, unsigned /* w */, unsigned /* h */> gr_build_stereo_viewport_window(const StereoFormat stereo, int x, int y, unsigned w, unsigned h)
+{
+	switch (stereo) {
+		case StereoFormat::None:
+		case StereoFormat::QuadBuffers:
+			[[likely]];
+			break;
+		case StereoFormat::AboveBelowSync:
+			h -= VR_sync_width / 2;
+			[[fallthrough]];
+		case StereoFormat::AboveBelow:
+			y -= y / 2;
+			h -= h / 2;
+			break;
+		case StereoFormat::SideBySideHalfHeight:
+			y -= y / 2;
+			h -= h / 2;
+			[[fallthrough]];
+		case StereoFormat::SideBySideFullHeight:
+			x -= x / 2;
+			w -= w / 2;
+			break;
+	}
+	return {x, y, w, h};
+}
+#endif	// DXX_USE_STEREOSCOPIC_RENDER
 
 }
 

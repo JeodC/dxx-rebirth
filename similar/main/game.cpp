@@ -203,10 +203,11 @@ constexpr screen_mode initial_large_game_screen_mode{1024, 768};
 screen_mode Game_screen_mode = initial_large_game_screen_mode;
 
 #if DXX_USE_STEREOSCOPIC_RENDER
-StereoFormat VR_stereo;
+StereoFormat VR_stereo = StereoFormat::None;
 fix  VR_eye_width = F1_0;
 int VR_eye_offset{0};
-int VR_sync_width{20};
+int VR_sync_width{24};
+int  VR_sync_param = 24;
 grs_subcanvas VR_hud_left;
 grs_subcanvas VR_hud_right;
 #endif
@@ -220,9 +221,7 @@ void init_stereo()
 {
 #if DXX_USE_OGL
 	// init stereo options
-	if (CGameArg.OglStereo || CGameArg.OglStereoView) {
-		if (VR_stereo == StereoFormat::None && !VR_eye_offset)
-			VR_stereo = (CGameArg.OglStereoView) ? static_cast<StereoFormat>(CGameArg.OglStereoView % (static_cast<unsigned>(StereoFormat::HighestFormat) + 1)) : StereoFormat::AboveBelow;
+	if (VR_stereo != StereoFormat::None) {
 		constexpr int half_width_eye_offset = -6;
 		constexpr int full_width_eye_offset = -12;
 		switch (VR_stereo)
@@ -230,6 +229,7 @@ void init_stereo()
 			case StereoFormat::None:
 			case StereoFormat::AboveBelow:
 			case StereoFormat::AboveBelowSync:
+			case StereoFormat::QuadBuffers:
 				VR_eye_offset = full_width_eye_offset;
 				break;
 			case StereoFormat::SideBySideFullHeight:
@@ -238,11 +238,8 @@ void init_stereo()
 				break;
 		}
 		VR_eye_width = (F1_0 * 7) / 10;	// Descent 1.5 defaults
-		VR_sync_width = (20 * SHEIGHT) / 480;
+		VR_sync_width = (VR_sync_param * SHEIGHT) / 480; // normalized for 640x480
 		PlayerCfg.CockpitMode[1] = cockpit_mode_t::full_screen;
-	}
-	else {
-		VR_stereo = StereoFormat::None;
 	}
 #endif
 }
@@ -311,6 +308,7 @@ void init_cockpit()
 				switch (VR_stereo)
 				{
 					case StereoFormat::None:
+					case StereoFormat::QuadBuffers:
 						/* Preserve width */
 						/* Preserve height */
 						break;
@@ -407,6 +405,13 @@ void game_init_render_sub_buffers(grs_canvas &canvas, const int x, const int y, 
 			case StereoFormat::None:
 			default:
 				return;
+			case StereoFormat::QuadBuffers:
+				l.x = x + dx;
+				l.y = r.y = y;
+				l.w = r.w = w - dx;
+				l.h = r.h = h;
+				r.x = x;
+				break;
 			case StereoFormat::AboveBelow:
 				l.x = x + dx;
 				l.y = y;
@@ -1889,13 +1894,13 @@ namespace dsx {
 object *Missile_viewer=NULL;
 object_signature_t Missile_viewer_sig;
 
-enumerated_array<game_marker_index, 2, gauge_inset_window_view> Marker_viewer_num{
+per_gauge_inset_window_view_array<game_marker_index> Marker_viewer_num{
 	{{
 		game_marker_index::None,
 		game_marker_index::None,
 	}}
 };
-enumerated_array<unsigned, 2, gauge_inset_window_view> Coop_view_player{
+per_gauge_inset_window_view_array<unsigned> Coop_view_player{
 	{{
 		 UINT_MAX,
 		 UINT_MAX
@@ -1988,23 +1993,42 @@ window_event_result GameProcessFrame(const d_level_shared_robot_info_state &Leve
 	auto &pl_flags = player_info.powerup_flags;
 	if (pl_flags & PLAYER_FLAGS_HEADLIGHT_ON)
 	{
-		static int turned_off=0;
-		auto &energy = player_info.energy;
+		/* The headlight consumes energy every frame.  If the player's energy
+		 * drops to less than 10, turn off the headlight to try to avoid
+		 * draining energy down to 0.  However, if the headlight has already
+		 * been forced off, and the player turns it back on, let it stay on
+		 * until energy reaches 0, because the player apparently wants light
+		 * despite the low energy level.
+		 *
+		 * If the headlight was previously forced off, and the player's energy
+		 * is no longer less than 10, clear
+		 * `player_headlight_forcibly_turned_off` so that the next time the
+		 * player drops to less than 10, the headlight can be forced off again,
+		 * without conflicting with the above allowance that the player can
+		 * override the automatic disable.
+		 */
+		static int8_t player_headlight_forcibly_turned_off{};
+		fix energy{player_info.energy};
 		energy -= (FrameTime*3/8);
+		bool headlight_should_turn_off{false};
 		if (energy < i2f(10)) {
-			if (!turned_off) {
-				pl_flags &= ~PLAYER_FLAGS_HEADLIGHT_ON;
-				turned_off = 1;
-				if (Game_mode & GM_MULTI)
-					multi_send_flags(Player_num);
+			if (!player_headlight_forcibly_turned_off)
+			{
+				headlight_should_turn_off = true;
+				player_headlight_forcibly_turned_off = 1;
 			}
 		}
 		else
-			turned_off = 0;
+			player_headlight_forcibly_turned_off = 0;
 
 		if (energy <= 0)
 		{
 			energy = 0;
+			headlight_should_turn_off = true;
+		}
+		player_info.energy = energy;
+		if (headlight_should_turn_off)
+		{
 			pl_flags &= ~PLAYER_FLAGS_HEADLIGHT_ON;
 			if (Game_mode & GM_MULTI)
 				multi_send_flags(Player_num);
@@ -2155,7 +2179,10 @@ void compute_slide_segs()
 		for (const auto sidenum : MAX_SIDES_PER_SEGMENT)
 		{
 			const auto &uside = suseg.u.sides[sidenum];
-			const auto &ti = TmapInfo[get_texture_index(uside.tmap_num)];
+			const auto texture1_index{get_texture_index(uside.tmap_num)};
+			if (texture1_index >= TmapInfo.size()) [[unlikely]]
+				continue;
+			const auto &ti{TmapInfo[texture1_index]};
 			if (!(ti.slide_u || ti.slide_v))
 				continue;
 			const auto &sside = suseg.s.sides[sidenum];
@@ -2200,7 +2227,10 @@ static void slide_textures(void)
 				if (slide_seg & build_sidemask(sidenum))
 				{
 					auto &side = useg.sides[sidenum];
-					const auto &ti = TmapInfo[get_texture_index(side.tmap_num)];
+					const auto texture1_index{get_texture_index(side.tmap_num)};
+					if (texture1_index >= TmapInfo.size()) [[unlikely]]
+						continue;
+					const auto &ti{TmapInfo[texture1_index]};
 					const auto tiu = ti.slide_u;
 					const auto tiv = ti.slide_v;
 					if (tiu || tiv)
@@ -2236,7 +2266,13 @@ static void flicker_lights(const d_level_shared_destructible_light_state &LevelS
 		const auto sidenum{f.sidenum};
 		{
 			auto &side = segp->unique_segment::sides[sidenum];
-			if (!(TmapInfo[get_texture_index(side.tmap_num)].lighting || TmapInfo[get_texture_index(side.tmap_num2)].lighting))
+			const auto texture1_index{get_texture_index(side.tmap_num)};
+			if (texture1_index >= TmapInfo.size()) [[unlikely]]
+				continue;
+			const auto texture2_index{get_texture_index(side.tmap_num2)};
+			if (texture2_index >= TmapInfo.size()) [[unlikely]]
+				continue;
+			if (!(TmapInfo[texture1_index].lighting || TmapInfo[texture2_index].lighting))
 				continue;
 		}
 
@@ -2312,7 +2348,7 @@ bool FireLaser(player_info &player_info, const control_info &Controls)
 
 	if (Primary_weapon == primary_weapon_index_t::FUSION_INDEX)
 	{
-		auto &energy = player_info.energy;
+		auto energy{player_info.energy};
 		auto &Auto_fire_fusion_cannon_time = player_info.Auto_fire_fusion_cannon_time;
 		if (energy < F1_0 * 2 && Auto_fire_fusion_cannon_time == 0)
 		{
@@ -2332,6 +2368,7 @@ bool FireLaser(player_info &player_info, const control_info &Controls)
 				Auto_fire_fusion_cannon_time = GameTime64 -1;	//	Fire now!
 			} else
 				Auto_fire_fusion_cannon_time = GameTime64 + FrameTime/2 + 1;		//	Fire the fusion cannon at this time in the future.
+			player_info.energy = energy;
 
 			{
 				int dg, db;

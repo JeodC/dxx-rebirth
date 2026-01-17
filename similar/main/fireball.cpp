@@ -153,7 +153,7 @@ struct connected_segment_raw_distances
 		fvcwallptr &vcwallptr;
 		const segment_distance_count_type max_depth;
 		depth_count_array &count_segments_at_depth;
-		enumerated_array<biased_distance, MAX_SEGMENTS, segnum_t> &depth_by_segment;
+		per_segment_array<biased_distance> &depth_by_segment;
 		/* Segments that are farther away than max_depth do not have a
 		 * specific distance computed, and are only known to be too far
 		 * away.
@@ -175,7 +175,7 @@ struct connected_segment_raw_distances
 	 * in the traversal.
 	 */
 	static_assert(static_cast<unsigned>(biased_distance::indeterminate) == 0, "`indeterminate` must be 0 so that zero-initialization assigns the value `indeterminate` to every element in the array");
-	enumerated_array<biased_distance, MAX_SEGMENTS, segnum_t> depth_by_segment{};
+	per_segment_array<biased_distance> depth_by_segment{};
 	/* Prefer that the maximum depth be passed as a
 	 * std::integral_constant so that it can be checked at compile time.
 	 * Allow use of non-integral_constant expressions if the caller uses
@@ -1253,8 +1253,8 @@ static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained
 				ai_local *const ailp{&obj.ctype.ai_info.ail};
 				ailp->player_awareness_type = player_awareness_type_t::PA_WEAPON_ROBOT_COLLISION;
 				ailp->player_awareness_time = F1_0*3;
-				obj.ctype.ai_info.CURRENT_STATE = AIS_LOCK;
-				obj.ctype.ai_info.GOAL_STATE = AIS_LOCK;
+				obj.ctype.ai_info.CURRENT_STATE = ai_static_state::AIS_LOCK;
+				obj.ctype.ai_info.GOAL_STATE = ai_static_state::AIS_LOCK;
 				obj.ctype.ai_info.REMOTE_OWNER = -1;
 			}
 
@@ -1704,13 +1704,13 @@ void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime
 
 	const auto &&objseg{Segments.vmptridx(obj.segnum)};
 	{
-		const auto &&segnum{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos_left, objseg)};
+		const auto &&segnum{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos_left, objseg DXX_lighting_hack_pass_parameter)};
 	if (segnum != segment_none)
 		object_create_explosion_without_damage(Vclip, segnum, pos_left, size_scale, vclip_index::afterburner_blob);
 	}
 
 	if (count > 1) {
-		const auto &&segnum{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos_right, objseg)};
+		const auto &&segnum{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos_right, objseg DXX_lighting_hack_pass_parameter)};
 		if (segnum != segment_none) {
 			const auto &&blob_obj{object_create_explosion_without_damage(Vclip, segnum, pos_right, size_scale, vclip_index::afterburner_blob)};
 			if (lifetime != -1 && blob_obj != object_none)

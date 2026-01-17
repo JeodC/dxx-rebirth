@@ -272,18 +272,24 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 	grs_bitmap *bm2 = nullptr;
 	if (!CGameArg.DbgUseOldTextureMerge)
 	{
-		const auto texture1 = Textures[get_texture_index(tmap1)];
+		const auto texture1_index{get_texture_index(tmap1)};
+		if (texture1_index >= TmapInfo.size()) [[unlikely]]
+			return;
+		const auto texture1{Textures[texture1_index]};
 		PIGGY_PAGE_IN(texture1);
 		bm = &GameBitmaps[texture1];
 		if (tmap2 != texture2_value::None)
 		{
-			const auto texture2 = Textures[get_texture_index(tmap2)];
+			const auto texture2_index{get_texture_index(tmap2)};
+			if (texture2_index >= TmapInfo.size()) [[unlikely]]
+				return;
+			const auto texture2{Textures[texture2_index]};
 			PIGGY_PAGE_IN(texture2);
 			bm2 = &GameBitmaps[texture2];
 			if (bm2->get_flag_mask(BM_FLAG_SUPER_TRANSPARENT))
 			{
 				bm2 = nullptr;
-			bm = &texmerge_get_cached_bitmap( tmap1, tmap2 );
+				bm = &texmerge_get_cached_bitmap(GameBitmaps, Textures, tmap1, tmap2);
 			}
 		}
 	}else
@@ -291,9 +297,12 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 		// New code for overlapping textures...
 		if (tmap2 != texture2_value::None)
 		{
-			bm = &texmerge_get_cached_bitmap( tmap1, tmap2 );
+			bm = &texmerge_get_cached_bitmap(GameBitmaps, Textures, tmap1, tmap2);
 		} else {
-			const auto texture1 = Textures[get_texture_index(tmap1)];
+			const auto texture1_index{get_texture_index(tmap1)};
+			if (texture1_index >= TmapInfo.size()) [[unlikely]]
+				return;
+			const auto texture1{Textures[texture1_index]};
 			bm = &GameBitmaps[texture1];
 			PIGGY_PAGE_IN(texture1);
 		}
@@ -346,10 +355,18 @@ static void render_face(grs_canvas &canvas, const shared_segment &segp, const si
 	}
 
 	bool alpha = false;
-	if (PlayerCfg.AlphaBlendEClips && is_alphablend_eclip(TmapInfo[get_texture_index(tmap1)].eclip_num)) // set nice transparency/blending for some special effects (if we do more, we should maybe use switch here)
+	if (PlayerCfg.AlphaBlendEClips)
 	{
-		alpha = true;
-		gr_settransblend(canvas, GR_FADE_OFF, gr_blend::additive_c);
+		const auto texture1_index{get_texture_index(tmap1)};
+		if (texture1_index >= TmapInfo.size()) [[unlikely]]
+		{
+			/* Do nothing - skip indexing into TmapInfo */
+		}
+		else if (is_alphablend_eclip(TmapInfo[texture1_index].eclip_num)) // set nice transparency/blending for some special effects (if we do more, we should maybe use switch here)
+		{
+			alpha = true;
+			gr_settransblend(canvas, GR_FADE_OFF, gr_blend::additive_c);
+		}
 	}
 
 #if DXX_USE_EDITOR
@@ -395,7 +412,7 @@ static void check_face(grs_canvas &canvas, const vmsegidx_t segnum, const sidenu
 		(void)tmap2;
 #else
 		grs_bitmap *const bm = (tmap2 != texture2_value::None)
-			? &texmerge_get_cached_bitmap( tmap1, tmap2 )
+			? &texmerge_get_cached_bitmap(GameBitmaps, Textures, tmap1, tmap2)
 			: &GameBitmaps[Textures[get_texture_index(tmap1)]];
 #endif
 		range_for (const uint_fast32_t i, xrange(nv))
@@ -1260,11 +1277,9 @@ void render_frame(grs_canvas &canvas, fix eye_offset, window_rendered_data &wind
 	g3_start_frame(canvas);
 
 #if DXX_USE_STEREOSCOPIC_RENDER
-#if DXX_USE_OGL
 	// select stereo viewport/transform/buffer per left/right eye
 	if (VR_stereo != StereoFormat::None && eye_offset)
-		ogl_stereo_frame(eye_offset < 0, VR_eye_offset);
-#endif
+		g3_stereo_frame(eye_offset, VR_eye_offset);
 #endif
 
 	auto Viewer_eye = Viewer->pos;
@@ -1282,7 +1297,7 @@ void render_frame(grs_canvas &canvas, fix eye_offset, window_rendered_data &wind
 	#endif
 
 	const auto &&viewer_segp = Segments.vmptridx(Viewer->segnum);
-	auto start_seg_num = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, Viewer_eye, viewer_segp);
+	auto start_seg_num{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, Viewer_eye, viewer_segp DXX_lighting_hack_pass_parameter)};
 
 	if (start_seg_num==segment_none)
 		start_seg_num = viewer_segp;
@@ -1676,8 +1691,17 @@ void render_mine(grs_canvas &canvas, const vms_vector &Viewer_eye, const vcsegid
 #endif
 							)
 						{
-							if (PlayerCfg.AlphaBlendEClips && is_alphablend_eclip(TmapInfo[get_texture_index(seg->unique_segment::sides[sn].tmap_num)].eclip_num)) // Do NOT render geometry with blending textures. Since we've not rendered any objects, yet, they would disappear behind them.
-                                                                continue;
+							if (PlayerCfg.AlphaBlendEClips)
+							{
+								const auto texture1_index{get_texture_index(seg->unique_segment::sides[sn].tmap_num)};
+								if (texture1_index >= TmapInfo.size()) [[unlikely]]
+								{
+									/* Do nothing - skip indexing into TmapInfo */
+								}
+								else if (is_alphablend_eclip(TmapInfo[texture1_index].eclip_num))
+									// Do NOT render geometry with blending textures. Since we've not rendered any objects, yet, they would disappear behind them.
+									continue;
+							}
 							glAlphaFunc(GL_GEQUAL,0.8); // prevent ugly outlines if an object (which is rendered later) is shown behind a grate, door, etc. if texture filtering is enabled. These sides are rendered later again with normal AlphaFunc
 							render_side(vcvertptr, canvas, seg, sn, wid, Viewer_eye);
 							glAlphaFunc(GL_GEQUAL,0.02);

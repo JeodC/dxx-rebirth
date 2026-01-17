@@ -207,6 +207,25 @@ static void show_first_found_title_screen(const char *oem, const char *share, co
 		show_title_screen(filename, title_load_location::from_hog_only);
 }
 
+#if DXX_USE_STEREOSCOPIC_RENDER
+[[nodiscard]]
+std::tuple<int /* x */, int /* y */, unsigned /* w */, unsigned /* h */> build_stereo_viewport_adjust(const StereoFormat stereo, const int x, const int y, const int w, const int h)
+{
+	auto v{gr_build_stereo_viewport_window(stereo, x, y, w, h)};
+	auto &ry{std::get<1>(v)};
+	ry = gr_build_stereo_viewport_offset_left_eye(stereo, ry);
+	return v;
+}
+
+void stereo_viewport_copy(grs_canvas &canvas, int x, int y, int w, int h)
+{
+	const auto &&[dx, dy]{gr_build_stereo_viewport_offset_right_eye(VR_stereo, x, y, 1)};
+#if DXX_USE_OGL
+	ogl_ubitblt_cs(canvas, w, h, dx, dy, x, y);
+#endif
+}
+#endif
+
 }
 
 }
@@ -328,74 +347,41 @@ namespace dcx {
 namespace {
 
 //-----------------------------------------------------------------------------
+
+struct msgstream
+{
+	int x;
+	int y;
+	color_t color;
+	std::array<char, 2> ch;
+};
+
 struct briefing_screen {
 	char    bs_name[13];                //  filename, eg merc01.  Assumes .lbm suffix.
 	sbyte   level_num;
 	sbyte   message_num;
-	short   text_ulx, text_uly;         //  upper left x,y of text window
-	short   text_width, text_height;    //  width and height of text window
+	int     text_ulx, text_uly;         //  upper left x,y of text window
+	int     text_width, text_height;    //  width and height of text window
 };
 
 #define	ENDING_LEVEL_NUM_OEMSHARE 0x7f
 #define	ENDING_LEVEL_NUM_REGISTER 0x7e
 
-static grs_subcanvas_ptr create_spinning_robot_sub_canvas(grs_canvas &canvas)
-{
-	return gr_create_sub_canvas(canvas, rescale_x(canvas.cv_bitmap, 138), rescale_y(canvas.cv_bitmap, 55), rescale_x(canvas.cv_bitmap, 166), rescale_y(canvas.cv_bitmap, 138));
-}
-
-static std::array<char, 32> get_message_name(const char *&message, const char *const trailer)
-{
-	auto p = message;
-	for (; *p == ' '; ++p)
-	{
-	}
-	std::array<char, 32> result{};
-	const auto e = std::prev(result.end(), sizeof(".bbm"));
-	auto i = result.begin();
-	char c;
-	for (; (c = *p) && c != ' ' && c != '\n'; ++p)
-	{
-		*i++ = c;
-		if (i == e)
-			/* Avoid buffer overflow; this was not present in the
-			 * original code.
-			 */
-			break;
-	}
-	/* This is inconsistent.  If the copy loop terminated on a newline,
-	 * then `p` points to the newline and the next loop is skipped.  If
-	 * the copy loop terminated on a null, the next loop is attempted,
-	 * but exits immediately.  In both those cases, `p` is unchanged.
-	 * If the copy loop terminated on any other character, the next loop
-	 * will advance `p` to point to a null (consistent with the copy
-	 * loop terminating on a null) or past the newline (inconsistent
-	 * with the copy loop).
-	 *
-	 * This inconsistency was present in the prior version of the code,
-	 * and is retained in case there exist briefings which rely on this
-	 * inconsistency.
-	 */
-	if (c != '\n')
-		while ((c = *p) && (++p, c) != '\n')		//	Get and drop eoln
-		{
-		}
-	message = p;
-	strcpy(i, trailer);
-	return result;
-}
-}
-}
-
-namespace dsx {
-namespace {
-
-#if DXX_BUILD_DESCENT == 2
-
-static std::array<briefing_screen, 60> Briefing_screens{{
-	{"brief03.pcx",0,3,8,8,257,177}
-}}; // default=0!!!
-#endif
+constexpr briefing_screen D1_Briefing_screens_share[] = {
+	{ "brief01.pcx",   0,  1,  13, 140, 290,  59 },
+	{ "brief02.pcx",   0,  2,  27,  34, 257, 177 },
+	{ "brief03.pcx",   0,  3,  20,  22, 257, 177 },
+	{ "brief02.pcx",   0,  4,  27,  34, 257, 177 },
+	{ "moon01.pcx",    1,  5,  10,  10, 300, 170 }, // level 1
+	{ "moon01.pcx",    2,  6,  10,  10, 300, 170 }, // level 2
+	{ "moon01.pcx",    3,  7,  10,  10, 300, 170 }, // level 3
+	{ "venus01.pcx",   4,  8,  15, 15, 300,  200 }, // level 4
+	{ "venus01.pcx",   5,  9,  15, 15, 300,  200 }, // level 5
+	{ "brief03.pcx",   6, 10,  20,  22, 257, 177 },
+	{ "merc01.pcx",    6, 10,  10, 15, 300, 200 }, // level 6
+	{ "merc01.pcx",    7, 11,  10, 15, 300, 200 }, // level 7
+	{ "end01.pcx",   ENDING_LEVEL_NUM_OEMSHARE,  1,  23, 40, 320, 200 }, // shareware end
+};
 
 constexpr briefing_screen D1_Briefing_screens_full[] = {
 	{ "brief01.pcx",   0,  1,  13, 140, 290,  59 },
@@ -444,29 +430,51 @@ constexpr briefing_screen D1_Briefing_screens_full[] = {
 	{ "end03.pcx",   ENDING_LEVEL_NUM_REGISTER,  3,  5, 5, 300, 200 },    // registered end
 };
 
-constexpr briefing_screen D1_Briefing_screens_share[] = {
-	{ "brief01.pcx",   0,  1,  13, 140, 290,  59 },
-	{ "brief02.pcx",   0,  2,  27,  34, 257, 177 },
-	{ "brief03.pcx",   0,  3,  20,  22, 257, 177 },
-	{ "brief02.pcx",   0,  4,  27,  34, 257, 177 },
-	{ "moon01.pcx",    1,  5,  10,  10, 300, 170 }, // level 1
-	{ "moon01.pcx",    2,  6,  10,  10, 300, 170 }, // level 2
-	{ "moon01.pcx",    3,  7,  10,  10, 300, 170 }, // level 3
-	{ "venus01.pcx",   4,  8,  15, 15, 300,  200 }, // level 4
-	{ "venus01.pcx",   5,  9,  15, 15, 300,  200 }, // level 5
-	{ "brief03.pcx",   6, 10,  20,  22, 257, 177 },
-	{ "merc01.pcx",    6, 10,  10, 15, 300, 200 }, // level 6
-	{ "merc01.pcx",    7, 11,  10, 15, 300, 200 }, // level 7
-	{ "end01.pcx",   ENDING_LEVEL_NUM_OEMSHARE,  1,  23, 40, 320, 200 }, // shareware end
-};
-
-struct msgstream
+static grs_subcanvas_ptr create_spinning_robot_sub_canvas(grs_canvas &canvas)
 {
-	int x;
-	int y;
-	color_t color;
-	std::array<char, 2> ch;
-};
+	return gr_create_sub_canvas(canvas, rescale_x(canvas.cv_bitmap, 138), rescale_y(canvas.cv_bitmap, 55), rescale_x(canvas.cv_bitmap, 166), rescale_y(canvas.cv_bitmap, 138));
+}
+
+static std::array<char, 32> get_message_name(const char *&message, const char *const trailer)
+{
+	auto p = message;
+	for (; *p == ' '; ++p)
+	{
+	}
+	std::array<char, 32> result{};
+	const auto e = std::prev(result.end(), sizeof(".bbm"));
+	auto i = result.begin();
+	char c;
+	for (; (c = *p) && c != ' ' && c != '\n'; ++p)
+	{
+		*i++ = c;
+		if (i == e)
+			/* Avoid buffer overflow; this was not present in the
+			 * original code.
+			 */
+			break;
+	}
+	/* This is inconsistent.  If the copy loop terminated on a newline,
+	 * then `p` points to the newline and the next loop is skipped.  If
+	 * the copy loop terminated on a null, the next loop is attempted,
+	 * but exits immediately.  In both those cases, `p` is unchanged.
+	 * If the copy loop terminated on any other character, the next loop
+	 * will advance `p` to point to a null (consistent with the copy
+	 * loop terminating on a null) or past the newline (inconsistent
+	 * with the copy loop).
+	 *
+	 * This inconsistency was present in the prior version of the code,
+	 * and is retained in case there exist briefings which rely on this
+	 * inconsistency.
+	 */
+	if (c != '\n')
+		while ((c = *p) && (++p, c) != '\n')		//	Get and drop eoln
+		{
+		}
+	message = p;
+	strcpy(i, trailer);
+	return result;
+}
 
 constexpr const briefing_screen *get_d1_briefing_screens(const descent_hog_size size)
 {
@@ -474,6 +482,60 @@ constexpr const briefing_screen *get_d1_briefing_screens(const descent_hog_size 
 		return D1_Briefing_screens_share;
 	return D1_Briefing_screens_full;
 }
+
+// Return a pointer to the start of text for screen #screen_num.
+static const char *get_briefing_message_from_text(const char *tptr, int screen_num)
+{
+	int cur_screen{0};
+	int	ch;
+
+	Assert(screen_num >= 0);
+
+	while ( (*tptr != 0 ) && (screen_num != cur_screen)) {
+		ch = *tptr++;
+		if (ch == '$') {
+			ch = *tptr++;
+			if (ch == 'S')
+				cur_screen = get_message_num(tptr);
+		}
+	}
+	if (screen_num != cur_screen)
+		return nullptr;
+	return tptr;
+}
+
+static int redraw_messagestream(grs_canvas &canvas, const grs_font &cv_font, const msgstream &stream, const int lastcolor)
+{
+	const auto nextcolor{stream.color};
+	if (lastcolor != nextcolor)
+		gr_set_fontcolor(canvas, nextcolor, -1);
+	gr_string(canvas, cv_font, stream.x + 1, stream.y, stream.ch.data());
+	return nextcolor;
+}
+
+//-----------------------------------------------------------------------------
+static void show_briefing_bitmap_res(grs_canvas &canvas, grs_bitmap *bmp, const bool hiresmode)
+{
+	const auto w = static_cast<float>(SWIDTH) / (hiresmode ? 640 : 320);
+	const auto h = static_cast<float>(SHEIGHT) / (hiresmode ? 480 : 200);
+	const float scale = (w < h) ? w : h;
+
+	auto bitmap_canv = gr_create_sub_canvas(canvas, rescale_x(canvas.cv_bitmap, 220), rescale_y(canvas.cv_bitmap, 55), bmp->bm_w*scale, bmp->bm_h*scale);
+	show_fullscr(*bitmap_canv, *bmp);
+}
+
+}
+
+}
+
+namespace dsx {
+namespace {
+
+#if DXX_BUILD_DESCENT == 2
+static std::array<briefing_screen, 60> Briefing_screens{{
+	{"brief03.pcx",0,3,8,8,257,177}
+}}; // default=0!!!
+#endif
 
 #if DXX_BUILD_DESCENT == 1
 using briefing_screen_deleter = std::default_delete<briefing_screen>;
@@ -505,22 +567,23 @@ struct briefing : window
 		backward = -1,
 		forward = 1,
 	};
-	briefing(grs_canvas &src) :
-		window(src, 0, 0, src.cv_bitmap.bm_w, src.cv_bitmap.bm_h)
+	briefing(grs_canvas &src, std::unique_ptr<char[]> text) :
+		window{src, 0, 0, src.cv_bitmap.bm_w, src.cv_bitmap.bm_h},
+		text{std::move(text)}
 	{
 	}
 	virtual window_event_result event_handler(const d_event &) override;
 	unsigned streamcount;
 	short	level_num;
-	short	cur_screen;
+	short	cur_screen{0};
 	std::unique_ptr<briefing_screen, briefing_screen_deleter> screen;
 	grs_main_bitmap background;
-	animating_bitmap_type animating_bitmap;
+	animating_bitmap_type animating_bitmap{animating_bitmap_type::loop};
 	uint8_t flashing_cursor;
 	uint8_t new_screen;
 	uint8_t new_page;
-	door_direction door_dir;
-	uint8_t door_div_count;
+	door_direction door_dir{door_direction::forward};
+	uint8_t door_div_count{0};
 	int8_t prev_ch;
 #if DXX_BUILD_DESCENT == 2
 	uint8_t got_z;
@@ -537,9 +600,9 @@ struct briefing : window
 	short	tab_stop;
 	fix64		start_time;
 	fix64		delay_count;
-	int		robot_num;
+	int		robot_num{0};
 	grs_subcanvas_ptr	robot_canv;
-	vms_angvec	robot_angles;
+	vms_angvec	robot_angles{};
 	std::array<char, 32> bitmap_name;
 	grs_main_bitmap  guy_bitmap;
 	std::array<char, 16> background_name;
@@ -552,35 +615,27 @@ static void briefing_init(briefing *br, short level_num)
 	if (EMULATING_D1 && (br->level_num == 1))
 		br->level_num = 0;	// for start of game stuff
 
-	br->cur_screen = 0;
 	br->background_name.back() = 0;
 	strncpy(br->background_name.data(), DEFAULT_BRIEFING_BKG, br->background_name.size() - 1);
-#if DXX_BUILD_DESCENT == 2
-	br->RoboFile = {};
-#endif
-	br->robot_num = 0;
-	br->robot_angles = {};
 	br->bitmap_name[0] = '\0';
-	br->door_dir = briefing::door_direction::forward;
-	br->door_div_count = 0;
-	br->animating_bitmap = briefing::animating_bitmap_type::loop;
 }
 
 //-----------------------------------------------------------------------------
 //	Load Descent briefing text.
-static int load_screen_text(const d_fname &filename, std::unique_ptr<char[]> &buf)
+static std::unique_ptr<char[]> load_screen_text(const d_fname &filename)
 {
 	int have_binary{0};
 	auto e = end(filename);
 	auto ext = std::find(begin(filename), e, '.');
+	std::unique_ptr<char[]> buf;
 	if (ext == e)
-		return (0);
+		return buf;
 	if (!d_stricmp(&*ext, ".txb"))
 		have_binary = 1;
 	
 	auto tfile = PHYSFSX_openReadBuffered(filename).first;
 	if (!tfile)
-		return (0);
+		return buf;
 
 	const auto len{PHYSFS_fileLength(tfile)};
 	buf = std::make_unique<char[]>(len + 1);
@@ -595,7 +650,7 @@ static int load_screen_text(const d_fname &filename, std::unique_ptr<char[]> &bu
 	if (have_binary)
 		decode_text(std::span(buf.get(), len));
 
-	return (1);
+	return buf;
 }
 
 #if DXX_BUILD_DESCENT == 2
@@ -609,28 +664,9 @@ static int get_new_message_num(const char *&message)
 }
 #endif
 
-// Return a pointer to the start of text for screen #screen_num.
-static const char * get_briefing_message(const briefing *br, int screen_num)
+static const char *get_briefing_message(const briefing *const br, int screen_num)
 {
-	const char	*tptr = br->text.get();
-	int cur_screen{0};
-	int	ch;
-
-	Assert(screen_num >= 0);
-
-	while ( (*tptr != 0 ) && (screen_num != cur_screen)) {
-		ch = *tptr++;
-		if (ch == '$') {
-			ch = *tptr++;
-			if (ch == 'S')
-				cur_screen = get_message_num(tptr);
-		}
-	}
-
-	if (screen_num!=cur_screen)
-		return (NULL);
-
-	return tptr;
+	return get_briefing_message_from_text(br->text.get(), screen_num);
 }
 
 static void init_char_pos(briefing *br, int x, int y)
@@ -1070,25 +1106,7 @@ static void set_briefing_fontcolor(briefing &br)
 
 	Erase_color = gr_find_closest_color_current(0, 0, 0);
 }
-}
 
-}
-
-namespace {
-
-static int redraw_messagestream(grs_canvas &canvas, const grs_font &cv_font, const msgstream &stream, const int lastcolor)
-{
-	const auto nextcolor{stream.color};
-	if (lastcolor != nextcolor)
-		gr_set_fontcolor(canvas, nextcolor, -1);
-	gr_string(canvas, cv_font, stream.x + 1, stream.y, stream.ch.data());
-	return nextcolor;
-}
-
-}
-
-namespace dsx {
-namespace {
 static void flash_cursor(grs_canvas &canvas, const grs_font &cv_font, briefing *const br, const int cursor_flag)
 {
 	if (cursor_flag == 0)
@@ -1213,35 +1231,18 @@ static void show_animated_bitmap(grs_canvas &canvas, briefing *br)
 	}
 }
 
-}
-
-}
-
-namespace {
-
-//-----------------------------------------------------------------------------
 static void show_briefing_bitmap(grs_canvas &canvas, grs_bitmap *bmp)
 {
-	const bool hiresmode = HIRESMODE;
-	const auto w = static_cast<float>(SWIDTH) / (hiresmode ? 640 : 320);
-	const auto h = static_cast<float>(SHEIGHT) / (hiresmode ? 480 : 200);
-	const float scale = (w < h) ? w : h;
-
-	auto bitmap_canv = gr_create_sub_canvas(canvas, rescale_x(canvas.cv_bitmap, 220), rescale_y(canvas.cv_bitmap, 55), bmp->bm_w*scale, bmp->bm_h*scale);
-	show_fullscr(*bitmap_canv, *bmp);
-}
-
+	show_briefing_bitmap_res(canvas, bmp, HIRESMODE);
 }
 
 //-----------------------------------------------------------------------------
-namespace dsx {
-namespace {
 static void init_spinning_robot(grs_canvas &canvas, briefing &br) //(int x,int y,int w,int h)
 {
 	br.robot_canv = create_spinning_robot_sub_canvas(canvas);
 }
 
-static void show_spinning_robot_frame(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &Polygon_models, const d_robot_info_array &Robot_info, briefing &br, const robot_id robot_num)
+static void show_spinning_robot_frame(const per_polygon_model_array<polymodel> &Polygon_models, const d_robot_info_array &Robot_info, briefing &br, const robot_id robot_num)
 {
 	br.robot_angles.p = br.robot_angles.b = 0;
 	br.robot_angles.h += 150;
@@ -1312,6 +1313,17 @@ static int DefineBriefingBox(const grs_bitmap &cv_bitmap, const char *&buf)
 	Briefing_screens[n].text_uly = rescale_y(cv_bitmap, Briefing_screens[n].text_uly);
 	Briefing_screens[n].text_width = rescale_x(cv_bitmap, Briefing_screens[n].text_width);
 	Briefing_screens[n].text_height = rescale_y(cv_bitmap, Briefing_screens[n].text_height);
+
+#if DXX_USE_STEREOSCOPIC_RENDER
+	if (VR_stereo != StereoFormat::None)
+	{
+		auto &&[vx, vy, vw, vh]{build_stereo_viewport_adjust(VR_stereo, Briefing_screens[n].text_ulx, Briefing_screens[n].text_uly, Briefing_screens[n].text_width, Briefing_screens[n].text_height)};
+		Briefing_screens[n].text_ulx = vx;
+		Briefing_screens[n].text_uly = vy;
+		Briefing_screens[n].text_width = vw;
+		Briefing_screens[n].text_height = vh;
+	}
+#endif
 
 	return (n);
 }
@@ -1386,10 +1398,24 @@ static int load_briefing_screen(grs_canvas &canvas, briefing *const br, const ch
 	set_briefing_fontcolor();
 
 	br->screen = std::make_unique<briefing_screen>(get_d1_briefing_screens(descent_hog_size)[br->cur_screen]);
-	br->screen->text_ulx = rescale_x(canvas.cv_bitmap, br->screen->text_ulx);
-	br->screen->text_uly = rescale_y(canvas.cv_bitmap, br->screen->text_uly);
-	br->screen->text_width = rescale_x(canvas.cv_bitmap, br->screen->text_width);
-	br->screen->text_height = rescale_y(canvas.cv_bitmap, br->screen->text_height);
+	auto text_ulx{rescale_x(canvas.cv_bitmap, br->screen->text_ulx)};
+	auto text_uly{rescale_y(canvas.cv_bitmap, br->screen->text_uly)};
+	auto text_width{rescale_x(canvas.cv_bitmap, br->screen->text_width)};
+	auto text_height{rescale_y(canvas.cv_bitmap, br->screen->text_height)};
+#if DXX_USE_STEREOSCOPIC_RENDER
+	if (VR_stereo != StereoFormat::None)
+	{
+		auto &&[vx, vy, vw, vh]{build_stereo_viewport_adjust(VR_stereo, text_ulx, text_uly, text_width, text_height)};
+		text_ulx = vx;
+		text_uly = vy;
+		text_width = vw;
+		text_height = vh;
+	}
+#endif
+	br->screen->text_ulx = text_ulx;
+	br->screen->text_uly = text_uly;
+	br->screen->text_width = text_width;
+	br->screen->text_height = text_height;
 	init_char_pos(br, br->screen->text_ulx, br->screen->text_uly);
 #elif DXX_BUILD_DESCENT == 2
 	free_briefing_screen(br);
@@ -1418,10 +1444,24 @@ static int load_briefing_screen(grs_canvas &canvas, briefing *const br, const ch
 	{
 		br->got_z = 1;
 		br->screen = std::make_unique<briefing_screen>(Briefing_screens[br->cur_screen]);
-		br->screen->text_ulx = rescale_x(canvas.cv_bitmap, br->screen->text_ulx);
-		br->screen->text_uly = rescale_y(canvas.cv_bitmap, br->screen->text_uly);
-		br->screen->text_width = rescale_x(canvas.cv_bitmap, br->screen->text_width);
-		br->screen->text_height = rescale_y(canvas.cv_bitmap, br->screen->text_height);
+		auto text_ulx{rescale_x(canvas.cv_bitmap, br->screen->text_ulx)};
+		auto text_uly{rescale_y(canvas.cv_bitmap, br->screen->text_uly)};
+		auto text_width{rescale_x(canvas.cv_bitmap, br->screen->text_width)};
+		auto text_height{rescale_y(canvas.cv_bitmap, br->screen->text_height)};
+#if DXX_USE_STEREOSCOPIC_RENDER
+		if (VR_stereo != StereoFormat::None)
+		{
+			auto &&[vx, vy, vw, vh]{build_stereo_viewport_adjust(VR_stereo, text_ulx, text_uly, text_width, text_height)};
+			text_ulx = vx;
+			text_uly = vy;
+			text_width = vw;
+			text_height = vh;
+		}
+#endif
+		br->screen->text_ulx = text_ulx;
+		br->screen->text_uly = text_uly;
+		br->screen->text_width = text_width;
+		br->screen->text_height = text_height;
 		init_char_pos(br, br->screen->text_ulx, br->screen->text_uly);
 	}
 
@@ -1688,6 +1728,12 @@ window_event_result briefing::event_handler(const d_event &event)
 				flash_cursor(canvas, game_font, this, this->flashing_cursor);
 			else if (this->flashing_cursor)
 				gr_string(canvas, game_font, this->text_x, this->text_y, "_");
+
+#if DXX_USE_STEREOSCOPIC_RENDER
+			if (VR_stereo != StereoFormat::None)
+				stereo_viewport_copy(canvas, this->screen->text_ulx, this->screen->text_uly,
+							this->screen->text_width, this->screen->text_height);
+#endif
 			break;
 		}
 		case event_type::window_close:
@@ -1708,13 +1754,15 @@ void do_briefing_screens(const d_fname &filename, int level_num)
 	if (!*static_cast<const char *>(filename))
 		return;
 
-	auto br = window_create<briefing>(grd_curscreen->sc_canvas);
-	briefing_init(br, level_num);
-
-	if (!load_screen_text(filename, br->text))
+	auto briefing_screen_text{load_screen_text(filename)};
+	if (!briefing_screen_text)
 	{
+		[[unlikely]];
 		return;
 	}
+
+	auto br{window_create<briefing>(grd_curscreen->sc_canvas, std::move(briefing_screen_text))};
+	briefing_init(br, level_num);
 
 #if DXX_BUILD_DESCENT == 2
 	if (!(EMULATING_D1 || is_SHAREWARE || is_MAC_SHARE || is_D2_OEM || !PLAYING_BUILTIN_MISSION))

@@ -224,6 +224,11 @@ using g3_draw_tmap_point = g3s_point;	// also applies to g3_draw_poly
 //start the frame
 void g3_start_frame(grs_canvas &);
 
+#if DXX_USE_STEREOSCOPIC_RENDER
+//modify the frame for stereo format
+void g3_stereo_frame(const int xeye, const int xoff);
+#endif
+
 //set view from x,y,z, viewer matrix, and zoom.  Must call one of g3_set_view_*() 
 void g3_set_view_matrix(const vms_vector &view_pos,const vms_matrix &view_matrix,fix zoom);
 
@@ -276,7 +281,7 @@ void g3_project_point(g3s_point &point);
 
 //calculate the depth of a point - returns the z coord of the rotated point
 [[nodiscard]]
-fix g3_calc_point_depth(const vms_vector &pnt);
+fix g3_calc_point_depth(const vms_vector &pnt, const vms_vector &View_position, const vms_vector &View_matrix_f);
 
 #if DXX_USE_EDITOR
 //from a 2d point, compute the vector through that point

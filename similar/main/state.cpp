@@ -417,8 +417,8 @@ static void state_object_to_object_rw(const object &obj, object_rw *const obj_rw
 		{
 			obj_rw->ctype.ai_info.behavior               = static_cast<uint8_t>(obj.ctype.ai_info.behavior);
 			obj_rw->ctype.ai_info.flags[0] = underlying_value(obj.ctype.ai_info.CURRENT_GUN);
-			obj_rw->ctype.ai_info.flags[1] = obj.ctype.ai_info.CURRENT_STATE;
-			obj_rw->ctype.ai_info.flags[2] = obj.ctype.ai_info.GOAL_STATE;
+			obj_rw->ctype.ai_info.flags[1] = underlying_value(obj.ctype.ai_info.CURRENT_STATE);
+			obj_rw->ctype.ai_info.flags[2] = underlying_value(obj.ctype.ai_info.GOAL_STATE);
 			obj_rw->ctype.ai_info.flags[3] = obj.ctype.ai_info.PATH_DIR;
 #if DXX_BUILD_DESCENT == 1
 			obj_rw->ctype.ai_info.flags[4] = obj.ctype.ai_info.SUBMODE;
@@ -731,7 +731,10 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 				obj.rtype.pobj_info.anim_angles[i].h = obj_rw->rtype.pobj_info.anim_angles[i].h;
 			}
 			obj.rtype.pobj_info.subobj_flags             = obj_rw->rtype.pobj_info.subobj_flags;
-			obj.rtype.pobj_info.tmap_override            = obj_rw->rtype.pobj_info.tmap_override;
+			{
+				const auto t{obj_rw->rtype.pobj_info.tmap_override};
+				obj.rtype.pobj_info.tmap_override = t < Textures.size() ? static_cast<texture_index>(t) : texture_index{UINT16_MAX};
+			}
 			obj.rtype.pobj_info.alt_textures             = obj_rw->rtype.pobj_info.alt_textures;
 			break;
 		}

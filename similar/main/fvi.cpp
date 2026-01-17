@@ -666,7 +666,7 @@ fvi_hit_type find_vector_intersection(const fvi_query fq, const segnum_t startse
 	if (hit_seg2 != segment_none && get_seg_masks(vcvertptr, hit_pnt, vcsegptr(hit_seg2), 0).centermask == sidemask_t{})
 		hit_seg = hit_seg2;
 	else
-		hit_seg = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, hit_pnt, imsegptridx(startseg));
+		hit_seg = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, hit_pnt, imsegptridx(startseg) DXX_lighting_hack_pass_parameter);
 
 //MATT: TAKE OUT THIS HACK AND FIX THE BUGS!
 	if (hit_type == fvi_hit_type::Wall && hit_seg == segment_none)
@@ -877,7 +877,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 	//now, check segment walls
 
 	auto &vcvertptr = Vertices.vcptr;
-	int startmask{get_seg_masks(vcvertptr, fq.p0, startseg, rad).facemask};
+	const auto startmask{get_seg_masks(vcvertptr, fq.p0, startseg, rad).facemask};
 
 	const auto &&masks = get_seg_masks(vcvertptr, fq.p1, startseg, rad);    //on back of which faces?
 	const auto centermask{masks.centermask};			//where the center point is
@@ -1177,7 +1177,7 @@ int check_trans_wall(const vms_vector &pnt, const vcsegptridx_t seg, const siden
 
 	const auto tmap_num{side.tmap_num};
 	const grs_bitmap &rbm = (side.tmap_num2 != texture2_value::None)
-		? texmerge_get_cached_bitmap(tmap_num, side.tmap_num2)
+		? texmerge_get_cached_bitmap(GameBitmaps, Textures, tmap_num, side.tmap_num2)
 		/* gcc-13 issues a -Wdangling-reference warning if this lambda returns
 		 * a `const grs_bitmap &`, but no warning if the lambda returns a
 		 * `const grs_bitmap *` to the same storage, and then converts it into
@@ -1218,7 +1218,7 @@ static sphere_intersects_wall_result sphere_intersects_wall(fvcsegptridx &vcsegp
 	++visited.count;
 
 	const shared_segment &sseg = seg;
-	const int facemask{get_seg_masks(vcvertptr, pnt, sseg, rad).facemask};
+	const auto facemask{get_seg_masks(vcvertptr, pnt, sseg, rad).facemask};
 	if (facemask != 0) {				//on the back of at least one face
 		//for each face we are on the back of, check if intersected
 

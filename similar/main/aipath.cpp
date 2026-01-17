@@ -113,10 +113,10 @@ static uint_fast32_t insert_center_points(segment_array &segments, point_seg *ps
 		vm_vec_sub(psegs[2*i-1].point, center_point, new_point);
 #if DXX_BUILD_DESCENT == 2
 		const auto &&segp = segments.imptridx(psegs[2*i].segnum);
-		const auto &&temp_segnum = find_point_seg(LevelSharedSegmentState, psegs[2*i-1].point, segp);
+		const auto &&temp_segnum{find_point_seg(LevelSharedSegmentState, psegs[2*i-1].point, segp DXX_lighting_hack_pass_parameter)};
 		if (temp_segnum == segment_none) {
 			psegs[2*i-1].point = center_point;
-			find_point_seg(LevelSharedSegmentState, psegs[2*i-1].point, segp);
+			find_point_seg(LevelSharedSegmentState, psegs[2*i-1].point, segp DXX_lighting_hack_pass_parameter);
 		}
 #endif
 
@@ -163,7 +163,7 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 		segnum_t			segnum;
 		vms_vector	e;
 		int			count;
-		const auto &&temp_segnum = find_point_seg(LevelSharedSegmentState, psegs[i].point, Segments.vcptridx(psegs[i].segnum));
+		const auto &&temp_segnum{find_point_seg(LevelSharedSegmentState, psegs[i].point, Segments.vcptridx(psegs[i].segnum) DXX_lighting_hack_pass_parameter)};
 		Assert(temp_segnum != segment_none);
 		psegs[i].segnum = temp_segnum;
 		segnum = psegs[i].segnum;
@@ -243,7 +243,7 @@ static void move_towards_outside(const d_level_shared_segment_state &LevelShared
 		}
 
 		//	Only move towards outside if remained inside segment.
-		const auto &&new_segnum = find_point_seg(LevelSharedSegmentState, goal_pos, Segments.vcptridx(psegs[i].segnum));
+		const auto &&new_segnum{find_point_seg(LevelSharedSegmentState, goal_pos, Segments.vcptridx(psegs[i].segnum) DXX_lighting_hack_pass_parameter)};
 		if (new_segnum == psegs[i].segnum) {
 			new_psegs[i].point = goal_pos;
 			new_psegs[i].segnum = new_segnum;
@@ -1123,16 +1123,14 @@ void ai_follow_path(const d_robot_info_array &Robot_info, const vmobjptridx_t ob
 						create_n_segment_path(objp, robptr, 16 + d_rand() * 16, segment_none);
 						aip->path_length = polish_path(objp, &Point_segs[aip->hide_index], aip->path_length);
 						Assert(aip->path_length != 0);
-						ailp->mode = ai_mode::AIM_WANDER;	//	Special buddy mode.
 						//--Int3_if(((aip->cur_path_index >= 0) && (aip->cur_path_index < aip->path_length)));
-						return;
 					} else {
-						ailp->mode = ai_mode::AIM_WANDER;	//	Special buddy mode.
 						obj.mtype.phys_info.velocity = {};
 						obj.mtype.phys_info.rotvel = {};
 						//!!Assert((aip->cur_path_index >= 0) && (aip->cur_path_index < aip->path_length));
-						return;
 					}
+					ailp->mode = ai_mode::AIM_WANDER;	//	Special buddy mode.
+					return;
 				}
 			}
 #endif
@@ -1254,18 +1252,6 @@ struct obj_path {
 	objnum_t objnum;
 };
 
-static int path_index_compare(const void *const v1, const void *const v2)
-{
-	const auto i1 = reinterpret_cast<const obj_path *>(v1);
-	const auto i2 = reinterpret_cast<const obj_path *>(v2);
-	if (i1->path_start < i2->path_start)
-		return -1;
-	else if (i1->path_start == i2->path_start)
-		return 0;
-	else
-		return 1;
-}
-
 }
 
 namespace dsx {
@@ -1360,7 +1346,7 @@ void ai_path_garbage_collect()
 	int free_path_index{0};
 	int num_path_objects{0};
 	int	objind;
-	obj_path		object_list[MAX_OBJECTS];
+	std::array<obj_path, MAX_OBJECTS>		object_list;
 
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptridx = Objects.vcptridx;
@@ -1381,14 +1367,14 @@ void ai_path_garbage_collect()
 										  )) {
 			const auto &aip = objp->ctype.ai_info;
 			if (aip.path_length) {
-				object_list[num_path_objects].path_start = aip.hide_index;
-				object_list[num_path_objects++].objnum = objp;
+				auto &ol{object_list[num_path_objects]};
+				++ num_path_objects;
+				ol.path_start = aip.hide_index;
+				ol.objnum = objp;
 			}
 		}
 	}
-
-	qsort(object_list, num_path_objects, sizeof(object_list[0]),
-			path_index_compare);
+	std::ranges::sort(std::span(object_list).first(num_path_objects), {}, &obj_path::path_start);
 
 	for (objind=0; objind < num_path_objects; objind++) {
 		ai_static	*aip;

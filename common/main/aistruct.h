@@ -43,10 +43,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 #endif
 
-#define GREEN_GUY   1
-
-#define MAX_SEGMENTS_PER_PATH       20
-
 namespace dcx {
 
 enum class contained_object_type : uint8_t;
@@ -68,7 +64,7 @@ enum class player_visibility_state : int8_t
 	visible_and_in_field_of_view,
 };
 
-enum ai_static_state : uint8_t
+enum class ai_static_state : uint8_t
 {
 	AIS_NONE = 0,
 	AIS_REST = 1,
@@ -78,6 +74,11 @@ enum ai_static_state : uint8_t
 	AIS_FIRE = 5,
 	AIS_RECO = 6,
 	AIS_ERR_ = 7,
+};
+
+enum class robot_gun_goal_index : uint8_t
+{
+	/* Valid values are [0, MAX_SUBMODELS - 1]. */
 };
 
 enum class robot_gun_number : uint8_t
@@ -179,22 +180,6 @@ enum class ai_mode : uint8_t
 #define AIE_COLL        2
 #define AIE_HURT        3
 
-//typedef struct opath {
-//	sbyte   path_index;     // current index of path
-//	sbyte   path_direction; // current path direction
-//	sbyte   path_length;    // length of current path
-//	sbyte   nothing;
-//	short   path[MAX_SEGMENTS_PER_PATH];
-//	short   always_0xabc;   // If this is ever not 0xabc, then someone overwrote
-//} opath;
-//
-//typedef struct oai_state {
-//	short   mode;               //
-//	short   counter;            // kind of a hack, frame countdown until switch modes
-//	opath   paths[2];
-//	vms_vector movement_vector; // movement vector for one second
-//} oai_state;
-
 #ifdef DXX_BUILD_DESCENT
 #if DXX_BUILD_DESCENT == 2
 #define SUB_FLAGS_GUNSEG        0x01
@@ -230,8 +215,8 @@ struct ai_local : public prohibit_void_ptr<ai_local>
 	fix64 next_misc_sound_time{0};          // absolute time in seconds at which this robot last made an angry or lurking sound.
 	std::array<vms_angvec, MAX_SUBMODELS> goal_angles{};    // angles for each subobject
 	std::array<vms_angvec, MAX_SUBMODELS> delta_angles{};   // angles for each subobject
-	enumerated_array<ai_static_state, MAX_SUBMODELS, robot_gun_number> goal_state{};     // Goal state for this sub-object
-	enumerated_array<ai_static_state, MAX_SUBMODELS, robot_gun_number> achieved_state{}; // Last achieved state
+	enumerated_array<ai_static_state, MAX_SUBMODELS, robot_gun_goal_index> goal_state{};     // Goal state for this sub-object
+	enumerated_array<ai_static_state, MAX_SUBMODELS, robot_gun_goal_index> achieved_state{}; // Last achieved state
 };
 
 struct ai_static : public prohibit_void_ptr<ai_static>

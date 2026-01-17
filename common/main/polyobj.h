@@ -64,8 +64,11 @@ constexpr std::size_t MAX_POLYGON_MODELS{+
 struct robot_info;
 struct glow_values_t;
 
+template <typename T>
+using per_polygon_model_array = enumerated_array<T, MAX_POLYGON_MODELS, polygon_model_index>;
+
 //for each model, a model number for dying & dead variants, or polygon_model_index::None if none
-extern enumerated_array<polygon_model_index, MAX_POLYGON_MODELS, polygon_model_index> Dying_modelnums, Dead_modelnums;
+extern per_polygon_model_array<polygon_model_index> Dying_modelnums, Dead_modelnums;
 }
 #endif
 
@@ -77,17 +80,19 @@ enum class submodel_index : uint8_t
 	/* Valid values are [0 .. (MAX_SUBMODELS - 1)]. */
 };
 
+template <typename T>
+using per_submodel_array = enumerated_array<T, MAX_SUBMODELS, submodel_index>;
+
 //used to describe a polygon model
 struct polymodel : prohibit_void_ptr<polymodel>
 {
-	unsigned n_models;
 	unsigned model_data_size;
 	std::unique_ptr<uint8_t[]>   model_data;
 	std::array<int, MAX_SUBMODELS> submodel_ptrs;
 	std::array<vms_vector, MAX_SUBMODELS> submodel_offsets;
 	std::array<vms_vector, MAX_SUBMODELS> submodel_norms;   // norm for sep plane
 	std::array<vms_vector, MAX_SUBMODELS> submodel_pnts;    // point on sep plane
-	enumerated_array<fix, MAX_SUBMODELS, submodel_index> submodel_rads;       // radius for each submodel
+	per_submodel_array<fix> submodel_rads;       // radius for each submodel
 	std::array<ubyte, MAX_SUBMODELS> submodel_parents;    // what is parent for each submodel
 	std::array<vms_vector, MAX_SUBMODELS> submodel_mins;
 	std::array<vms_vector, MAX_SUBMODELS> submodel_maxs;
@@ -95,6 +100,7 @@ struct polymodel : prohibit_void_ptr<polymodel>
 	fix     rad;
 	ushort  first_texture;
 	ubyte   n_textures;
+	uint8_t n_models;
 	polygon_simpler_model_index simpler_model;                      // alternate model with less detail (0 if none, model_num+1 else)
 	//vms_vector min,max;
 };
@@ -137,9 +143,9 @@ namespace dsx {
  */
 struct d_level_shared_polygon_model_state : ::dcx::d_level_shared_polygon_model_state
 {
-	enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> Polygon_models;
+	per_polygon_model_array<polymodel> Polygon_models;
 	// array of names of currently-loaded models
-	enumerated_array<char[FILENAME_LEN], MAX_POLYGON_MODELS, polygon_model_index> Pof_names;
+	per_polygon_model_array<char[FILENAME_LEN]> Pof_names;
 #if DXX_BUILD_DESCENT == 2
 	//the model number of the marker object
 	polygon_model_index Marker_model_num = polygon_model_index::None;
@@ -176,8 +182,8 @@ public:
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 // draw a polygon model
-void draw_polygon_model(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &, grs_canvas &, tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polygon_model_index model_num, unsigned flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
-void draw_polygon_model(grs_canvas &, tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polymodel &model_num, unsigned flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
+void draw_polygon_model(const per_polygon_model_array<polymodel> &, grs_canvas &, tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polygon_model_index model_num, uint16_t subobj_flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
+void draw_polygon_model(grs_canvas &, tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, submodel_angles anim_angles, const polymodel &model_num, uint16_t subobj_flags, g3s_lrgb light, const glow_values_t *glow_values, alternate_textures);
 }
 #endif
 

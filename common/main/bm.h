@@ -83,24 +83,21 @@ constexpr std::integral_constant<unsigned, 1200> MAX_TEXTURES{};
 
 struct tmap_info : prohibit_void_ptr<tmap_info>
 {
-#if DXX_BUILD_DESCENT == 1
-	d_fname filename;
-	tmapinfo_flags flags;
-	fix			lighting;		// 0 to 1
-	fix			damage;			//how much damage being against this does
-	unsigned eclip_num;		//if not -1, the eclip that changes this   
-#elif DXX_BUILD_DESCENT == 2
 	fix     lighting;  //how much light this casts
 	fix     damage;    //how much damage being against this does (for lava)
+#if DXX_BUILD_DESCENT == 1
+	unsigned eclip_num;		//if not -1, the eclip that changes this   
+#elif DXX_BUILD_DESCENT == 2
 	uint16_t eclip_num; //the eclip that changes this, or -1
-	short   destroyed; //bitmap to show when destroyed, or -1
+	texture_index destroyed; //bitmap to show when destroyed, or -1
 	short   slide_u,slide_v;    //slide rates of texture, stored in 8:8 fix
+#endif
 	tmapinfo_flags flags;
-#if DXX_USE_EDITOR
-	d_fname filename;       //used by editor to remap textures
-	#endif
-
-#define TMAP_INFO_SIZE 20   // how much space it takes up on disk
+#if DXX_BUILD_DESCENT == 1 || (DXX_BUILD_DESCENT == 2 && DXX_USE_EDITOR)
+	/* Descent 1 always uses this.  In Descent 2, it is only used by the
+	 * editor, for texture remapping.
+	 */
+	d_fname filename;
 #endif
 };
 }
@@ -121,7 +118,7 @@ extern unsigned Num_cockpits;
 
 namespace dsx {
 #if DXX_USE_EDITOR
-using tmap_xlate_table_array = std::array<short, MAX_TEXTURES>;
+using tmap_xlate_table_array = std::array<texture_index, MAX_TEXTURES>;
 extern tmap_xlate_table_array tmap_xlate_table;
 #endif
 
@@ -166,13 +163,11 @@ extern std::array<polygon_model_index, MAX_OBJTYPE> ObjId;			// ID of a robot, w
 extern fix	ObjStrength[MAX_OBJTYPE];	// initial strength of each object
 
 constexpr std::integral_constant<unsigned, 210> MAX_OBJ_BITMAPS{};
-constexpr std::size_t N_COCKPIT_BITMAPS{4};
 
 #elif DXX_BUILD_DESCENT == 2
 
 extern int Robot_replacements_loaded;
 constexpr std::integral_constant<unsigned, 610> MAX_OBJ_BITMAPS{};
-constexpr std::size_t N_COCKPIT_BITMAPS{6};
 extern unsigned N_ObjBitmaps;
 #endif
 
@@ -195,13 +190,19 @@ enum class cockpit_bitmap_index : uint8_t
 #endif
 };
 
+/* In case of invalid preprocessor directive, set an impossible size of
+ * `SIZE_MAX` to force a compile error.
+ */
+using cockpit_bitmap_array = enumerated_array<bitmap_index, /* N_COCKPIT_BITMAPS = */ (DXX_BUILD_DESCENT == 1 ? 4 : (DXX_BUILD_DESCENT == 2 ? 6 : SIZE_MAX)), cockpit_bitmap_index>;
+
+extern cockpit_bitmap_array cockpit_bitmap;
+
 }
 
 extern int First_multi_bitmap_num;
 void compute_average_rgb(grs_bitmap *bm, std::array<fix, 3> &rgb);
 
 namespace dsx {
-extern enumerated_array<bitmap_index, N_COCKPIT_BITMAPS, cockpit_bitmap_index> cockpit_bitmap;
 void load_robot_replacements(const d_fname &level_name);
 #if DXX_BUILD_DESCENT == 1 || (DXX_BUILD_DESCENT == 2 && DXX_USE_EDITOR)
 // Initializes all bitmaps from BITMAPS.TBL file.

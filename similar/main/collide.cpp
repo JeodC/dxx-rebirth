@@ -352,12 +352,14 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
-	fix damage;
 
 	if (get_player_id(playerobj) != Player_num) // Execute only for local player
 		return;
 
-	auto &tmi1 = TmapInfo[get_texture_index(hitseg->unique_segment::sides[hitwall].tmap_num)];
+	const auto texture1_index{get_texture_index(hitseg->unique_segment::sides[hitwall].tmap_num)};
+	if (texture1_index >= TmapInfo.size()) [[unlikely]]
+		return;
+	auto &tmi1{TmapInfo[texture1_index]};
 
 	//	If this wall does damage, don't make *BONK* sound, we'll be making another sound.
 	if (tmi1.damage > 0)
@@ -392,19 +394,32 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 
 	//	** Damage from hitting wall **
 	//	If the player has less than 10% shields, don't take damage from bump
+	const fix damage{
 #if DXX_BUILD_DESCENT == 1
-	damage = hitspeed / WALL_DAMAGE_SCALE;
+		hitspeed / WALL_DAMAGE_SCALE
 #elif DXX_BUILD_DESCENT == 2
+		[&]() -> fix {
+			/* If the wall is lava or is water, then there is no damage from
+			 * the impact.  Lava walls will deal damage separately.  Water
+			 * walls will not deal damage, and so are a free hit.
+			 */
+			constexpr auto tmi_no_damage{(tmapinfo_flag::water | tmapinfo_flag::lava)};
+			if (tmi1.flags & tmi_no_damage)
+				return 0;
+			const auto tmap_num2{hitseg->unique_segment::sides[hitwall].tmap_num2};
+			if (tmap_num2 != texture2_value::None)
+			{
+				const auto texture2_index{get_texture_index(tmap_num2)};
+				if (texture2_index >= TmapInfo.size()) [[unlikely]]
+					return 0;
+				if (TmapInfo[texture2_index].flags & tmi_no_damage)
+					return 0;
+			}
 	// Note: Does quad damage if hit a force field - JL
-	damage = (hitspeed / WALL_DAMAGE_SCALE) * (ForceFieldHit*8 + 1);
-
-	const auto tmap_num2 = hitseg->unique_segment::sides[hitwall].tmap_num2;
-
-	//don't do wall damage and sound if hit lava or water
-	constexpr auto tmi_no_damage = (tmapinfo_flag::water | tmapinfo_flag::lava);
-	if ((tmi1.flags & tmi_no_damage) || (tmap_num2 != texture2_value::None && (TmapInfo[get_texture_index(tmap_num2)].flags & tmi_no_damage)))
-		damage = 0;
+			return (hitspeed / WALL_DAMAGE_SCALE) * (ForceFieldHit*8 + 1);
+		}()
 #endif
+	};
 
 	if (damage >= WALL_DAMAGE_THRESHOLD) {
 		int	volume;
@@ -451,7 +466,10 @@ volatile_wall_result check_volatile_wall(const vmobjptridx_t obj, const unique_s
 	Assert(obj->type==OBJ_PLAYER);
 
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
-	const auto &tmi1 = TmapInfo[get_texture_index(side.tmap_num)];
+	const auto texture1_index{get_texture_index(side.tmap_num)};
+	if (texture1_index >= TmapInfo.size()) [[unlikely]]
+		return volatile_wall_result::none;
+	const auto &tmi1{TmapInfo[texture1_index]};
 	const fix d = tmi1.damage;
 	if (d > 0
 #if DXX_BUILD_DESCENT == 2
@@ -584,19 +602,21 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 	if (const auto tmap2 = seg->unique_segment::sides[side].tmap_num2; tmap2 != texture2_value::None)
 	{
 		const auto tm = get_texture_index(tmap2);			//tm without flags
+		if (tm >= TmapInfo.size()) [[unlikely]]
+			return 0;
 		auto &tmi2 = TmapInfo[tm];
 		const auto ec = tmi2.eclip_num;
-		unsigned db{0};
+		texture_index db{};
 		if (
 #if DXX_BUILD_DESCENT == 1
 			ec != eclip_none &&
 #elif DXX_BUILD_DESCENT == 2
 		//check if it's an animation (monitor) or casts light
 			ec == eclip_none
-			? tmi2.destroyed != -1
+			? tmi2.destroyed != texture_index{UINT16_MAX}
 			:
 #endif
-			(db = Effects[ec].dest_bm_num) != ~0u && !(Effects[ec].flags & EF_ONE_SHOT)
+			(db = Effects[ec].dest_bm_num) != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT)
 		)
 		{
 			const auto tmf = get_texture_rotation_high(tmap2);		//tm flags
@@ -645,7 +665,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 			{		//not trans, thus on effect
 #if DXX_BUILD_DESCENT == 2
 				if ((Game_mode & GM_MULTI) && Netgame.AlwaysLighting)
-					if (!(ec != eclip_none && db != -1 && !(Effects[ec].flags & EF_ONE_SHOT)))
+					if (!(ec != eclip_none && db != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT)))
 						return 0;
 
 				//note: this must get called before the texture changes,
@@ -676,7 +696,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 				object_create_explosion_without_damage(Vclip, seg, pnt, dest_size, vc);
 
 #if DXX_BUILD_DESCENT == 2
-				if (ec != eclip_none && db != -1 && !(Effects[ec].flags & EF_ONE_SHOT))
+				if (ec != eclip_none && db != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT))
 #endif
 				{
 
@@ -688,11 +708,10 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 
 					if (Effects[ec].dest_eclip!=-1 && Effects[Effects[ec].dest_eclip].segnum == segment_none)
 					{
-						int bm_num;
 						eclip *new_ec;
 
 						new_ec = &Effects[Effects[ec].dest_eclip];
-						bm_num = new_ec->changing_wall_texture;
+						const auto bm_num{new_ec->changing_wall_texture};
 
 						new_ec->time_left = new_ec->vc.frame_time;
 						new_ec->frame_count = 0;
@@ -772,7 +791,10 @@ static window_event_result collide_weapon_and_wall(
 	}
 
 	auto &uhitside = hitseg->unique_segment::sides[hitwall];
-	auto &tmi1 = TmapInfo[get_texture_index(uhitside.tmap_num)];
+	const auto texture1_index{get_texture_index(uhitside.tmap_num)};
+	if (texture1_index >= TmapInfo.size()) [[unlikely]]
+		return window_event_result::ignored;
+	auto &tmi1{TmapInfo[texture1_index]};
 	//if an energy weapon hits a forcefield, let it bounce
 	if ((tmi1.flags & tmapinfo_flag::force_field) &&
 		 !(weapon->type == OBJ_WEAPON && Weapon_info[get_weapon_id(weapon)].energy_usage==0)) {
@@ -841,13 +863,8 @@ static window_event_result collide_weapon_and_wall(
 	const auto wall_type = wall_hit_process(player_info.powerup_flags, hitseg, hitwall, weapon->shields, playernum, weapon);
 
 	const auto Difficulty_level = GameUniqueState.Difficulty_level;
-#if DXX_BUILD_DESCENT == 1
-	auto &tmi1 = TmapInfo[get_texture_index(uhitside.tmap_num)];
-#endif
 	// Wall is volatile if either tmap 1 or 2 is volatile
-	if ((tmi1.flags & tmapinfo_flag::lava) ||
-		(uhitside.tmap_num2 != texture2_value::None && (TmapInfo[get_texture_index(uhitside.tmap_num2)].flags & tmapinfo_flag::lava))
-		)
+	if (const auto texture_flags{get_side_combined_tmapinfo_flags(TmapInfo, uhitside)}; texture_flags & tmapinfo_flag::lava)
 	{
 		weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 
@@ -872,12 +889,9 @@ static window_event_result collide_weapon_and_wall(
 		}
 
 		weapon->flags |= OF_SHOULD_BE_DEAD;		//make flares die in lava
-
 	}
 #if DXX_BUILD_DESCENT == 2
-	else if ((tmi1.flags & tmapinfo_flag::water) ||
-			(uhitside.tmap_num2 != texture2_value::None && (TmapInfo[get_texture_index(uhitside.tmap_num2)].flags & tmapinfo_flag::water))
-			)
+	else if (texture_flags & tmapinfo_flag::water)
 	{
 		weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 
@@ -1089,7 +1103,7 @@ static void collide_robot_and_player(const d_robot_info_array &Robot_info, const
 	if (check_collision_delayfunc_exec())
 	{
 		const auto &&player_segp = Segments.vmptridx(playerobj->segnum);
-		const auto &&collision_seg = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, collision_point, player_segp);
+		const auto &&collision_seg{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, collision_point, player_segp DXX_lighting_hack_pass_parameter)};
 
 #if DXX_BUILD_DESCENT == 2
 		// added this if to remove the bump sound if it's the thief.
@@ -1577,7 +1591,7 @@ static boss_weapon_collision_result do_boss_weapon_collision(const d_robot_info_
 		const auto tvec1 = vm_vec_normalized_quick(vm_vec_build_sub(collision_point, robot.pos));
 		dot = vm_vec_build_dot(tvec1, robot.orient.fvec);
 		if (dot > Boss_invulnerable_dot()) {
-			if (const auto &&segp = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, collision_point, Segments.vmptridx(robot.segnum)))
+			if (const auto &&segp{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, collision_point, Segments.vmptridx(robot.segnum) DXX_lighting_hack_pass_parameter)})
 				digi_link_sound_to_pos(sound_effect::SOUND_WEAPON_HIT_DOOR, segp, sidenum_t::WLEFT, collision_point, 0, F1_0);
 			if (BuddyState.Buddy_objnum != object_none)
 			{
@@ -1626,7 +1640,7 @@ static boss_weapon_collision_result do_boss_weapon_collision(const d_robot_info_
 			? Boss_invulnerable_matter
 			: Boss_invulnerable_energy)[d2_boss_index])
 	{
-		if (const auto &&segp = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, collision_point, Segments.vmptridx(robot.segnum)))
+		if (const auto &&segp{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, collision_point, Segments.vmptridx(robot.segnum) DXX_lighting_hack_pass_parameter)})
 			digi_link_sound_to_pos(sound_effect::SOUND_WEAPON_HIT_DOOR, segp, sidenum_t::WLEFT, collision_point, 0, F1_0);
 		return boss_weapon_collision_result::invulnerable;
 	}
@@ -2000,7 +2014,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		{
 			const auto randvec = make_random_vector();
 			const auto tvec = vm_vec_build_add(playerobj->pos, randvec);
-			const auto &&newseg = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, tvec, Segments.vmptridx(playerobj->segnum));
+			const auto &&newseg{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, tvec, Segments.vmptridx(playerobj->segnum) DXX_lighting_hack_pass_parameter)};
 			if (newseg != segment_none)
 			{
 				-- mines;

@@ -62,8 +62,8 @@ namespace {
 
 class abs_vertex_lists_predicate
 {
-	const enumerated_array<vertnum_t, MAX_VERTICES_PER_SEGMENT, segment_relative_vertnum> &m_vp;
-	const enumerated_array<segment_relative_vertnum, 4, side_relative_vertnum> &m_sv;
+	const per_segment_relative_vertnum_array<vertnum_t> &m_vp;
+	const per_side_relative_vertnum_array<segment_relative_vertnum> &m_sv;
 public:
 	abs_vertex_lists_predicate(const shared_segment &seg, const sidenum_t sidenum) :
 		m_vp(seg.verts), m_sv(Side_to_verts[sidenum])
@@ -87,7 +87,7 @@ struct verts_for_normal
 // How far a point can be from a plane, and still be "in" the plane
 #define PLANE_DIST_TOLERANCE	250
 
-static vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const enumerated_array<vertnum_t, MAX_VERTICES_PER_SEGMENT, segment_relative_vertnum> &verts, const sidenum_t side)
+static vms_vector compute_center_point_on_side(fvcvertptr &vcvertptr, const per_segment_relative_vertnum_array<vertnum_t> &verts, const sidenum_t side)
 {
 	vms_vector vp{};
 	range_for (auto &v, Side_to_verts[side])
@@ -114,7 +114,7 @@ static void create_vertex_list_from_invalid_side(const shared_segment &segp, con
 
 // Fill in array with four absolute point numbers for a given side
 [[nodiscard]]
-static side_vertnum_list_t get_side_verts(const enumerated_array<vertnum_t, MAX_VERTICES_PER_SEGMENT, segment_relative_vertnum> &vp, const sidenum_t sidenum)
+static side_vertnum_list_t get_side_verts(const per_segment_relative_vertnum_array<vertnum_t> &vp, const sidenum_t sidenum)
 {
 	side_vertnum_list_t vertlist;
 	auto &sv = Side_to_verts[sidenum];
@@ -426,7 +426,7 @@ static void add_side_as_2_triangles(fvcvertptr &vcvertptr, shared_segment &sp, c
 		reconstruct_at(sidep->normals[0], vm_vec_normal, vvs0, vvs1, *n0v3);
 		reconstruct_at(sidep->normals[1], vm_vec_normal, *n1v1, vvs2, vvs3);
 	} else {
-		enumerated_array<vertnum_t, 4, side_relative_vertnum> v;
+		per_side_relative_vertnum_array<vertnum_t> v;
 
 		for (const auto i : MAX_VERTICES_PER_SIDE)
 			v[i] = sp.verts[vs[i]];
@@ -834,9 +834,9 @@ constexpr vm_distance fcd_abort_return_value{-1};
 lighting_hack Doing_lighting_hack_flag{lighting_hack::normal};
 #endif
 
-imsegptridx_t find_point_seg(const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &, const vms_vector &p, const imsegptridx_t segnum)
+imsegptridx_t find_point_seg(const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &, const vms_vector &p, const imsegptridx_t segnum DXX_lighting_hack_decl_parameter)
 {
-	return segnum.rebind_policy(find_point_seg(LevelSharedSegmentState, p, segnum));
+	return segnum.rebind_policy(find_point_seg(LevelSharedSegmentState, p, segnum DXX_lighting_hack_pass_parameter));
 }
 
 //Tries to find a segment for a point, in the following way:
@@ -844,7 +844,7 @@ imsegptridx_t find_point_seg(const d_level_shared_segment_state &LevelSharedSegm
 // 2. Recursively trace through attached segments
 // 3. Check all the segments
 //Returns segnum if found, or -1
-icsegptridx_t find_point_seg(const d_level_shared_segment_state &LevelSharedSegmentState, const vms_vector &p, const icsegptridx_t segnum)
+icsegptridx_t find_point_seg(const d_level_shared_segment_state &LevelSharedSegmentState, const vms_vector &p, const icsegptridx_t segnum DXX_lighting_hack_decl_parameter)
 {
 	//allow segnum==-1, meaning we have no idea what segment point is in
 	if (segnum != segment_none) {
@@ -965,12 +965,10 @@ struct fcd_data
 	vm_distance dist;
 };
 
-#if DXX_BUILD_DESCENT == 2
 static constexpr sidemask_t &operator&=(sidemask_t &a, const sidemask_t b)
 {
 	return a = static_cast<sidemask_t>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
-#endif
 
 fix64	Last_fcd_flush_time;
 unsigned Fcd_index;
@@ -1438,7 +1436,7 @@ Levels 9-end: unchecked
 	if (const auto old_tmap_idx = get_texture_index(old_tmap_num); old_tmap_idx >= NumTextures)
 		uside.tmap_num = build_texture1_value((
 			LevelErrorV(PLAYING_BUILTIN_MISSION ? CON_VERBOSE : CON_URGENT, "segment #%hu side #%i has invalid tmap %u (NumTextures=%u).", sp.get_unchecked_index(), underlying_value(sidenum), old_tmap_idx, NumTextures),
-			(sside.wall_num == wall_none)
+			(sside.wall_num == wall_none) ? texture_index{1} : texture_index{0}
 		));
 
 	//	Set render_flag.
@@ -1520,8 +1518,8 @@ namespace {
 	/* The array can be of any type that can hold values in the range
 	 * [0, AMBIENT_SEGMENT_DEPTH].
 	 */
-struct segment_lava_depth_array : enumerated_array<uint8_t, MAX_SEGMENTS, segnum_t> {};
-struct segment_water_depth_array : enumerated_array<uint8_t, MAX_SEGMENTS, segnum_t> {};
+struct segment_lava_depth_array : per_segment_array<uint8_t> {};
+struct segment_water_depth_array : per_segment_array<uint8_t> {};
 
 //	------------------------------------------------------------------------------------------
 //cast static light from a segment to nearby segments
@@ -1589,7 +1587,13 @@ static void change_segment_light(const vmsegptridx_t segp, const sidenum_t siden
 	if (WALL_IS_DOORWAY(GameBitmaps, Textures, vcwallptr, segp, sidenum) & WALL_IS_DOORWAY_FLAG::render)
 	{
 		auto &sidep = segp->unique_segment::sides[sidenum];
-		const auto light_intensity = TmapInfo[get_texture_index(sidep.tmap_num)].lighting + TmapInfo[get_texture_index(sidep.tmap_num2)].lighting;
+		const auto texture1_index{get_texture_index(sidep.tmap_num)};
+		if (texture1_index >= TmapInfo.size()) [[unlikely]]
+			return;
+		const auto texture2_index{get_texture_index(sidep.tmap_num2)};
+		if (texture2_index >= TmapInfo.size()) [[unlikely]]
+			return;
+		const auto light_intensity{TmapInfo[texture1_index].lighting + TmapInfo[texture2_index].lighting};
 		if (light_intensity) {
 			auto &vcvertptr = Vertices.vcptr;
 			const auto segment_center{compute_segment_center(vcvertptr, segp)};
@@ -1777,7 +1781,6 @@ void set_ambient_sound_flags()
 		for (const auto j : MAX_SIDES_PER_SEGMENT)
 		{
 			const auto &sside = segp->shared_segment::sides[j];
-			const auto &uside = segp->unique_segment::sides[j];
 			if (IS_CHILD(segp->children[j]) && sside.wall_num == wall_none)
 				/* If this side is open and there is no wall defined,
 				 * then the texture is never visible to the player.
@@ -1786,11 +1789,7 @@ void set_ambient_sound_flags()
 				 * added.  Skip this side.
 				 */
 				continue;
-			/* No other call site needs to combine two sets of
-			 * tmapinfo_flags, so there is no overloaded operator to
-			 * handle this.  Use the casts to allow it here.
-			 */
-			const auto texture_flags = static_cast<tmapinfo_flags>(underlying_value(TmapInfo[get_texture_index(uside.tmap_num)].flags) | underlying_value(TmapInfo[get_texture_index(uside.tmap_num2)].flags));
+			const auto texture_flags{get_side_combined_tmapinfo_flags(TmapInfo, segp->unique_segment::sides[j])};
 			/* These variables do not need to be named, but naming them
 			 * is the easiest way to establish sequence points, so that
 			 * `sound_flag` is passed to `ambient_mark_bfs` only after

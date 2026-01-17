@@ -439,14 +439,14 @@ static void create_group_list(const vmsegptridx_t segp, group::segment_array_typ
 #define MXV MAX_VERTICES
 
 // ------------------------------------------------------------------------------------------------
-static void duplicate_group(enumerated_array<uint8_t, MAX_VERTICES, vertnum_t> &vertex_ids, group::segment_array_type_t &segments)
+static void duplicate_group(per_vertex_array<uint8_t> &vertex_ids, group::segment_array_type_t &segments)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vmobjptridx = Objects.vmptridx;
 	group::segment_array_type_t new_segments;
-	enumerated_array<vertnum_t, MAX_VERTICES, vertnum_t> new_vertex_ids;		// If new_vertex_ids[v] != -1, then vertex v has been remapped to new_vertex_ids[v]
+	per_vertex_array<vertnum_t> new_vertex_ids;		// If new_vertex_ids[v] != -1, then vertex v has been remapped to new_vertex_ids[v]
 	constexpr vertnum_t undefined_vertex_id{UINT32_MAX};
 
 	//	duplicate vertices
@@ -570,7 +570,7 @@ static int med_copy_group(const unsigned delta_flag, const vmsegptridx_t base_se
 	GroupList[new_current_group] = GroupList[current_group];
 
 	//	Make a list of all vertices in group.
-	enumerated_array<uint8_t, MAX_VERTICES, vertnum_t> in_vertex_list{};
+	per_vertex_array<uint8_t> in_vertex_list{};
 	if (group_seg == &New_segment)
 		range_for (auto &v, group_seg->verts)
 			in_vertex_list[v] = 1;
@@ -694,8 +694,8 @@ static int med_move_group(int delta_flag, const vmsegptridx_t base_seg, const si
 //					return 1;
 //				}
 
-	enumerated_array<uint8_t, MAX_VERTICES, vertnum_t> in_vertex_list{};
-	enumerated_array<int8_t, MAX_VERTICES, vertnum_t> out_vertex_list{};
+	per_vertex_array<uint8_t> in_vertex_list{};
+	per_vertex_array<int8_t> out_vertex_list{};
 
 	//	Make a list of all vertices in group.
 	range_for(const auto &gs, GroupList[current_group].segments)
@@ -1127,7 +1127,6 @@ static int med_save_group( const char *filename, const group::vertex_array_type_
 }
 
 static std::array<d_fname, MAX_TEXTURES> old_tmap_list;
-// static short tmap_xlate_table[MAX_TEXTURES]; // ZICO - FIXME
 
 // -----------------------------------------------------------------------------
 // Load group will:
@@ -1346,9 +1345,8 @@ static int med_load_group( const char *filename, group::vertex_array_type_t &ver
 		temptr = strchr(&old_tmap_list[j][0u], '.');
 		if (temptr) *temptr = '\0';
 
-		tmap_xlate_table[j] = hashtable_search( &ht, static_cast<const char *>(old_tmap_list[j]));
-		if (tmap_xlate_table[j]	< 0 )
-			tmap_xlate_table[j] = 0;
+		const auto s{hashtable_search( &ht, static_cast<const char *>(old_tmap_list[j]))};
+		tmap_xlate_table[j] = (s < 0 || s >= tmap_xlate_table.size()) ? 0 : s;
 		if (tmap_xlate_table[j] != j ) translate = 1;
 	}
 }

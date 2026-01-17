@@ -69,6 +69,89 @@ static constexpr fix avg_fix(fix64 a, fix64 b)
 	return (a + b) / 2;
 }
 
+[[nodiscard]]
+static fix vm_vec_dot3(fix x,fix y,fix z,const vms_vector &v)
+{
+	/* Promote all the inputs up to 64-bit to avoid overflow. */
+	const int64_t x0{x};
+	const int64_t x1{v.x};
+	const int64_t y0{y};
+	const int64_t y1{v.y};
+	const int64_t z0{z};
+	const int64_t z1{v.z};
+	const int64_t p{(x0 * x1) + (y0 * y1) + (z0 * z1)};
+	/* Convert back to fix and return. */
+	return p >> 16;
+}
+
+//make sure a vector is reasonably sized to go into a cross product
+[[nodiscard]]
+static vms_vector check_vec(vms_vector v)
+{
+	if (unlikely(v == vms_vector{}))
+		return v;
+	int cnt{0};
+
+	fix check = labs(v.x) | labs(v.y) | labs(v.z);
+	if (check & 0xfffc0000) {		//too big
+
+		while (check & 0xfff00000) {
+			cnt += 4;
+			check >>= 4;
+		}
+
+		while (check & 0xfffc0000) {
+			cnt += 2;
+			check >>= 2;
+		}
+
+		v.x >>= cnt;
+		v.y >>= cnt;
+		v.z >>= cnt;
+	}
+	else												//maybe too small
+		if ((check & 0xffff8000) == 0) {		//yep, too small
+
+			while ((check & 0xfffff000) == 0) {
+				cnt += 4;
+				check <<= 4;
+			}
+
+			while ((check & 0xffff8000) == 0) {
+				cnt += 2;
+				check <<= 2;
+			}
+
+			v.x >>= cnt;
+			v.y >>= cnt;
+			v.z >>= cnt;
+		}
+	return v;
+}
+
+[[nodiscard]]
+static vms_matrix vm_matrix_build_from_sincos(const fixang bank, const fix_sincos_result p, const fix_sincos_result h)
+{
+	vms_matrix m;
+	m.fvec.y = -p.sin;								//m6
+	m.fvec.x = fixmul(h.sin,p.cos);				//m3
+	m.fvec.z = fixmul(h.cos,p.cos);				//m9
+	const auto &&[sinb, cosb]{fix_sincos(bank)};
+	m.rvec.y = fixmul(sinb,p.cos);				//m4
+	m.uvec.y = fixmul(cosb,p.cos);				//m5
+
+	const auto cbch{fixmul(cosb, h.cos)};
+	const auto sbsh{fixmul(sinb, h.sin)};
+	m.rvec.x = cbch + fixmul(p.sin,sbsh);		//m1
+	m.uvec.z = sbsh + fixmul(p.sin,cbch);		//m8
+
+	const auto sbch{fixmul(sinb, h.cos)};
+	const auto cbsh{fixmul(cosb, h.sin)};
+	m.uvec.x = fixmul(p.sin,cbsh) - sbch;		//m2
+	m.rvec.z = fixmul(p.sin,sbch) - cbsh;		//m7
+	return m;
+}
+
 }
 
 //adds two vectors, fills in dest, returns ptr to dest
@@ -180,20 +263,6 @@ void vm_vec_scale2(vms_vector &dest,fix n,fix d)
 		.y = fixmuldiv({dest.y}, {n}, {d}),
 		.z = fixmuldiv({dest.z}, {n}, {d}),
 	};
-}
-
-[[nodiscard]]
-static fix vm_vec_dot3(fix x,fix y,fix z,const vms_vector &v)
-{
-	const int64_t x0{x};
-	const int64_t x1{v.x};
-	const int64_t y0{y};
-	const int64_t y1{v.y};
-	const int64_t z0{z};
-	const int64_t z1{v.z};
-	const int64_t p{(x0 * x1) + (y0 * y1) + (z0 * z1)};
-	/* Convert back to fix and return. */
-	return p >> 16;
 }
 
 fix vm_vec_build_dot(const vms_vector &v0,const vms_vector &v1)
@@ -309,55 +378,6 @@ vms_vector vm_vec_normal(const vms_vector &p0, const vms_vector &p1, const vms_v
 	return vm_vec_normalized(vm_vec_perp(p0, p1, p2));
 }
 
-namespace {
-
-//make sure a vector is reasonably sized to go into a cross product
-[[nodiscard]]
-static vms_vector check_vec(vms_vector v)
-{
-	if (unlikely(v == vms_vector{}))
-		return v;
-	int cnt{0};
-
-	fix check = labs(v.x) | labs(v.y) | labs(v.z);
-	if (check & 0xfffc0000) {		//too big
-
-		while (check & 0xfff00000) {
-			cnt += 4;
-			check >>= 4;
-		}
-
-		while (check & 0xfffc0000) {
-			cnt += 2;
-			check >>= 2;
-		}
-
-		v.x >>= cnt;
-		v.y >>= cnt;
-		v.z >>= cnt;
-	}
-	else												//maybe too small
-		if ((check & 0xffff8000) == 0) {		//yep, too small
-
-			while ((check & 0xfffff000) == 0) {
-				cnt += 4;
-				check <<= 4;
-			}
-
-			while ((check & 0xffff8000) == 0) {
-				cnt += 2;
-				check <<= 2;
-			}
-
-			v.x >>= cnt;
-			v.y >>= cnt;
-			v.z >>= cnt;
-		}
-	return v;
-}
-
-}
-
 //computes cross product of two vectors. 
 //Note: this magnitude of the resultant vector is the
 //product of the magnitudes of the two source vectors.  This means it is
@@ -410,40 +430,6 @@ fixang vm_vec_delta_ang_norm(const vms_vector &v0,const vms_vector &v1,const vms
 	if (vm_vec_build_dot(vm_vec_cross(v0, v1), fvec) < 0)
 			a = -a;
 	return a;
-}
-
-namespace {
-
-[[nodiscard]]
-static vms_matrix vm_matrix_build_from_sincos(const fixang bank, const fix_sincos_result p, const fix_sincos_result h)
-{
-	vms_matrix m;
-#define DXX_S2M_DECL(V)	\
-	const auto &sin##V = V.sin;	\
-	const auto &cos##V = V.cos
-	DXX_S2M_DECL(p);
-	DXX_S2M_DECL(h);
-	m.fvec.y = -sinp;								//m6
-	m.fvec.x = fixmul(sinh,cosp);				//m3
-	m.fvec.z = fixmul(cosh,cosp);				//m9
-	const auto &&b = fix_sincos(bank);
-	DXX_S2M_DECL(b);
-#undef DXX_S2M_DECL
-	m.rvec.y = fixmul(sinb,cosp);				//m4
-	m.uvec.y = fixmul(cosb,cosp);				//m5
-
-	const auto cbch{fixmul(cosb, cosh)};
-	const auto sbsh{fixmul(sinb, sinh)};
-	m.rvec.x = cbch + fixmul(sinp,sbsh);		//m1
-	m.uvec.z = sbsh + fixmul(sinp,cbch);		//m8
-
-	const auto sbch{fixmul(sinb, cosh)};
-	const auto cbsh{fixmul(cosb, sinh)};
-	m.uvec.x = fixmul(sinp,cbsh) - sbch;		//m2
-	m.rvec.z = fixmul(sinp,sbch) - cbsh;		//m7
-	return m;
-}
-
 }
 
 //computes a matrix from a set of three angles.  returns ptr to matrix

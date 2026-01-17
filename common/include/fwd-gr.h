@@ -82,9 +82,7 @@ extern uint8_t HiresGFXAvailable;
 
 //now have string versions of these control characters (can concat inside a string)
 
-#define CC_COLOR_S      "\x1"   //next char is new foreground color
 #define CC_LSPACING_S   "\x2"   //next char specifies line spacing
-#define CC_UNDERLINE_S  "\x3"   //next char is underlined
 
 namespace dcx {
 
@@ -115,7 +113,6 @@ namespace dcx {
 
 struct grs_bitmap;
 struct grs_canvas;
-#define GRS_FONT_SIZE 28    // how much space it takes up on disk
 struct grs_point;
 
 union screen_mode;
@@ -243,7 +240,7 @@ void gr_uline(grs_canvas &canvas, fix x0,fix y0,fix x1,fix y1, color_palette_ind
 // Draw the bitmap into the current canvas at the specified location.
 void gr_bitmap(grs_canvas &, unsigned x,unsigned y,grs_bitmap &bm);
 void gr_ubitmap(grs_canvas &, grs_bitmap &bm);
-void show_fullscr(grs_canvas &, grs_bitmap &bm);
+void show_fullscr(grs_canvas &, grs_bitmap &bm, bool fill = true);
 
 // Find transparent area in bitmap
 void gr_bitblt_find_transparent_area(const grs_bitmap &bm, unsigned &minx, unsigned &miny, unsigned &maxx, unsigned &maxy);

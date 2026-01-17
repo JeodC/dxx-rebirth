@@ -100,12 +100,16 @@ public:
 
 struct submodel_data
 {
-	const uint16_t *body;
-	const unsigned type;
+	const uint16_t *const body;
+	/* `nverts` and `startpoint` could be stored as `uint16_t` due to the
+	 * limited range of the input data.  However, for code generation reasons
+	 * and to avoid spurious narrowing, use a full `unsigned`.
+	 */
 	const unsigned nverts;
 	const unsigned startpoint;
 };
 
+[[nodiscard]]
 submodel_data parse_model_data_header(const polymodel &pm, const unsigned submodel_num)
 {
 	auto data{reinterpret_cast<const uint16_t *>(&pm.model_data[pm.submodel_ptrs[submodel_num]])};
@@ -120,9 +124,14 @@ submodel_data parse_model_data_header(const polymodel &pm, const unsigned submod
 		: throw invalid_morph_model_type(type)
 	};
 	const uint16_t nverts{*pnverts};
-	return {data, type, nverts, startpoint};
+	return {
+		.body = data,
+		.nverts = nverts,
+		.startpoint = startpoint
+	};
 }
 
+[[nodiscard]]
 std::size_t count_submodel_points(const polymodel &pm, const polygon_model_index model_idx, const unsigned submodel_num)
 {
 	/* Return the minimum array size that will not cause this submodel
@@ -135,6 +144,7 @@ std::size_t count_submodel_points(const polymodel &pm, const polygon_model_index
 	return count;
 }
 
+[[nodiscard]]
 std::size_t count_model_points(const polymodel &pm, const polygon_model_index model_idx)
 {
 	/* Return the minimum array size that will not cause any used
@@ -209,15 +219,14 @@ morph_data::ptr morph_data::create(object_base &o, const polymodel &pm, const po
 }
 
 morph_data::morph_data(object_base &o, const max_vectors m) :
-	obj(&o), Morph_sig(o.signature), max_vecs(m)
+	obj{&o}, Morph_sig{o.signature},
+	morph_save_control_type{o.control_source},
+	morph_save_movement_type{o.movement_source}, max_vecs{m},
+	morph_save_phys_info{o.mtype.phys_info}
 {
-	DXX_POISON_VAR(submodel_active, 0xcc);
-	const auto morph_times{get_morph_times()};
-	DXX_POISON_MEMORY(morph_times, 0xcc);
-	const auto morph_vecs{get_morph_times()};
-	DXX_POISON_MEMORY(morph_vecs, 0xcc);
-	const auto morph_deltas{get_morph_times()};
-	DXX_POISON_MEMORY(morph_deltas, 0xcc);
+	std::ranges::fill(get_morph_times(), fix{});
+	DXX_POISON_MEMORY(get_morph_vecs(), 0xcc);
+	DXX_POISON_MEMORY(get_morph_deltas(), 0xcc);
 	DXX_POISON_VAR(n_morphing_points, 0xcc);
 	DXX_POISON_VAR(submodel_startpoints, 0xcc);
 }
@@ -306,6 +315,7 @@ static std::ranges::min_max_result<vms_vector> find_min_max(const polymodel &pm,
 constexpr fix morph_rate{F1_0 * 3};
 constexpr fix indeterminate_box_extent{INT32_MAX};
 
+[[nodiscard]]
 static fix update_bounding_box_extent(const vms_vector &vp, const vms_vector &box_size, fix vms_vector::*const p, const fix entry_extent)
 {
 	if (!(vp.*p))
@@ -317,6 +327,7 @@ static fix update_bounding_box_extent(const vms_vector &vp, const vms_vector &bo
 	return std::min(entry_extent, fixdiv(box_size_p, abs_vp_p));
 }
 
+[[nodiscard]]
 static fix compute_bounding_box_extents(const vms_vector &vp, const vms_vector *const box_size)
 {
 	return box_size
@@ -475,11 +486,6 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 	morph_data *const md{moi->get()};
 
 	assert(obj.render_type == render_type::RT_POLYOBJ);
-
-	md->morph_save_control_type = obj.control_source;
-	md->morph_save_movement_type = obj.movement_source;
-	md->morph_save_phys_info = obj.mtype.phys_info;
-
 	assert(obj.control_source == object::control_type::ai);		//morph objects are also AI objects
 
 	obj.control_source = object::control_type::morph;
@@ -495,14 +501,6 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 		.y = max(-pmmin.y, pmmax.y) / 2,
 		.z = max(-pmmin.z, pmmax.z) / 2
 	};
-
-	//clear all points
-	const auto morph_times{md->get_morph_times()};
-	std::fill(morph_times.begin(), morph_times.end(), fix{});
-	//clear all parts
-	md->submodel_active = {};
-
-	md->n_submodels_active = 1;
 
 	//now, project points onto surface of box
 

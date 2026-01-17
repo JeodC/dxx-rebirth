@@ -471,11 +471,11 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 #endif
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-	if (obj->rtype.pobj_info.tmap_override != -1) {
+	if (const auto tmap_override{obj->rtype.pobj_info.tmap_override}; tmap_override < Textures.size()) {
 		std::array<bitmap_index, 12> bm_ptrs;
 
 		//fill whole array, in case simple model needs more
-		bm_ptrs.fill(Textures[obj->rtype.pobj_info.tmap_override]);
+		bm_ptrs.fill(Textures[tmap_override]);
 		draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 				   obj->orient,
 				   obj->rtype.pobj_info.anim_angles,
@@ -708,7 +708,7 @@ void create_small_fireball_on_object(const vmobjptridx_t objp, fix size_scale, i
 	size = fixmul(size_scale, F1_0/2 + d_rand()*4/2);
 #endif
 
-	const auto &&segnum = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos, Segments.vmptridx(objp->segnum));
+	const auto &&segnum{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos, Segments.vmptridx(objp->segnum) DXX_lighting_hack_pass_parameter)};
 	if (segnum != segment_none) {
 		const auto &&expl_obj = object_create_explosion_without_damage(Vclip, segnum, pos, size, vclip_index::small_explosion);
 		if (!expl_obj)
@@ -907,7 +907,7 @@ void reset_player_object(object_base &ConsoleObject)
 	ConsoleObject.render_type = render_type::RT_POLYOBJ;
 	ConsoleObject.rtype.pobj_info.model_num = Player_ship->model_num;		//what model is this?
 	ConsoleObject.rtype.pobj_info.subobj_flags = 0;		//zero the flags
-	ConsoleObject.rtype.pobj_info.tmap_override = -1;		//no tmap override!
+	ConsoleObject.rtype.pobj_info.tmap_override = texture_index{UINT16_MAX};		//no tmap override!
 	ConsoleObject.rtype.pobj_info.anim_angles = {};
 
 	// Clear misc
@@ -1197,7 +1197,7 @@ imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, co
 	auto &vcvertptr = Vertices.vcptr;
 	if (get_seg_masks(vcvertptr, pos, segnum, 0).centermask != sidemask_t{})
 	{
-		const auto &&p = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos, segnum);
+		const auto &&p{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos, segnum DXX_lighting_hack_pass_parameter)};
 		if (p == segment_none) {
 			return object_none;		//don't create this object
 		}
@@ -1256,14 +1256,14 @@ imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, co
 	if (obj->render_type == render_type::RT_POLYOBJ)
         {
                 obj->rtype.pobj_info.subobj_flags = 0;
-		obj->rtype.pobj_info.tmap_override = -1;
+		obj->rtype.pobj_info.tmap_override = texture_index{UINT16_MAX};
                 obj->rtype.pobj_info.alt_textures = 0;
         }
 
 	obj->shields 				= 20*F1_0;
 
 	{
-		const auto &&p = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos, segnum);		//find correct segment
+		const auto &&p{find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, pos, segnum DXX_lighting_hack_pass_parameter)};		//find correct segment
 		// Previously this was only an assert check.  Now it is also
 		// checked at runtime.
 		segnum = p;
@@ -2263,7 +2263,7 @@ void reset_objects(d_level_unique_object_state &LevelUniqueObjectState, const un
 imsegptridx_t find_object_seg(const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const object_base &obj)
 {
 	auto &Segments = LevelUniqueSegmentState.get_segments();
-	return find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj.pos, Segments.vmptridx(obj.segnum));
+	return find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj.pos, Segments.vmptridx(obj.segnum) DXX_lighting_hack_pass_parameter);
 }
 
 

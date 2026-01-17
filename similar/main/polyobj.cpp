@@ -24,6 +24,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  */
 
 
+#include <algorithm>
 #include <span>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +35,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "vecmat.h"
 #include "cntrlcen.h"
 #include "interp.h"
+#include "common/3d/globvars.h"
 #include "dxxerror.h"
 #include "u_mem.h"
 #include "physfs-serial.h"
@@ -186,11 +188,11 @@ static void read_model_file(polymodel &pm, const char *const filename, robot_inf
 		switch (pof_id)
 		{
 			case ID_OHDR: {		//Object header
-				pm.n_models = pof_read_int(model_buf, Pof_addr);
+				const auto n_models{pof_read_int(model_buf, Pof_addr)};
+				if (!(n_models <= MAX_SUBMODELS))
+					Error("Invalid model file <%s>: too many submodels in object header: %u", filename, n_models);
+				pm.n_models = n_models;
 				pm.rad = pof_read_int(model_buf, Pof_addr);
-
-				assert(pm.n_models <= MAX_SUBMODELS);
-
 				{
 					const auto pmmin{pof_read_vec(model_buf, Pof_addr)};
 					static_cast<void>(pmmin);
@@ -407,9 +409,9 @@ void free_model(polymodel &po)
 
 namespace dsx {
 
-void draw_polygon_model(const enumerated_array<polymodel, MAX_POLYGON_MODELS, polygon_model_index> &Polygon_models, grs_canvas &canvas, const tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polygon_model_index model_num, const unsigned flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
+void draw_polygon_model(const per_polygon_model_array<polymodel> &Polygon_models, grs_canvas &canvas, const tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polygon_model_index model_num, const uint16_t subobj_flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
 {
-	draw_polygon_model(canvas, tmap_drawer_ptr, pos, orient, anim_angles, Polygon_models[model_num], flags, light, glow_values, alt_textures);
+	draw_polygon_model(canvas, tmap_drawer_ptr, pos, orient, anim_angles, Polygon_models[model_num], subobj_flags, light, glow_values, alt_textures);
 }
 
 static polygon_model_index build_polygon_model_index_from_polygon_simpler_model_index(const polygon_simpler_model_index i)
@@ -417,19 +419,19 @@ static polygon_model_index build_polygon_model_index_from_polygon_simpler_model_
 	return static_cast<polygon_model_index>(underlying_value(i) - 1);
 }
 
-void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polymodel &pm, unsigned flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
+void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_ptr, const vms_vector &pos, const vms_matrix &orient, const submodel_angles anim_angles, const polymodel &pm, const uint16_t subobj_flags, const g3s_lrgb light, const glow_values_t *const glow_values, const alternate_textures alt_textures)
 {
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	const polymodel *po = &pm;
 
 	//check if should use simple model
 	if (po->simpler_model != polygon_simpler_model_index::None)	//must have a simpler model
-		if (flags==0)							//can't switch if this is debris
+		if (subobj_flags == 0)							//can't switch if this is debris
 			//alt textures might not match, but in the one case we're using this
 			//for on 11/14/94, they do match.  So we leave it in.
 			{
 				int cnt{1};
-				const auto depth = g3_calc_point_depth(pos);		//gets 3d depth
+				const auto depth{g3_calc_point_depth(pos, View_position, View_matrix.fvec)};		//gets 3d depth
 				while (po->simpler_model != polygon_simpler_model_index::None && depth > cnt++ * Simple_model_threshhold_scale * po->rad)
 					po = &Polygon_models[build_polygon_model_index_from_polygon_simpler_model_index(po->simpler_model)];
 			}
@@ -441,8 +443,7 @@ void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_p
 		auto &&tlir = partial_range(texture_list_index, n_textures);
 		if (const std::span<const bitmap_index> a{alt_textures}; !a.empty())
 		{
-			for (auto &&[at, tli] : zip(a.first(n_textures), tlir))
-				tli = at;
+			std::ranges::copy(a.first(n_textures), tlir.begin());
 		}
 		else
 		{
@@ -466,10 +467,11 @@ void draw_polygon_model(grs_canvas &canvas, const tmap_drawer_type tmap_drawer_p
 
 	polygon_model_points robot_points;
 
-	if (flags == 0)		//draw entire object
+	if (subobj_flags == 0)		//draw entire object
 		g3_draw_polygon_model(texture_list.data(), robot_points, canvas, tmap_drawer_ptr, anim_angles, light, glow_values, po->model_data.get());
 
 	else {
+		auto flags{subobj_flags};
 		for (int i=0;flags;flags>>=1,i++)
 			if (flags & 1) {
 				Assert(i < po->n_models);
@@ -631,7 +633,7 @@ void draw_model_picture(grs_canvas &canvas, const polymodel &mn, const vms_angve
 namespace dcx {
 
 DEFINE_SERIAL_VMS_VECTOR_TO_MESSAGE();
-DEFINE_SERIAL_UDT_TO_MESSAGE(polymodel, p, (p.n_models, p.model_data_size, serial::pad<4>(), p.submodel_ptrs, p.submodel_offsets, p.submodel_norms, p.submodel_pnts, p.submodel_rads, p.submodel_parents, p.submodel_mins, p.submodel_maxs, p.mins, p.maxs, p.rad, p.n_textures, p.first_texture, p.simpler_model));
+DEFINE_SERIAL_UDT_TO_MESSAGE(polymodel, p, (p.n_models, serial::pad<3, 0>(), p.model_data_size, serial::pad<4>(), p.submodel_ptrs, p.submodel_offsets, p.submodel_norms, p.submodel_pnts, p.submodel_rads, p.submodel_parents, p.submodel_mins, p.submodel_maxs, p.mins, p.maxs, p.rad, p.n_textures, p.first_texture, p.simpler_model));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(polymodel, 12 + (10 * 4) + (10 * 3 * sizeof(vms_vector)) + (10 * sizeof(fix)) + 10 + (10 * 2 * sizeof(vms_vector)) + (2 * sizeof(vms_vector)) + 8);
 
 /*

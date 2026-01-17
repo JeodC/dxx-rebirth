@@ -62,8 +62,6 @@ struct alias;
 extern std::array<alias, MAX_ALIASES> alias_list;
 extern unsigned Num_aliases;
 #endif
-
-extern uint8_t Pigfile_initialized;
 }
 #endif
 #endif
@@ -71,17 +69,12 @@ extern uint8_t Pigfile_initialized;
 // an index into the bitmap collection of the piggy file
 enum class bitmap_index : uint16_t;
 
-#ifdef DXX_BUILD_DESCENT
-#if DXX_BUILD_DESCENT == 1
-
-extern grs_bitmap bogus_bitmap;
-#endif
-#endif
 extern std::array<uint8_t, 64 * 64> bogus_data;
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
+extern grs_bitmap bogus_bitmap;
 extern bool MacPig;
 extern bool PCSharePig;
 #endif
@@ -101,7 +94,10 @@ constexpr std::integral_constant<unsigned, 2620> MAX_BITMAP_FILES{};
 #endif
 #define MAX_SOUND_FILES     MAX_SOUNDS
 
-using GameBitmaps_array = enumerated_array<grs_bitmap, MAX_BITMAP_FILES, bitmap_index>;
+template <typename T>
+	using per_bitmap_index_array = enumerated_array<T, MAX_BITMAP_FILES, bitmap_index>;
+
+using GameBitmaps_array = per_bitmap_index_array<grs_bitmap>;
 extern std::array<digi_sound, MAX_SOUND_FILES> GameSounds;
 extern GameBitmaps_array GameBitmaps;
 void piggy_bitmap_page_in(GameBitmaps_array &, bitmap_index bmp);
@@ -152,7 +148,7 @@ extern ubyte bogus_bitmap_initialized;
 extern hashtable AllBitmapsNames;
 extern hashtable AllDigiSndNames;
 #elif DXX_BUILD_DESCENT == 2
-extern enumerated_array<BitmapFile, MAX_BITMAP_FILES, bitmap_index> AllBitmaps;
+extern per_bitmap_index_array<BitmapFile> AllBitmaps;
 #endif
 #endif
 

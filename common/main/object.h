@@ -173,7 +173,7 @@ struct player_info
 	player_selected_weapon<primary_weapon_index_t> Primary_weapon;
 	player_selected_weapon<secondary_weapon_index_t> Secondary_weapon;
 	enum laser_level laser_level;
-	enumerated_array<uint8_t, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t>  secondary_ammo; // How much ammo of each type.
+	per_secondary_weapon_array<uint8_t>  secondary_ammo; // How much ammo of each type.
 	uint8_t Spreadfire_toggle;
 #if DXX_BUILD_DESCENT == 2
 	static constexpr uint8_t max_hoard_orbs{12};
@@ -352,8 +352,8 @@ namespace dcx {
 struct vclip_info : prohibit_void_ptr<vclip_info>
 {
 	vclip_index vclip_num;
-	fix     frametime;
 	uint8_t framenum;
+	fix     frametime;
 };
 
 struct vclip_info_rw
@@ -369,8 +369,13 @@ struct polyobj_info : prohibit_void_ptr<polyobj_info>
 {
 	polygon_model_index model_num{};// which polygon model
 	std::array<vms_angvec, MAX_SUBMODELS> anim_angles{}; // angles for each subobject
-	int subobj_flags{0};       // specify which subobjs to draw
-	int tmap_override{0};      // if this is not -1, map all face to this
+	uint16_t subobj_flags{0};       // specify which subobjs to draw
+	/* If this is not texture_index{UINT16_MAX}, then use this texture on all faces.
+	 * Initialize to 0 instead, so that global scope instances can be in bss.
+	 * The object loading and generation code will assign an appropriate value,
+	 * so the 0 here should have no effect on properly loaded objects.
+	 */
+	texture_index tmap_override{0};
 	int alt_textures{0};       // if not -1, use these textures instead
 };
 

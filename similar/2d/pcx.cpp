@@ -79,6 +79,28 @@ struct PCXHeader
 #endif
 
 #if DXX_USE_SDLIMAGE
+static auto load_physfs_blob(const char *const filename)
+{
+	unique_span<uint8_t> result;
+	if (RAIIPHYSFS_File file{PHYSFS_openRead(filename)}; !file)
+	{
+		[[unlikely]];
+		con_printf(CON_VERBOSE, "%s:%u: failed to open \"%s\": %s", __FILE__, __LINE__, filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+	}
+	else if (const std::size_t fsize = PHYSFS_fileLength(file); fsize > 0x100000u)
+	{
+		[[unlikely]];
+		con_printf(CON_VERBOSE, "%s:%u: file too large \"%s\"", __FILE__, __LINE__, filename);
+	}
+	else if (PHYSFSX_readBytes(file, (result = {fsize}).get(), fsize) != fsize)
+	{
+		[[unlikely]];
+		result.reset();
+		con_printf(CON_VERBOSE, "%s:%u: failed to read \"%s\"", __FILE__, __LINE__, filename);
+	}
+	return result;
+}
+
 static pcx_result pcx_read_bitmap(const char *const filename, grs_main_bitmap &bmp, palette_array_t &palette, RWops_ptr rw)
 {
 	RAII_SDL_Surface surface(IMG_LoadPCX_RW(rw.get()));
@@ -103,16 +125,15 @@ static pcx_result pcx_read_bitmap(const char *const filename, grs_main_bitmap &b
 	DXX_CHECK_MEM_IS_DEFINED(std::span(static_cast<const std::byte *>(s.pixels), xsize * ysize));
 	gr_init_bitmap_alloc(bmp, bm_mode::linear, 0, 0, xsize, ysize, xsize);
 	std::copy_n(reinterpret_cast<const uint8_t *>(s.pixels), xsize * ysize, &bmp.get_bitmap_data()[0]);
-	{
-		const auto a = [](const SDL_Color &c) {
+	std::ranges::transform(std::span(fpal->colors, fpal->colors + palette.size()), palette.begin(),
+		[](const SDL_Color &c) {
 			return rgb_t{
 				static_cast<uint8_t>(c.r >> 2),
 				static_cast<uint8_t>(c.g >> 2),
 				static_cast<uint8_t>(c.b >> 2)
 			};
-		};
-		std::transform(fpal->colors, fpal->colors + palette.size(), palette.begin(), a);
-	}
+		}
+	);
 	return pcx_result::SUCCESS;
 }
 #endif
@@ -158,25 +179,6 @@ namespace dsx {
 namespace {
 
 #if DXX_USE_SDLIMAGE
-static auto load_physfs_blob(const char *const filename)
-{
-	unique_span<uint8_t> result;
-	if (auto &&[file, physfserr]{PHYSFSX_openReadBuffered(filename)}; !file)
-	{
-		con_printf(CON_VERBOSE, "%s:%u: failed to open \"%s\": %s", __FILE__, __LINE__, filename, PHYSFS_getErrorByCode(physfserr));
-	}
-	else if (const std::size_t fsize = PHYSFS_fileLength(file); fsize > 0x100000u)
-	{
-		con_printf(CON_VERBOSE, "%s:%u: file too large \"%s\"", __FILE__, __LINE__, filename);
-	}
-	else if (PHYSFSX_readBytes(file, (result = {fsize}).get(), fsize) != fsize)
-	{
-		result.reset();
-		con_printf(CON_VERBOSE, "%s:%u: failed to read \"%s\"", __FILE__, __LINE__, filename);
-	}
-	return result;
-}
-
 static auto load_decoded_physfs_blob(const char *const filename)
 {
 	unique_span<uint8_t> decoded_buffer;
@@ -204,8 +206,7 @@ pcx_result bald_guy_load(const char *const filename, grs_main_bitmap &bmp, palet
 	if (!b)
 		return pcx_result::ERROR_OPENING;
 
-	RWops_ptr rw(SDL_RWFromConstMem(b, bguy_data.size()));
-	return pcx_read_bitmap(filename, bmp, palette, std::move(rw));
+	return pcx_read_bitmap(filename, bmp, palette, RWops_ptr{SDL_RWFromConstMem(b, bguy_data.size())});
 #else
 	return pcx_support_not_compiled(filename, bmp, palette);
 #endif
@@ -219,18 +220,15 @@ namespace dcx {
 pcx_result pcx_read_bitmap(const char *const filename, grs_main_bitmap &bmp, palette_array_t &palette)
 {
 #if DXX_USE_SDLIMAGE
-	/* Try to enable buffering on the PHYSFS file.  On Windows,
-	 * unbuffered access to the file causes SDL_image to be slow enough
-	 * for users to detect the latency and report it as an issue.  On
-	 * Linux, unbuffered access is still fast.
-	 */
-	auto &&[rw, physfserr] = PHYSFSRWOPS_openReadBuffered(filename, 1024 * 1024);
-	if (!rw)
+	auto blob{load_physfs_blob(filename)};
+	const auto b{blob.get()};
+	if (!b)
 	{
-		con_printf(CON_NORMAL, "%s:%u: failed to open \"%s\": %s", __FILE__, __LINE__, filename, PHYSFS_getErrorByCode(physfserr));
+		[[unlikely]];
+		con_printf(CON_NORMAL, "%s:%u: failed to open \"%s\": %s", __FILE__, __LINE__, filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 		return pcx_result::ERROR_OPENING;
 	}
-	return pcx_read_bitmap(filename, bmp, palette, std::move(rw));
+	return pcx_read_bitmap(filename, bmp, palette, RWops_ptr{SDL_RWFromConstMem(b, blob.size())});
 #else
 	return pcx_support_not_compiled(filename, bmp, palette);
 #endif
