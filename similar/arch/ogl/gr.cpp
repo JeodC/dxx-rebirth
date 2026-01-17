@@ -809,7 +809,7 @@ void gr_set_attributes(void)
 #if SDL_MAJOR_VERSION == 2
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #endif
 #endif
 	ogl_smash_texture_list_internal();
@@ -866,7 +866,18 @@ int gr_init()
 		return -1;
 	SDL_GetWindowPosition(SDLWindow, &g_iRebirthWindowX, &g_iRebirthWindowY);
 	g_pRebirthSDLMainWindow = SDLWindow;
-	SDL_GL_CreateContext(SDLWindow);
+
+	SDL_GLContext ctx = SDL_GL_CreateContext(SDLWindow);
+	if (!ctx) {
+		con_printf(CON_URGENT, "SDL_GL_CreateContext failed: %s", SDL_GetError());
+		return -1;
+	}
+
+	if (SDL_GL_MakeCurrent(SDLWindow, ctx) != 0) {
+		con_printf(CON_URGENT, "SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+		return -1;
+	}
+
 	if (const auto window_icon = SDL_LoadBMP(DXX_SDL_WINDOW_ICON_BITMAP))
 		SDL_SetWindowIcon(SDLWindow, window_icon);
 #endif
