@@ -1114,7 +1114,10 @@ static void collide_robot_and_player(const d_robot_info_array &Robot_info, const
 			digi_link_sound_to_pos(sound_effect::SOUND_ROBOT_HIT_PLAYER, player_segp, sidenum_t::WLEFT, collision_point, 0, F1_0);
 
 		if (collision_seg != segment_none)
-			object_create_explosion_without_damage(Vclip, collision_seg, collision_point, Weapon_info[0].impact_size, Weapon_info[0].wall_hit_vclip);
+		{
+			auto &wi{Weapon_info[weapon_id_type::LASER_ID_L1]};
+			object_create_explosion_without_damage(Vclip, collision_seg, collision_point, wi.impact_size, wi.wall_hit_vclip);
+		}
 	}
 
 	bump_two_objects(Robot_info, robot, playerobj, 1);
