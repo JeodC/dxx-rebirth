@@ -1315,8 +1315,11 @@ imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectSt
 	auto &obj = *objp;
 	//	Set (or not) persistent bit in phys_info.
 	assert(obj.control_source == object::control_type::weapon);
-	if (Weapon_info[id].persistent != weapon_info::persistence_flag::terminate_on_impact)
-		obj.mtype.phys_info.flags |= PF_PERSISTENT;
+	if (const auto opt_id{Weapon_info.valid_index(id)})
+	{
+		if (Weapon_info[*opt_id].persistent != weapon_info::persistence_flag::terminate_on_impact)
+			obj.mtype.phys_info.flags |= PF_PERSISTENT;
+	}
 	obj.ctype.laser_info.creation_time = {GameTime64};
 	obj.ctype.laser_info.clear_hitobj();
 	obj.ctype.laser_info.multiplier = F1_0;
