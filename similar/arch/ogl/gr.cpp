@@ -139,7 +139,6 @@ void gr_set_mode_from_window_size()
 
 #if DXX_USE_OGLES && SDL_MAJOR_VERSION == 1 
 static EGLDisplay eglDisplay=EGL_NO_DISPLAY;
-static EGLConfig eglConfig;
 static EGLSurface eglSurface=EGL_NO_SURFACE;
 static EGLContext eglContext=EGL_NO_CONTEXT;
 
@@ -456,6 +455,7 @@ static int ogl_init_window(int w, int h)
 	}
 #endif
 
+	static EGLConfig eglConfig;
 	if (eglSurface == EGL_NO_SURFACE) {
 		if (!eglChooseConfig(eglDisplay, configAttribs, &eglConfig, 1, &iConfigs) || (iConfigs != 1)) {
 			con_printf(CON_URGENT, "EGL: Error choosing config");
