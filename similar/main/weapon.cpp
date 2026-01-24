@@ -1864,18 +1864,18 @@ void weapon_info_write(PHYSFS_File *fp, const weapon_info &w)
  */
 namespace dsx {
 
-void weapon_info_read_n(weapon_info_array &wi, std::size_t count, const NamedPHYSFS_File fp,
-#if DXX_BUILD_DESCENT == 2
-						const pig_hamfile_version file_version,
-#endif
-						std::size_t offset)
+void weapon_info_read_current_version(weapon_info_array &wi, const std::size_t offset, const std::size_t count, const NamedPHYSFS_File fp)
 {
-	auto r = partial_range(wi, offset, count);
-#if DXX_BUILD_DESCENT == 1
-#elif DXX_BUILD_DESCENT == 2
+	for (auto &w : partial_range(wi, offset, count))
+		PHYSFSX_serialize_read(fp, w);
+}
+
+#if DXX_BUILD_DESCENT == 2
+void weapon_info_read_specified_version(weapon_info_array &wi, const std::size_t offset, const std::size_t count, const NamedPHYSFS_File fp, const pig_hamfile_version file_version)
+{
 	if (file_version < pig_hamfile_version::_3)
 	{
-		range_for (auto &w, r)
+		for (auto &w : partial_range(wi, offset, count))
 			PHYSFSX_serialize_read(fp, static_cast<v2_weapon_info &>(w));
 		/* Set the type of children correctly when using old
 		 * datafiles.  In earlier descent versions this was simply
@@ -1885,10 +1885,8 @@ void weapon_info_read_n(weapon_info_array &wi, std::size_t count, const NamedPHY
 		wi[weapon_id_type::SUPERPROX_ID].children = weapon_id_type::SMART_MINE_HOMING_ID;
 		return;
 	}
-#endif
-	range_for (auto &w, r)
-	{
-		PHYSFSX_serialize_read(fp, w);
-	}
+	weapon_info_read_current_version(wi, offset, count, fp);
 }
+#endif
+
 }

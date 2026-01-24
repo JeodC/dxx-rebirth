@@ -96,11 +96,10 @@ extern const per_secondary_weapon_array<uint8_t>    Secondary_ammo_max;
  */
 using weapon_info_array = enumerated_array<weapon_info, MAX_WEAPON_TYPES, weapon_id_type>;
 extern weapon_info_array Weapon_info;
-void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_File fp,
+void weapon_info_read_current_version(weapon_info_array &wi, std::size_t offset, std::size_t count, NamedPHYSFS_File fp);
 #if DXX_BUILD_DESCENT == 2
-						pig_hamfile_version file_version,
+void weapon_info_read_specified_version(weapon_info_array &wi, std::size_t offset, std::size_t count, NamedPHYSFS_File fp, pig_hamfile_version file_version);
 #endif
-						std::size_t offset);
 
 // Weapon flags, if player->weapon_flags & WEAPON_FLAG is set, then the player has this weapon
 #define HAS_LASER_FLAG      HAS_PRIMARY_FLAG(primary_weapon_index::laser)
