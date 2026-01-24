@@ -162,6 +162,9 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 	sbyte   destroyable;        // If !0, this weapon can be destroyed by another weapon.
 
 	sbyte   homing_flag;        // Set if this weapon can home in on a target.
+#if DXX_BUILD_DESCENT == 2
+	uint8_t flags;	// WIF_PLACABLE or 0
+#endif
 
 	bitmap_index bitmap;        // Pointer to bitmap if rendertype==0 or 1.
 
@@ -186,9 +189,6 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 	bitmap_index    picture;    // a picture of the weapon for the cockpit
 #elif DXX_BUILD_DESCENT == 2
 	ubyte   speedvar;           // allowed variance in speed below average, /128: 64 = 50% meaning if speed = 100, can be 50..100
-
-	ubyte   flags;              // see values above
-
 	sbyte   flash;              // Flash effect
 	sbyte   afterburner_size;   // Size of blobs in F1_0/16 units, specify in bitmaps.tbl as floating point.  Player afterburner size = 2.5.
 
