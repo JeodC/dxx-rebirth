@@ -163,10 +163,10 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 
 	sbyte   homing_flag;        // Set if this weapon can home in on a target.
 
+	bitmap_index bitmap;        // Pointer to bitmap if rendertype==0 or 1.
+
 	fix energy_usage;           // How much fuel is consumed to fire this weapon.
 	fix fire_wait;              // Time until this weapon can be fired again.
-
-	bitmap_index bitmap;        // Pointer to bitmap if rendertype==0 or 1.
 
 	fix blob_size;              // Size of blob if blob type
 	fix flash_size;             // How big to draw the flash
