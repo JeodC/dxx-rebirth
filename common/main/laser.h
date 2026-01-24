@@ -144,39 +144,49 @@ extern std::array<muzzle_info, MUZZLE_QUEUE_MAX> Muzzle_data;
 }
 
 #ifdef DXX_BUILD_DESCENT
-namespace d1x {
-
-static inline int is_proximity_bomb_or_player_smart_mine(const weapon_id_type id)
-{
-	return id == weapon_id_type::PROXIMITY_ID;
-}
-
-static inline int is_proximity_bomb_or_player_smart_mine_or_placed_mine(const weapon_id_type id)
-{
-	/* Descent 1 has no smart mines or placed mines. */
-	return id == weapon_id_type::PROXIMITY_ID;
-}
-
-}
+namespace dsx {
 
 #if DXX_BUILD_DESCENT == 2
-namespace dsx {
 // Omega cannon stuff.
 #define MAX_OMEGA_CHARGE    (F1_0)  //  Maximum charge level for omega cannonw
-
-static inline int is_proximity_bomb_or_player_smart_mine(const weapon_id_type id)
-{
-	if (id == weapon_id_type::SUPERPROX_ID)
-		return 1;
-	return ::d1x::is_proximity_bomb_or_player_smart_mine(id);
-}
-
-static inline int is_proximity_bomb_or_player_smart_mine_or_placed_mine(const weapon_id_type id)
-{
-	if (id == weapon_id_type::PMINE_ID)
-		return 1;
-	return is_proximity_bomb_or_player_smart_mine(id);
-}
-}
 #endif
+
+static constexpr uint8_t is_proximity_bomb_or_player_smart_mine(const weapon_id_type id)
+{
+	switch (id)
+	{
+#if DXX_BUILD_DESCENT == 2
+		case weapon_id_type::SUPERPROX_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::SUPERPROX_ID) != 0);
+			[[fallthrough]];
+#endif
+		case weapon_id_type::PROXIMITY_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::PROXIMITY_ID) != 0);
+			return static_cast<uint8_t>(id);
+		default:
+			return 0;
+	}
+}
+
+static constexpr uint8_t is_proximity_bomb_or_player_smart_mine_or_placed_mine(const weapon_id_type id)
+{
+	switch (id)
+	{
+#if DXX_BUILD_DESCENT == 2
+		case weapon_id_type::SUPERPROX_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::SUPERPROX_ID) != 0);
+			[[fallthrough]];
+		case weapon_id_type::PMINE_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::PMINE_ID) != 0);
+			[[fallthrough]];
+#endif
+		case weapon_id_type::PROXIMITY_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::PROXIMITY_ID) != 0);
+			return static_cast<uint8_t>(id);
+		default:
+			return 0;
+	}
+}
+
+}
 #endif
