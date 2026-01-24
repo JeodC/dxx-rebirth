@@ -3295,6 +3295,7 @@ static void net_udp_process_dump(const upid_rspan<upid::dump> data, const _socka
 			const char *dump_string;
 			switch (why)
 			{
+				default:	// unreachable
 				case kick_player_reason::kicked:	// unreachable
 				case kick_player_reason::pkttimeout:	// unreachable
 				case kick_player_reason::closed:	// reachable
