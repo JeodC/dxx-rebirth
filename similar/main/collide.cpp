@@ -2465,11 +2465,11 @@ static void collide_weapon_and_weapon(const d_robot_info_array &Robot_info, cons
 	if (wi1.destroyable || wi2.destroyable) {
 		if (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num)
 		{
+			//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
+			if (w1id == w2id)
+				return;
 		// shooting Plasma will make bombs explode one drops at the same time since hitboxes overlap. Small HACK to get around this issue. if the player moves away from the bomb at least...
 		if ((GameTime64 < weapon1->ctype.laser_info.creation_time + (F1_0/5)) && (GameTime64 < weapon2->ctype.laser_info.creation_time + (F1_0/5)))
-			return;
-		//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
-		if (w1id == w2id)
 			return;
 		}
 
