@@ -2462,7 +2462,9 @@ static void collide_weapon_and_weapon(const d_robot_info_array &Robot_info, cons
 
 	const auto &wi1{Weapon_info[w1id]};
 	const auto &wi2{Weapon_info[w2id]};
-	if (wi1.destroyable || wi2.destroyable) {
+	const auto w1destroyable{wi1.destroyable};
+	const auto w2destroyable{wi2.destroyable};
+	if (w1destroyable || w2destroyable) {
 		if (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num)
 		{
 			//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
@@ -2474,19 +2476,19 @@ static void collide_weapon_and_weapon(const d_robot_info_array &Robot_info, cons
 		}
 
 #if DXX_BUILD_DESCENT == 1
-		if (wi1.destroyable)
+		if (w1destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point))
 				maybe_kill_weapon(weapon2,weapon1);
 
-		if (wi2.destroyable)
+		if (w2destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point))
 				maybe_kill_weapon(weapon1,weapon2);
 #elif DXX_BUILD_DESCENT == 2
-		if (wi1.destroyable)
+		if (w1destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point))
 				maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point);
 
-		if (wi2.destroyable)
+		if (w2destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point))
 				maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point);
 #endif
