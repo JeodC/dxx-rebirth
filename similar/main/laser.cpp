@@ -88,19 +88,22 @@ void Laser_render(grs_canvas &canvas, const object_base &obj)
 	switch(wi.render)
 	{
 	case weapon_info::render_type::laser:
-		Int3();	// Not supported anymore!
-					//Laser_draw_one(obj-Objects, Weapon_info[obj->id].bitmap );
+	case weapon_info::render_type::vclip:
+	default:
+		/* These types were unsupported in this context as of the original
+		 * release of the Descent 1 source, and remained unsupported in the
+		 * original release of the Descent 2 source.
+		 *
+		 * Skip rendering them, but do not abort on the use of an unsupported
+		 * type.
+		 */
+		[[unlikely]];
 		break;
 	case weapon_info::render_type::blob:
 		draw_object_blob(GameBitmaps, *Viewer, canvas, obj, wi.bitmap);
 		break;
 	case weapon_info::render_type::polymodel:
 		break;
-	case weapon_info::render_type::vclip:
-		Int3();	//	Oops, not supported, type added by mk on 09/09/94, but not for lasers...
-		[[fallthrough]];
-	default:
-		Error( "Invalid weapon render type in Laser_render\n" );
 	}
 }
 
