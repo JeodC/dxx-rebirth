@@ -2444,42 +2444,46 @@ int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptrid
 
 static void collide_weapon_and_weapon(const d_robot_info_array &Robot_info, const vmobjptridx_t weapon1, const vmobjptridx_t weapon2, const vms_vector &collision_point)
 {
+	const auto w1id{get_weapon_id(weapon1)};
+	const auto w2id{get_weapon_id(weapon2)};
 #if DXX_BUILD_DESCENT == 2
 	// -- Does this look buggy??:  if (weapon1->id == PMINE_ID && weapon1->id == PMINE_ID)
-	if (get_weapon_id(weapon1) == weapon_id_type::PMINE_ID && get_weapon_id(weapon2) == weapon_id_type::PMINE_ID)
+	if (w1id == weapon_id_type::PMINE_ID && w2id == weapon_id_type::PMINE_ID)
 		return;		//these can't blow each other up
 
-	if (get_weapon_id(weapon1) == weapon_id_type::OMEGA_ID) {
+	if (w1id == weapon_id_type::OMEGA_ID) {
 		if (!ok_to_do_omega_damage(weapon1)) // see comment in laser.c
 			return;
-	} else if (get_weapon_id(weapon2) == weapon_id_type::OMEGA_ID) {
+	} else if (w2id == weapon_id_type::OMEGA_ID) {
 		if (!ok_to_do_omega_damage(weapon2)) // see comment in laser.c
 			return;
 	}
 #endif
 
-	if ((Weapon_info[get_weapon_id(weapon1)].destroyable) || (Weapon_info[get_weapon_id(weapon2)].destroyable)) {
+	const auto &wi1{Weapon_info[w1id]};
+	const auto &wi2{Weapon_info[w2id]};
+	if (wi1.destroyable || wi2.destroyable) {
 		// shooting Plasma will make bombs explode one drops at the same time since hitboxes overlap. Small HACK to get around this issue. if the player moves away from the bomb at least...
 		if ((GameTime64 < weapon1->ctype.laser_info.creation_time + (F1_0/5)) && (GameTime64 < weapon2->ctype.laser_info.creation_time + (F1_0/5)) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))
 			return;
 		//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
-		if ((get_weapon_id(weapon1) == get_weapon_id(weapon2)) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))
+		if (w1id == w2id && weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num)
 			return;
 
 #if DXX_BUILD_DESCENT == 1
-		if (Weapon_info[get_weapon_id(weapon1)].destroyable)
+		if (wi1.destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point))
 				maybe_kill_weapon(weapon2,weapon1);
 
-		if (Weapon_info[get_weapon_id(weapon2)].destroyable)
+		if (wi2.destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point))
 				maybe_kill_weapon(weapon1,weapon2);
 #elif DXX_BUILD_DESCENT == 2
-		if (Weapon_info[get_weapon_id(weapon1)].destroyable)
+		if (wi1.destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point))
 				maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point);
 
-		if (Weapon_info[get_weapon_id(weapon2)].destroyable)
+		if (wi2.destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point))
 				maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point);
 #endif
