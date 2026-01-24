@@ -117,7 +117,6 @@ public:
 	{
 		return d;
 	}
-	constexpr vm_distance_squared operator*(const vm_distance &) const;
 };
 
 class vm_magnitude : public vm_distance
@@ -147,9 +146,10 @@ static constexpr auto operator<=>(const vm_distance_squared a, const vm_distance
 	return static_cast<fix64>(a) <=> static_cast<fix64>(b);
 }
 
-constexpr vm_distance_squared vm_distance::operator*(const vm_distance &rhs) const
+[[nodiscard]]
+constexpr vm_distance_squared operator*(const vm_distance lhs, const vm_distance rhs)
 {
-	return vm_distance_squared{static_cast<fix64>(static_cast<fix>(*this)) * static_cast<fix64>(static_cast<fix>(rhs))};
+	return vm_distance_squared{static_cast<fix64>(static_cast<fix>(lhs)) * static_cast<fix64>(static_cast<fix>(rhs))};
 }
 
 [[nodiscard]]
