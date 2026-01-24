@@ -134,6 +134,10 @@ enum class vm_distance_squared : fix64
 	maximum_value = INT64_MAX,
 };
 
+enum class vm_magnitude_squared : uint64_t
+{
+};
+
 [[nodiscard]]
 static constexpr vm_distance_squared build_vm_distance_squared(const vm_magnitude_squared m)
 {
