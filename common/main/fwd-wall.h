@@ -10,6 +10,7 @@
 
 #include <type_traits>
 #include <physfs.h>
+#include "d_bit_enum.h"
 #include "piggy.h"
 #include "textures.h"
 #include "fwd-object.h"
@@ -60,9 +61,6 @@ constexpr fix DOOR_WAIT_TIME = i2f(5);      // How long before auto door closes
 }
 
 #ifdef DXX_BUILD_DESCENT
-namespace dsx {
-}
-
 namespace dcx {
 
 enum class WALL_IS_DOORWAY_FLAG : uint8_t
@@ -77,10 +75,8 @@ enum class WALL_IS_DOORWAY_FLAG : uint8_t
 	/* endif */
 };
 
-static constexpr WALL_IS_DOORWAY_FLAG operator|(const WALL_IS_DOORWAY_FLAG a, const WALL_IS_DOORWAY_FLAG b)
-{
-	return static_cast<WALL_IS_DOORWAY_FLAG>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<WALL_IS_DOORWAY_FLAG, WALL_IS_DOORWAY_FLAG>{true};
 
 enum class wall_is_doorway_result : uint8_t;
 }
