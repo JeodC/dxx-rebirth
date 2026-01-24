@@ -2421,7 +2421,8 @@ namespace {
 
 int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptridx_t weapon1, object &weapon2, const vms_vector &collision_point)
 {
-	if ( Weapon_info[get_weapon_id(weapon1)].damage_radius ) {
+	const auto damage_radius{Weapon_info[get_weapon_id(weapon1)].damage_radius};
+	if (damage_radius) {
 		auto dist = vm_vec_dist_quick(weapon1->pos, weapon2.pos);
 		if (dist < F1_0*5) {
 			maybe_kill_weapon(weapon1,weapon2);
@@ -2433,13 +2434,11 @@ int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptrid
 #endif
 				digi_link_sound_to_pos(Weapon_info[get_weapon_id(weapon1)].robot_hit_sound, vcsegptridx(weapon1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
 			}
-			return 1;
 		} else {
 			weapon1->lifeleft = min(static_cast<fix>(dist) / 64, F1_0);
-			return 1;
 		}
-	} else
-		return 0;
+	}
+	return damage_radius;
 }
 
 static void collide_weapon_and_weapon(const d_robot_info_array &Robot_info, const vmobjptridx_t weapon1, const vmobjptridx_t weapon2, const vms_vector &collision_point)
