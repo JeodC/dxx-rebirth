@@ -868,7 +868,8 @@ int gr_init()
 		return -1;
 	SDL_GetWindowPosition(SDLWindow, &g_iRebirthWindowX, &g_iRebirthWindowY);
 	g_pRebirthSDLMainWindow = SDLWindow;
-	SDL_GL_CreateContext(SDLWindow);
+	if (!SDL_GL_CreateContext(SDLWindow))
+		Error("Failed to create SDL GL context: %s", SDL_GetError());
 	if (const auto window_icon = SDL_LoadBMP(DXX_SDL_WINDOW_ICON_BITMAP))
 		SDL_SetWindowIcon(SDLWindow, window_icon);
 #endif
