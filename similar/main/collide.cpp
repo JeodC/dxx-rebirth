@@ -2421,7 +2421,8 @@ namespace {
 
 int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptridx_t weapon1, object &weapon2, const vms_vector &collision_point)
 {
-	const auto damage_radius{Weapon_info[get_weapon_id(weapon1)].damage_radius};
+	auto &wi1{Weapon_info[get_weapon_id(weapon1)]};
+	const auto damage_radius{wi1.damage_radius};
 	if (damage_radius) {
 		auto dist = vm_vec_dist_quick(weapon1->pos, weapon2.pos);
 		if (dist < F1_0*5) {
@@ -2432,7 +2433,7 @@ int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptrid
 #elif DXX_BUILD_DESCENT == 2
 				explode_badass_weapon(Robot_info, weapon1, collision_point);
 #endif
-				digi_link_sound_to_pos(Weapon_info[get_weapon_id(weapon1)].robot_hit_sound, vcsegptridx(weapon1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
+				digi_link_sound_to_pos(wi1.robot_hit_sound, vcsegptridx(weapon1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
 			}
 		} else {
 			weapon1->lifeleft = min(static_cast<fix>(dist) / 64, F1_0);
