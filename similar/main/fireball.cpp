@@ -1374,7 +1374,7 @@ static void explode_model(object_base &obj)
 		 *
 		 * Skip over the first element, because Descent has always done that.
 		 */
-		for (const auto &&[i, submodel_rad] : enumerate(std::span(pm.submodel_rads).first(n_models).template subspan<1>(), submodel_index{})
+		for (const auto &&[i, submodel_rad] : enumerate(std::span(pm.submodel_rads).first(n_models).template subspan<1>(), submodel_index{1})
 		)
 		{
 #if DXX_BUILD_DESCENT == 2
