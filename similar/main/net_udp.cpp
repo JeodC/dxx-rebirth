@@ -1675,9 +1675,9 @@ window_event_result netgame_list_game_menu::event_handler(const d_event &event)
 		else
 			status = "BETWEEN ";
 		
-		const auto gamemode = underlying_value(augi.gamemode);
+		const auto gamemode{augi.gamemode};
 		auto &p = ljtext[i];
-		snprintf(p.data(), p.size(), "%d.\t%.24s \t%.7s \t%3u/%u \t%.24s \t %s \t%s", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1, GameName.data(), (gamemode < std::size(GMNamesShrt)) ? GMNamesShrt[gamemode] : "INVALID", nplayers, augi.max_numplayers, MissName.data(), levelname, status);
+		snprintf(p.data(), p.size(), "%d.\t%.24s \t%.7s \t%3u/%u \t%.24s \t %s \t%s", (i + (NLPage * UDP_NETGAMES_PPAGE)) + 1, GameName.data(), GMNamesShrt.valid_index(gamemode) ? GMNamesShrt[gamemode] : "INVALID", nplayers, augi.max_numplayers, MissName.data(), levelname, status);
 	}
 	return newmenu::event_handler(event);
 }
@@ -2158,7 +2158,7 @@ static void net_udp_send_door_updates(void)
 	range_for (const auto &&p, vcwallptridx)
 	{
 		auto &w = *p;
-		if ((w.type == WALL_DOOR && (w.state == wall_state::opening || w.state == wall_state::waiting)) || (w.type == WALL_BLASTABLE && (w.flags & wall_flag::blasted)))
+		if ((w.type == WALL_DOOR && (w.state == wall_state::opening || w.state == wall_state::waiting)) || (w.type == WALL_BLASTABLE && +(w.flags & wall_flag::blasted)))
 			multi_send_door_open(w.segnum, w.sidenum, {});
 		else if (w.type == WALL_BLASTABLE && w.hps != WALL_HPS)
 			multi_send_hostage_door_status(p);
@@ -2174,7 +2174,7 @@ static void net_udp_send_door_updates(const playernum_t pnum)
 	range_for (const auto &&p, vcwallptridx)
 	{
 		auto &w = *p;
-		if ((w.type == WALL_DOOR && (w.state == wall_state::opening || w.state == wall_state::waiting || w.state == wall_state::open)) || (w.type == WALL_BLASTABLE && (w.flags & wall_flag::blasted)))
+		if ((w.type == WALL_DOOR && (w.state == wall_state::opening || w.state == wall_state::waiting || w.state == wall_state::open)) || (w.type == WALL_BLASTABLE && +(w.flags & wall_flag::blasted)))
 			multi_send_door_open_specific(pnum,w.segnum, w.sidenum,w.flags);
 		else if (w.type == WALL_BLASTABLE && w.hps != WALL_HPS)
 			multi_send_hostage_door_status(p);
@@ -2747,13 +2747,13 @@ void net_udp_update_netgame()
 //	"sneak" Hoard information into this field.  This is better than sending 
 //	another packet that could be lost in transit.
 
-	if (HoardEquipped())
+	if (HoardEquipped() != hoard_availability_state::Missing)
 	{
 		const auto is_hoard_game{game_mode_hoard(Game_mode)};
 		const auto game_flag_no_hoard{Netgame.game_flag & ~(netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)};
 		Netgame.game_flag = is_hoard_game
 			? (
-				(Game_mode & GM_TEAM)
+				+(Game_mode & GM_TEAM)
 				? (game_flag_no_hoard | netgame_rule_flags::hoard | netgame_rule_flags::team_hoard)
 				: (game_flag_no_hoard | netgame_rule_flags::hoard)
 			)
@@ -2924,7 +2924,7 @@ static std::span<const uint8_t> net_udp_prepare_heavy_game_info(const d_level_un
 	buf[len] = Netgame.team_vector;							len++;
 	PUT_INTEL_INT(&buf[len], underlying_value(Netgame.AllowedItems));					len += 4;
 	/* In cooperative games, never shuffle. */
-	PUT_INTEL_INT(&buf[len], (Game_mode & GM_MULTI_COOP) ? 0 : Netgame.ShufflePowerupSeed);			len += 4;
+	PUT_INTEL_INT(&buf[len], +(Game_mode & GM_MULTI_COOP) ? 0 : Netgame.ShufflePowerupSeed);			len += 4;
 	buf[len] = Netgame.SecludedSpawns;			len += 1;
 #if DXX_BUILD_DESCENT == 1
 	buf[len] = Netgame.SpawnGrantedItems.mask;			len += 1;
@@ -2981,7 +2981,8 @@ static std::span<const uint8_t> net_udp_prepare_heavy_game_info(const d_level_un
 		buf[len] = static_cast<uint8_t>(i.get_player_flags());
 		len++;
 	}
-	PUT_INTEL_SHORT(&buf[len], Netgame.PacketsPerSec);				len += 2;
+	buf[len++] = Netgame.PacketsPerSec;
+	buf[len++] = 0;	/* was high 8 bits of PacketsPerSec, but PacketsPerSec never exceeds MAX_PPS */
 	buf[len] = Netgame.PacketLossPrevention;					len++;
 	buf[len] = Netgame.NoFriendlyFire;						len++;
 	buf[len] = Netgame.MouselookFlags;						len++;
@@ -3112,7 +3113,7 @@ static void net_udp_process_game_info_light(const std::span<const uint8_t> buf, 
 #if DXX_BUILD_DESCENT == 2
 		// See if this is really a Hoard game
 		// If so, adjust all the data accordingly
-		if (HoardEquipped())
+		if (HoardEquipped() != hoard_availability_state::Missing)
 		{
 			if (const auto game_flag{i->game_flag}; (game_flag & netgame_rule_flags::hoard) != netgame_rule_flags::None)
 			{
@@ -3237,7 +3238,7 @@ static void net_udp_process_game_info_heavy(const uint8_t *data, uint_fast32_t, 
 			i = player_flags(data[len]);
 			len++;
 		}
-		Netgame.PacketsPerSec = GET_INTEL_SHORT(&(data[len]));				len += 2;
+		Netgame.PacketsPerSec = data[len];	len += 2;
 		Netgame.PacketLossPrevention = data[len];					len++;
 		Netgame.NoFriendlyFire = data[len];						len++;
 		Netgame.MouselookFlags = data[len];						len++;
@@ -3294,6 +3295,7 @@ static void net_udp_process_dump(const upid_rspan<upid::dump> data, const _socka
 			const char *dump_string;
 			switch (why)
 			{
+				default:	// unreachable
 				case kick_player_reason::kicked:	// unreachable
 				case kick_player_reason::pkttimeout:	// unreachable
 				case kick_player_reason::closed:	// reachable
@@ -3967,7 +3969,9 @@ public:
 #endif
 	void update_packstring()
 	{
-		snprintf(packstring.data(), packstring.size(), "%u", Netgame.PacketsPerSec);
+		const unsigned PacketsPerSec{Netgame.PacketsPerSec};
+		cf_assert(PacketsPerSec <= MAX_PPS);
+		snprintf(packstring.data(), packstring.size(), "%u", PacketsPerSec);
 	}
 	void update_portstring()
 	{
@@ -4299,7 +4303,7 @@ static int net_udp_game_param_handler( newmenu *menu,const d_event &event, param
 				menus[opt->closed+1].value = 0;
 			}
 #elif DXX_BUILD_DESCENT == 2
-			if (((HoardEquipped() && (citem == opt->team_hoard)) || ((citem == opt->team_anarchy) || (citem == opt->capture))) && !menus[opt->closed].value && !menus[opt->refuse].value) 
+			if (((HoardEquipped() != hoard_availability_state::Missing && (citem == opt->team_hoard)) || ((citem == opt->team_anarchy) || (citem == opt->capture))) && !menus[opt->closed].value && !menus[opt->refuse].value)
 			{
 				menus[opt->refuse].value = 1;
 				menus[opt->refuse-1].value = 0;
@@ -4344,9 +4348,9 @@ static int net_udp_game_param_handler( newmenu *menu,const d_event &event, param
 #if DXX_BUILD_DESCENT == 2
 				else if (menus[opt->capture].value)
 					Netgame.gamemode = network_game_type::capture_flag;
-				else if (HoardEquipped() && menus[opt->hoard].value)
+				else if (const auto hoard{HoardEquipped()}; hoard != hoard_availability_state::Missing && menus[opt->hoard].value)
 					Netgame.gamemode = network_game_type::hoard;
-				else if (HoardEquipped() && menus[opt->team_hoard].value)
+				else if (hoard != hoard_availability_state::Missing && menus[opt->team_hoard].value)
 					Netgame.gamemode = network_game_type::team_hoard;
 #endif
 				else if( menus[opt->bounty].value )
@@ -4437,7 +4441,6 @@ window_event_result net_udp_setup_game()
 	Netgame.ThiefModifierFlags = 0;
 #endif
 	Netgame.difficulty=PlayerCfg.DefaultDifficulty;
-	Netgame.PacketsPerSec=DEFAULT_PPS;
 	snprintf(Netgame.game_name.data(), Netgame.game_name.size(), "%s%s", static_cast<const char *>(InterfaceUniqueState.PilotName), TXT_S_GAME);
 	reset_UDP_MyPort();
 	Netgame.ShufflePowerupSeed = 0;
@@ -4457,7 +4460,7 @@ window_event_result net_udp_setup_game()
 	read_netgame_profile(&Netgame);
 
 #if DXX_BUILD_DESCENT == 2
-	if (!HoardEquipped() && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard)) // did we restore a hoard mode but don't have hoard installed right now? then fall back to anarchy!
+	if (HoardEquipped() == hoard_availability_state::Missing && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard)) // did we restore a hoard mode but don't have hoard installed right now? then fall back to anarchy!
 		Netgame.gamemode = network_game_type::anarchy;
 #endif
 
@@ -4502,7 +4505,7 @@ window_event_result net_udp_setup_game()
 #if DXX_BUILD_DESCENT == 2
 	nm_set_item_radio(m[optnum], "Capture the flag", Netgame.gamemode == network_game_type::capture_flag, 0); opt.capture=optnum; optnum++;
 
-	if (HoardEquipped())
+	if (HoardEquipped() != hoard_availability_state::Missing)
 	{
 		nm_set_item_radio(m[optnum], "Hoard", Netgame.gamemode == network_game_type::hoard, 0); opt.hoard=optnum; optnum++;
 		nm_set_item_radio(m[optnum], "Team Hoard", Netgame.gamemode == network_game_type::team_hoard, 0); opt.team_hoard=optnum; optnum++;
@@ -4584,9 +4587,9 @@ static void net_udp_set_game_mode(const network_game_type gamemode)
 		 Game_mode = game_mode_flags::capture_flag;
 		Show_kill_list = show_kill_list_mode::team_kills;
 		}
-	else if (HoardEquipped() && gamemode == network_game_type::hoard)
+	else if (const auto hoard{HoardEquipped()}; hoard != hoard_availability_state::Missing && gamemode == network_game_type::hoard)
 		Game_mode = game_mode_flags::hoard;
-	else if (HoardEquipped() && gamemode == network_game_type::team_hoard)
+	else if (hoard != hoard_availability_state::Missing && gamemode == network_game_type::team_hoard)
 		 {
 		Game_mode = game_mode_flags::team_hoard;
  		Show_kill_list = show_kill_list_mode::team_kills;
@@ -5174,7 +5177,7 @@ int net_udp_do_join_game()
 		}
 	}
 
-	if (!HoardEquipped() && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard))
+	if (HoardEquipped() == hoard_availability_state::Missing && (Netgame.gamemode == network_game_type::hoard || Netgame.gamemode == network_game_type::team_hoard))
 	{
 		struct error_hoard_not_available : passive_messagebox
 		{
@@ -5408,7 +5411,7 @@ void dispatch_table::do_protocol_frame(int force, int listen) const
 		WaitForRefuseAnswer=0;
 
 	// Send positional update either in the regular PPS interval OR if forced
-	if (force || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))))
+	if (force || (Netgame.PacketsPerSec && time >= (last_pdata_time + (F1_0 / Netgame.PacketsPerSec))))
 	{
 		last_pdata_time = time;
 		net_udp_send_pdata();
@@ -5955,7 +5958,7 @@ void net_udp_process_pdata(const std::span<const uint8_t> data, const _sockaddr 
 	UDP_frame_info pd;
 	int len{0};
 
-	if (!((Game_mode & GM_NETWORK) && (Network_status == network_state::playing || Network_status == network_state::endlevel)))
+	if (!(+(Game_mode & GM_NETWORK) && (Network_status == network_state::playing || Network_status == network_state::endlevel)))
 		return;
 
 	len++;
@@ -6096,7 +6099,7 @@ static void net_udp_send_fly_thru_triggers (const playernum_t pnum)
 	auto &vctrgptridx = Triggers.vcptridx;
 	range_for (const auto &&t, vctrgptridx)
 	{
-		if (t->flags & trigger_behavior_flags::disabled)
+		if (+(t->flags & trigger_behavior_flags::disabled))
 			multi_send_trigger_specific(pnum, t);
 	}
  }
@@ -6216,7 +6219,7 @@ void net_udp_do_refuse_stuff(const UDP_sequence_request_packet &their, const str
 #endif
 	
 		const auto &&rankstr = GetRankStringWithSpace(their.rank);
-		if (Game_mode & GM_TEAM)
+		if (+(Game_mode & GM_TEAM))
 		{
 			HUD_init_message(HM_MULTI, "%s%s'%s' wants to join", rankstr.first, rankstr.second, their.callsign.operator const char *());
 			HUD_init_message(HM_MULTI, "Alt-1 assigns to team %s. Alt-2 to team %s", Netgame.team_name[team_number::blue].operator const char *(), Netgame.team_name[team_number::red].operator const char *());
@@ -6241,7 +6244,7 @@ void net_udp_do_refuse_stuff(const UDP_sequence_request_packet &their, const str
 			RefuseTimeLimit=0;
 			RefuseThisPlayer=0;
 			WaitForRefuseAnswer=0;
-			if (Game_mode & GM_TEAM)
+			if (+(Game_mode & GM_TEAM))
 			{
 				new_player_num=net_udp_get_new_player_num ();
 	
@@ -6328,7 +6331,7 @@ void net_udp_send_extras ()
 		net_udp_send_door_updates(Player_joining_extras);
 	if (Network_sending_extras==7)
 		multi_send_markers();
-	if (Network_sending_extras==6 && (Game_mode & GM_MULTI_ROBOTS))
+	if (Network_sending_extras==6 && +(Game_mode & GM_MULTI_ROBOTS))
 		multi_send_stolen_items();
 	if (Network_sending_extras==5 && (Netgame.PlayTimeAllowed.count() || Netgame.KillGoal))
 #endif
@@ -6341,7 +6344,7 @@ void net_udp_send_extras ()
 #endif
 	if (Network_sending_extras==2)
 		multi_send_player_inventory(multiplayer_data_priority::_1);
-	if (Network_sending_extras==1 && Game_mode & GM_BOUNTY)
+	if (Network_sending_extras==1 && +(Game_mode & GM_BOUNTY))
 		multi_send_bounty();
 
 	Network_sending_extras--;
@@ -6397,7 +6400,7 @@ const std::array<char, 512> &show_game_info_menu::setup_subtitle_text(std::array
 #define DXX_SECRET_LEVEL_FORMAT
 #define DXX_SECRET_LEVEL_PARAMETER
 #endif
-	const auto gamemode = underlying_value(netgame.gamemode);
+	const auto gamemode{netgame.gamemode};
 	const unsigned
 #if DXX_BUILD_DESCENT == 1
 	players = netgame.numplayers;
@@ -6409,7 +6412,7 @@ const std::array<char, 512> &show_game_info_menu::setup_subtitle_text(std::array
 	F("%." DXX_STRINGIZE(MISSION_NAME_LEN) "s", netgame.mission_title.data())	\
 	F(" - Lvl " DXX_SECRET_LEVEL_FORMAT "%i", DXX_SECRET_LEVEL_PARAMETER netgame.levelnum)	\
 	F("\n\nDifficulty: %s", MENU_DIFFICULTY_TEXT(netgame.difficulty))	\
-	F("\nGame Mode: %s", gamemode < GMNames.size() ? GMNames[gamemode] : "INVALID")	\
+	F("\nGame Mode: %s", GMNames.valid_index(gamemode) ? GMNames[gamemode] : "INVALID")	\
 	F("\nPlayers: %u/%i", players, netgame.max_numplayers)
 #define EXPAND_FORMAT(A,B,...)	A
 #define EXPAND_ARGUMENT(A,B,...)	, B, ## __VA_ARGS__

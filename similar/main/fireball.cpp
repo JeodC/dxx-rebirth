@@ -344,7 +344,7 @@ void connected_segment_raw_distances::builder::visit_segment(const vcsegidx_t cu
 			auto &w{*vcwallptr(wall_num)};
 			if (w.type == WALL_CLOSED)
 				continue;
-			if (w.type == WALL_DOOR && (w.flags & wall_flag::door_locked))
+			if (w.type == WALL_DOOR && +(w.flags & wall_flag::door_locked))
 				continue;
 		}
 		visit_segment(child_segnum, current_depth + 1);
@@ -555,7 +555,7 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 									}
 								}
 #endif
-								if (obj_explosion_origin != object_none && (Game_mode & GM_MULTI) && obj_explosion_origin->type == OBJ_PLAYER)
+								if (obj_explosion_origin != object_none && +(Game_mode & GM_MULTI) && obj_explosion_origin->type == OBJ_PLAYER)
 								{
 									killer = obj_explosion_origin;
 								}
@@ -728,7 +728,7 @@ static vmsegptridx_t choose_drop_segment(fvmsegptridx &vmsegptridx, fvcvertptr &
 				continue;
 			if (plr.connected == player_connection_status::disconnected)
 				continue;
-			if ((Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == team_of_drop_player)
+			if (+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == team_of_drop_player)
 				continue;
 			*r++ = pnum;
 		}
@@ -840,8 +840,8 @@ void maybe_drop_net_powerup(powerup_type_t powerup_type, bool adjust_cap, bool r
 	auto &LevelUniqueControlCenterState{LevelUniqueObjectState.ControlCenterState};
 	auto &Vertices{LevelSharedVertexState.get_vertices()};
 	playernum_t pnum{Player_num};
-	if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)) {
-		if ((Game_mode & GM_NETWORK) && adjust_cap)
+	if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)) {
+		if (+(Game_mode & GM_NETWORK) && adjust_cap)
 		{
 			MultiLevelInv_Recount(); // recount current items
 			if (!MultiLevelInv_AllowSpawn(powerup_type))
@@ -935,8 +935,8 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 	 * borrow LASER_INDEX as a flag value to indicate that the powerup
 	 * ID was not recognized.
 	 */
-	static constexpr primary_weapon_index_t unset_weapon_index{primary_weapon_index_t::LASER_INDEX};
-	primary_weapon_index_t weapon_index{unset_weapon_index};
+	static constexpr primary_weapon_index unset_weapon_index{primary_weapon_index::laser};
+	primary_weapon_index weapon_index{unset_weapon_index};
 
 	if (del_obj.contains.type != contained_object_type::powerup)
 		return;
@@ -948,29 +948,29 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 				del_obj.contains.count = 0;
 			return;
 		case powerup_type_t::POW_VULCAN_WEAPON:
-			weapon_index = primary_weapon_index_t::VULCAN_INDEX;
+			weapon_index = primary_weapon_index::vulcan;
 			break;
 		case powerup_type_t::POW_SPREADFIRE_WEAPON:
-			weapon_index = primary_weapon_index_t::SPREADFIRE_INDEX;
+			weapon_index = primary_weapon_index::spreadfire;
 			break;
 		case powerup_type_t::POW_PLASMA_WEAPON:
-			weapon_index = primary_weapon_index_t::PLASMA_INDEX;
+			weapon_index = primary_weapon_index::plasma;
 			break;
 		case powerup_type_t::POW_FUSION_WEAPON:
-			weapon_index = primary_weapon_index_t::FUSION_INDEX;
+			weapon_index = primary_weapon_index::fusion;
 			break;
 #if DXX_BUILD_DESCENT == 2
 		case powerup_type_t::POW_GAUSS_WEAPON:
-			weapon_index = primary_weapon_index_t::GAUSS_INDEX;
+			weapon_index = primary_weapon_index::gauss;
 			break;
 		case powerup_type_t::POW_HELIX_WEAPON:
-			weapon_index = primary_weapon_index_t::HELIX_INDEX;
+			weapon_index = primary_weapon_index::helix;
 			break;
 		case powerup_type_t::POW_PHOENIX_WEAPON:
-			weapon_index = primary_weapon_index_t::PHOENIX_INDEX;
+			weapon_index = primary_weapon_index::phoenix;
 			break;
 		case powerup_type_t::POW_OMEGA_WEAPON:
-			weapon_index = primary_weapon_index_t::OMEGA_INDEX;
+			weapon_index = primary_weapon_index::omega;
 			break;
 #endif
 		case powerup_type_t::POW_EXTRA_LIFE:
@@ -1070,7 +1070,7 @@ void maybe_replace_powerup_with_energy(object_base &del_obj)
 		del_obj.contains.count = 0;
 
 	// Change multiplayer extra-lives into invulnerability
-	if ((Game_mode & GM_MULTI) && (del_obj.contains.id.powerup == powerup_type_t::POW_EXTRA_LIFE))
+	if (+(Game_mode & GM_MULTI) && (del_obj.contains.id.powerup == powerup_type_t::POW_EXTRA_LIFE))
 	{
 		del_obj.contains.id.powerup = powerup_type_t::POW_INVULNERABILITY;
 	}
@@ -1082,7 +1082,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 				int	rand_scale;
 
 				//	We want powerups to move more in network mode.
-				if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)) {
+				if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)) {
 					rand_scale = 4;
 					//	extra life powerups are converted to invulnerability in multiplayer, for what is an extra life, anyway?
 					if (id == powerup_type_t::POW_EXTRA_LIFE)
@@ -1090,7 +1090,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 				} else
 					rand_scale = 2;
 
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{	
 					if (Net_create_loc >= MAX_NET_CREATE_OBJECTS)
 					{
@@ -1098,7 +1098,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 						return object_none;
 					}
 #if DXX_BUILD_DESCENT == 2
-					if ((Game_mode & GM_NETWORK) && Network_status == network_state::endlevel)
+					if (+(Game_mode & GM_NETWORK) && Network_status == network_state::endlevel)
 					 return object_none;
 #endif
 				}
@@ -1112,14 +1112,14 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 					obj.flags |= OF_PLAYER_DROPPED;
 #endif
 
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					Net_create_objnums[Net_create_loc++] = objp;
 				}
 
 				// Give keys zero velocity so they can be tracked better in multi
 				auto &object_velocity{obj.mtype.phys_info.velocity};
-				if ((Game_mode & GM_MULTI) && (id >= powerup_type_t::POW_KEY_BLUE) && (id <= powerup_type_t::POW_KEY_GOLD))
+				if (+(Game_mode & GM_MULTI) && (id >= powerup_type_t::POW_KEY_BLUE) && (id <= powerup_type_t::POW_KEY_GOLD))
 					object_velocity = {};
 				else
 				{
@@ -1148,7 +1148,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 					case powerup_type_t::POW_SHIELD_BOOST:
 					case powerup_type_t::POW_ENERGY:
 						obj.lifeleft = (d_rand() + F1_0*3) * 64;		//	Lives for 3 to 3.5 binary minutes (a binary minute is 64 seconds)
-						if (Game_mode & GM_MULTI)
+						if (+(Game_mode & GM_MULTI))
 							obj.lifeleft /= 2;
 						break;
 #if DXX_BUILD_DESCENT == 2
@@ -1222,7 +1222,7 @@ static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained
 				created = true;
 				++LevelUniqueObjectState.accumulated_robots;
 				++GameUniqueState.accumulated_robots;
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					Net_create_objnums[Net_create_loc++] = objp;
 				}
@@ -1374,7 +1374,7 @@ static void explode_model(object_base &obj)
 		 *
 		 * Skip over the first element, because Descent has always done that.
 		 */
-		for (const auto &&[i, submodel_rad] : enumerate(std::span(pm.submodel_rads).first(n_models).template subspan<1>(), submodel_index{})
+		for (const auto &&[i, submodel_rad] : enumerate(std::span(pm.submodel_rads).first(n_models).template subspan<1>(), submodel_index{1})
 		)
 		{
 #if DXX_BUILD_DESCENT == 2
@@ -1574,7 +1574,7 @@ void do_explosion_sequence(const d_robot_info_array &Robot_info, object &obj)
 //explode the given wall
 void explode_wall(fvcvertptr &vcvertptr, const vcsegptridx_t segnum, const sidenum_t sidenum, wall &w)
 {
-	if (w.flags & wall_flag::exploding)
+	if (+(w.flags & wall_flag::exploding))
 		/* Already exploding */
 		return;
 	w.explode_time_elapsed = 0;
@@ -1621,18 +1621,18 @@ unsigned do_exploding_wall_frame(const d_robot_info_array &Robot_info, wall &w1)
 			auto &w2{*vmwallptr(cwall_num)};
 			assert(&w1 != &w2);
 			w2.flags |= wall_flag::blasted;
-			assert((w1.flags & wall_flag::exploding) || (w2.flags & wall_flag::exploding));
-			if (w1_explode_time_elapsed >= EXPL_WALL_TIME && w2.flags & wall_flag::exploding)
+			assert(+(w1.flags & wall_flag::exploding) || !!(w2.flags & wall_flag::exploding));
+			if (w1_explode_time_elapsed >= EXPL_WALL_TIME && +(w2.flags & wall_flag::exploding))
 			{
 				w2.flags &= ~wall_flag::exploding;
 				++ walls_updated;
 			}
 		}
 		else
-			assert(w1.flags & wall_flag::exploding);
+			assert(+(w1.flags & wall_flag::exploding));
 
 		w1.flags |= wall_flag::blasted;
-		if (w1_explode_time_elapsed >= EXPL_WALL_TIME && w1.flags & wall_flag::exploding)
+		if (w1_explode_time_elapsed >= EXPL_WALL_TIME && +(w1.flags & wall_flag::exploding))
 		{
 			w1.flags &= ~wall_flag::exploding;
 			++ walls_updated;

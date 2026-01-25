@@ -170,8 +170,8 @@ struct player_info
 	bool FakingInvul;
 	bool lavafall_hiss_playing;
 	uint8_t missile_gun;
-	player_selected_weapon<primary_weapon_index_t> Primary_weapon;
-	player_selected_weapon<secondary_weapon_index_t> Secondary_weapon;
+	player_selected_weapon<primary_weapon_index> Primary_weapon;
+	player_selected_weapon<secondary_weapon_index> Secondary_weapon;
 	enum laser_level laser_level;
 	per_secondary_weapon_array<uint8_t>  secondary_ammo; // How much ammo of each type.
 	uint8_t Spreadfire_toggle;
@@ -368,6 +368,11 @@ struct vclip_info_rw
 struct polyobj_info : prohibit_void_ptr<polyobj_info>
 {
 	polygon_model_index model_num{};// which polygon model
+	/* If `alt_textures - 1` is a valid index into `multi_player_textures`,
+	 * then it is used to obtain an alternate texture.  Otherwise, the standard
+	 * texture is used.
+	 */
+	uint8_t alt_textures{0};
 	std::array<vms_angvec, MAX_SUBMODELS> anim_angles{}; // angles for each subobject
 	uint16_t subobj_flags{0};       // specify which subobjs to draw
 	/* If this is not texture_index{UINT16_MAX}, then use this texture on all faces.
@@ -376,7 +381,6 @@ struct polyobj_info : prohibit_void_ptr<polyobj_info>
 	 * so the 0 here should have no effect on properly loaded objects.
 	 */
 	texture_index tmap_override{0};
-	int alt_textures{0};       // if not -1, use these textures instead
 };
 
 struct polyobj_info_rw
@@ -413,24 +417,16 @@ struct object_base
 
 	// movement info, determined by MOVEMENT_TYPE
 	union movement_info {
-		physics_info phys_info; // a physics object
+		physics_info phys_info{}; // a physics object
 		vms_vector   spin_rate; // for spinning objects
-		constexpr movement_info() :
-			phys_info{}
-		{
-			static_assert(sizeof(phys_info) == sizeof(*this), "insufficient initialization");
-		}
+		static_assert(sizeof(phys_info) >= sizeof(spin_rate), "insufficient initialization");
 	} mtype;
 
 	// render info, determined by RENDER_TYPE
 	union render_info {
-		struct polyobj_info    pobj_info;      // polygon model
+		struct polyobj_info    pobj_info{};      // polygon model
 		struct vclip_info      vclip_info;     // vclip
-		constexpr render_info() :
-			pobj_info{}
-		{
-			static_assert(sizeof(pobj_info) == sizeof(*this), "insufficient initialization");
-		}
+		static_assert(sizeof(pobj_info) >= sizeof(vclip_info), "insufficient initialization");
 	} rtype;
 };
 
@@ -634,7 +630,7 @@ namespace dsx {
 imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, object_type_t type, unsigned id, vmsegptridx_t segnum, const vms_vector &pos, const vms_matrix *orient, fix size, enum object::control_type ctype, enum object::movement_type mtype, render_type rtype);
 
 [[nodiscard]]
-imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const weapon_info_array &Weapon_info, unsigned id, vmsegptridx_t segnum, const vms_vector &pos, fix size, render_type rtype);
+imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const weapon_info_array &Weapon_info, weapon_id_type id, vmsegptridx_t segnum, const vms_vector &pos, fix size, render_type rtype);
 
 #if DXX_BUILD_DESCENT == 2
 
@@ -784,7 +780,6 @@ namespace dcx {
 
 #ifdef DXX_BUILD_DESCENT
 contained_object_type build_contained_object_type_from_untrusted(uint8_t untrusted);
-contained_object_id build_contained_object_id_from_untrusted(contained_object_type, uint8_t untrusted);
 contained_object_parameters build_contained_object_parameters_from_untrusted(uint8_t type, uint8_t id, uint8_t count);
 #endif
 

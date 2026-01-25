@@ -106,8 +106,8 @@ extern void newdemo_record_restore_cockpit(void);
 extern void newdemo_record_multi_cloak(int pnum);
 extern void newdemo_record_multi_decloak(int pnum);
 namespace dsx {
-void newdemo_record_player_weapon(primary_weapon_index_t);
-void newdemo_record_player_weapon(secondary_weapon_index_t);
+void newdemo_record_player_weapon(primary_weapon_index);
+void newdemo_record_player_weapon(secondary_weapon_index);
 void newdemo_record_wall_set_tmap_num1(vcsegidx_t seg, sidenum_t side, vcsegidx_t cseg, sidenum_t cside, texture1_value tmap);
 void newdemo_record_wall_set_tmap_num2(vcsegidx_t seg, sidenum_t side, vcsegidx_t cseg, sidenum_t cside, texture2_value tmap);
 extern void newdemo_set_new_level(int level_num);

@@ -402,7 +402,7 @@ static void ogl_cache_vclipn_textures(const d_vclip_array &Vclip, const vclip_in
 		ogl_cache_vclip_textures(Vclip[i]);
 }
 
-static void ogl_cache_weapon_textures(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const unsigned weapon_type)
+static void ogl_cache_weapon_textures(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const weapon_id_type weapon_type)
 {
 	if (weapon_type >= Weapon_info.size())
 		return;
@@ -410,9 +410,9 @@ static void ogl_cache_weapon_textures(const d_vclip_array &Vclip, const weapon_i
 	ogl_cache_vclipn_textures(Vclip, w.flash_vclip);
 	ogl_cache_vclipn_textures(Vclip, w.robot_hit_vclip);
 	ogl_cache_vclipn_textures(Vclip, w.wall_hit_vclip);
-	if (w.render == WEAPON_RENDER_VCLIP)
+	if (w.render == weapon_info::render_type::vclip)
 		ogl_cache_vclipn_textures(Vclip, w.weapon_vclip);
-	else if (w.render == WEAPON_RENDER_POLYMODEL)
+	else if (w.render == weapon_info::render_type::polymodel)
 	{
 		ogl_cache_polymodel_textures(w.model_num);
 		ogl_cache_polymodel_textures(w.model_num_inner);
@@ -496,8 +496,8 @@ void ogl_cache_level_textures(void)
 	{
 		auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 		// always have lasers, concs, flares.  Always shows player appearance, and at least concs are always available to disappear.
-		ogl_cache_weapon_textures(Vclip, Weapon_info, Primary_weapon_to_weapon_info[primary_weapon_index_t::LASER_INDEX]);
-		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[secondary_weapon_index_t::CONCUSSION_INDEX]);
+		ogl_cache_weapon_textures(Vclip, Weapon_info, Primary_weapon_to_weapon_info[primary_weapon_index::laser]);
+		ogl_cache_weapon_textures(Vclip, Weapon_info, Secondary_weapon_to_weapon_info[secondary_weapon_index::concussion]);
 		ogl_cache_weapon_textures(Vclip, Weapon_info, weapon_id_type::FLARE_ID);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::player_appearance);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::powerup_disappearance);
@@ -510,24 +510,24 @@ void ogl_cache_level_textures(void)
 			{
 				ogl_cache_vclipn_textures(Vclip, objp->rtype.vclip_info.vclip_num);
 				const auto id = get_powerup_id(objp);
-				primary_weapon_index_t p;
-				secondary_weapon_index_t s;
-				int w;
+				primary_weapon_index p;
+				secondary_weapon_index s;
+				weapon_id_type w;
 				if (
 					(
 						(
-							(id == powerup_type_t::POW_VULCAN_WEAPON && (p = primary_weapon_index_t::VULCAN_INDEX, true)) ||
-							(id == powerup_type_t::POW_SPREADFIRE_WEAPON && (p = primary_weapon_index_t::SPREADFIRE_INDEX, true)) ||
-							(id == powerup_type_t::POW_PLASMA_WEAPON && (p = primary_weapon_index_t::PLASMA_INDEX, true)) ||
-							(id == powerup_type_t::POW_FUSION_WEAPON && (p = primary_weapon_index_t::FUSION_INDEX, true))
+							(id == powerup_type_t::POW_VULCAN_WEAPON && (p = primary_weapon_index::vulcan, true)) ||
+							(id == powerup_type_t::POW_SPREADFIRE_WEAPON && (p = primary_weapon_index::spreadfire, true)) ||
+							(id == powerup_type_t::POW_PLASMA_WEAPON && (p = primary_weapon_index::plasma, true)) ||
+							(id == powerup_type_t::POW_FUSION_WEAPON && (p = primary_weapon_index::fusion, true))
 						) && (w = Primary_weapon_to_weapon_info[p], true)
 					) ||
 					(
 						(
-							(id == powerup_type_t::POW_PROXIMITY_WEAPON && (s = secondary_weapon_index_t::PROXIMITY_INDEX, true)) ||
-							((id == powerup_type_t::POW_HOMING_AMMO_1 || id == powerup_type_t::POW_HOMING_AMMO_4) && (s = secondary_weapon_index_t::HOMING_INDEX, true)) ||
-							(id == powerup_type_t::POW_SMARTBOMB_WEAPON && (s = secondary_weapon_index_t::SMART_INDEX, true)) ||
-							(id == powerup_type_t::POW_MEGA_WEAPON && (s = secondary_weapon_index_t::MEGA_INDEX, true))
+							(id == powerup_type_t::POW_PROXIMITY_WEAPON && (s = secondary_weapon_index::proximity, true)) ||
+							((id == powerup_type_t::POW_HOMING_AMMO_1 || id == powerup_type_t::POW_HOMING_AMMO_4) && (s = secondary_weapon_index::homing, true)) ||
+							(id == powerup_type_t::POW_SMARTBOMB_WEAPON && (s = secondary_weapon_index::smart, true)) ||
+							(id == powerup_type_t::POW_MEGA_WEAPON && (s = secondary_weapon_index::mega, true))
 						) && (w = Secondary_weapon_to_weapon_info[s], true)
 					)
 				)

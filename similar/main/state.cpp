@@ -798,12 +798,12 @@ static void state_player_to_player_rw(const relocated_player_data &rpd, const pl
 	pl_rw->primary_weapon_flags      = pl_info.primary_weapon_flags;
 #if DXX_BUILD_DESCENT == 1
 	// make sure no side effects for Mac demo
-	pl_rw->secondary_weapon_flags    = 0x0f | (pl_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index_t::MEGA_INDEX);
+	pl_rw->secondary_weapon_flags    = 0x0f | (pl_info.secondary_ammo[secondary_weapon_index::mega] > 0) << underlying_value(secondary_weapon_index::mega);
 #elif DXX_BUILD_DESCENT == 2
 	// make sure no side effects for PC demo
-	pl_rw->secondary_weapon_flags    = 0xef | (pl_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] > 0) << underlying_value(secondary_weapon_index_t::MEGA_INDEX)
-											| (pl_info.secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] > 0) << underlying_value(secondary_weapon_index_t::SMISSILE4_INDEX)	// mercury missile
-											| (pl_info.secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] > 0) << underlying_value(secondary_weapon_index_t::SMISSILE5_INDEX);	// earthshaker missile
+	pl_rw->secondary_weapon_flags    = 0xef | (pl_info.secondary_ammo[secondary_weapon_index::mega] > 0) << underlying_value(secondary_weapon_index::mega)
+											| (pl_info.secondary_ammo[secondary_weapon_index::mercury] > 0) << underlying_value(secondary_weapon_index::mercury)	// mercury missile
+											| (pl_info.secondary_ammo[secondary_weapon_index::earthshaker] > 0) << underlying_value(secondary_weapon_index::earthshaker);	// earthshaker missile
 #endif
 	pl_rw->obsolete_primary_ammo = {};
 	pl_rw->vulcan_ammo   = pl_info.vulcan_ammo;
@@ -912,7 +912,7 @@ namespace {
 
 void state_format_savegame_filename(d_game_unique_state::savegame_file_path &filename, const unsigned i)
 {
-	snprintf(filename.data(), filename.size(), PLAYER_DIRECTORY_STRING("%.8s.%cg%x"), static_cast<const char *>(InterfaceUniqueState.PilotName), (Game_mode & GM_MULTI_COOP) ? 'm' : 's', i);
+	snprintf(filename.data(), filename.size(), PLAYER_DIRECTORY_STRING("%.8s.%cg%x"), static_cast<const char *>(InterfaceUniqueState.PilotName), +(Game_mode & GM_MULTI_COOP) ? 'm' : 's', i);
 }
 
 void state_autosave_game(const int multiplayer)
@@ -968,7 +968,7 @@ uint8_t read_savegame_properties(const std::size_t savegame_index, d_game_unique
 	if (!(version >= STATE_COMPATIBLE_VERSION || SWAPINT(version) >= STATE_COMPATIBLE_VERSION))
 		return 0;
 	// In case it's Coop, handle state_game_id & callsign as well
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 	{
 		PHYSFS_seek(fp, PHYSFS_tell(fp) + sizeof(PHYSFS_sint32) + sizeof(char)*CALLSIGN_LEN+1); // skip state_game_id, callsign
 	}
@@ -1061,7 +1061,7 @@ void state_set_next_autosave(d_game_unique_state &GameUniqueState, const autosav
 
 void state_poll_autosave_game(d_game_unique_state &GameUniqueState, const d_level_unique_object_state &LevelUniqueObjectState)
 {
-	const auto multiplayer{Game_mode & GM_MULTI};
+	const auto multiplayer{+(Game_mode & GM_MULTI)};
 	if (multiplayer && !multi_i_am_master())
 		return;
 	const auto interval = (multiplayer ? static_cast<const d_gameplay_options &>(Netgame.MPGameplayOptions) : PlayerCfg.SPGameplayOptions).AutosaveInterval;
@@ -1209,9 +1209,9 @@ int state_save_all(const secret_save secret, const blind_save blind_save)
 		return 0;
 #endif
 
-	if ( Game_mode & GM_MULTI )
+	if (+(Game_mode & GM_MULTI))
 	{
-		if (Game_mode & GM_MULTI_COOP)
+		if (+(Game_mode & GM_MULTI_COOP))
 			multi_initiate_save_game();
 		return 0;
 	}
@@ -1334,7 +1334,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 	}
 
 // Save Coop state_game_id and this Player's callsign. Oh the redundancy... we have this one later on but Coop games want to read this before loading a state so for easy access save this here, too
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 	{
 		PHYSFSX_writeBytes(fp, &state_game_id, sizeof(unsigned));
 		PHYSFSX_writeBytes(fp, &get_local_player().callsign, sizeof(char) * CALLSIGN_LEN + 1);
@@ -1631,9 +1631,9 @@ int state_save_all_sub(const char *filename, const char *desc)
 		 * MAX_*_WEAPONS for each.  Copy into a temporary, then write
 		 * the temporary to the file.
 		 */
-		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index::vulcan); j != static_cast<uint8_t>(primary_weapon_index::super_laser); ++j)
 		{
-			if (Primary_last_was_super & HAS_PRIMARY_FLAG(primary_weapon_index_t{j}))
+			if (Primary_last_was_super & HAS_PRIMARY_FLAG(primary_weapon_index{j}))
 				last_was_super[j] = 1;
 		}
 		PHYSFSX_writeBytes(fp, &last_was_super, MAX_PRIMARY_WEAPONS);
@@ -1641,9 +1641,9 @@ int state_save_all_sub(const char *filename, const char *desc)
 	{
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
 		std::array<uint8_t, MAX_SECONDARY_WEAPONS> last_was_super{};
-		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index_t::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index_t::SMISSILE1_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index::concussion); j != static_cast<uint8_t>(secondary_weapon_index::flash); ++j)
 		{
-			if (Secondary_last_was_super & HAS_SECONDARY_FLAG(secondary_weapon_index_t{j}))
+			if (Secondary_last_was_super & HAS_SECONDARY_FLAG(secondary_weapon_index{j}))
 				last_was_super[j] = 1;
 		}
 		PHYSFSX_writeBytes(fp, &last_was_super, MAX_SECONDARY_WEAPONS);
@@ -1692,7 +1692,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 	}
 
 // Save Coop Info
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 	{
 		/* Write local player's shields for everyone.  Remote players'
 		 * shields are ignored, and using local everywhere is cheaper
@@ -1762,9 +1762,9 @@ int state_restore_all(const int in_game, const secret_restore secret, const char
 	if ( Newdemo_state != ND_STATE_NORMAL )
 		return 0;
 
-	if ( Game_mode & GM_MULTI )
+	if (+(Game_mode & GM_MULTI))
 	{
-		if (Game_mode & GM_MULTI_COOP)
+		if (+(Game_mode & GM_MULTI_COOP))
 			multi_initiate_restore_game();
 		return 0;
 	}
@@ -1881,7 +1881,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	}
 
 // Read Coop state_game_id. Oh the redundancy... we have this one later on but Coop games want to read this before loading a state so for easy access we have this here
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 	{
 		callsign_t saved_callsign;
 		state_game_id = PHYSFSX_readSXE32(fp, swap);
@@ -2058,7 +2058,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	{
 		auto &plr = get_local_player();
 		plr.callsign = org_callsign;
-	if (Game_mode & GM_MULTI_COOP)
+		if (+(Game_mode & GM_MULTI_COOP))
 			plr.objnum = coop_org_objnum;
 	}
 
@@ -2067,13 +2067,13 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	{
 		uint8_t v{};
 		PHYSFSX_readBytes(fp, &v, sizeof(v));
-		Primary_weapon = primary_weapon_index_t{v};
+		Primary_weapon = primary_weapon_index{v};
 	}
 	auto &Secondary_weapon = pl_info.Secondary_weapon;
 	{
 		uint8_t v{};
 		PHYSFSX_readBytes(fp, &v, sizeof(v));
-		Secondary_weapon = secondary_weapon_index_t{v};
+		Secondary_weapon = secondary_weapon_index{v};
 	}
 
 	select_primary_weapon(pl_info, nullptr, Primary_weapon, 0);
@@ -2358,18 +2358,18 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		 */
 		PHYSFSX_readBytes(fp, &last_was_super, MAX_PRIMARY_WEAPONS);
 		uint8_t Primary_last_was_super{};
-		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX); j != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(primary_weapon_index::vulcan); j != static_cast<uint8_t>(primary_weapon_index::super_laser); ++j)
 		{
 			if (last_was_super[j])
-				Primary_last_was_super |= HAS_PRIMARY_FLAG(primary_weapon_index_t{j});
+				Primary_last_was_super |= HAS_PRIMARY_FLAG(primary_weapon_index{j});
 		}
 		player_info.Primary_last_was_super = Primary_last_was_super;
 		PHYSFSX_readBytes(fp, &last_was_super, MAX_SECONDARY_WEAPONS);
 		uint8_t Secondary_last_was_super{};
-		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index_t::CONCUSSION_INDEX); j != static_cast<uint8_t>(secondary_weapon_index_t::SMISSILE1_INDEX); ++j)
+		for (uint8_t j = static_cast<uint8_t>(secondary_weapon_index::concussion); j != static_cast<uint8_t>(secondary_weapon_index::flash); ++j)
 		{
 			if (last_was_super[j])
-				Secondary_last_was_super |= HAS_SECONDARY_FLAG(secondary_weapon_index_t{j});
+				Secondary_last_was_super |= HAS_SECONDARY_FLAG(secondary_weapon_index{j});
 		}
 		player_info.Secondary_last_was_super = Secondary_last_was_super;
 	}
@@ -2449,7 +2449,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	}
 
 // Read Coop Info
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 	{
 		player restore_players[MAX_PLAYERS];
 		object restore_objects[MAX_PLAYERS];
@@ -2557,7 +2557,7 @@ deny_save_result deny_save_game(fvcobjptr &vcobjptr, const d_level_unique_contro
 {
 	if (LevelUniqueControlCenterState.Control_center_destroyed)
 		return deny_save_result::denied;
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		if (!(Game_mode & GM_MULTI_COOP))
 			/* Deathmatch games can never be saved */

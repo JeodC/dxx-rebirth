@@ -214,10 +214,10 @@ static int pick_up_energy(player_info &player_info)
 	return used;
 }
 
-static int pick_up_primary_or_energy(player_info &player_info, const primary_weapon_index_t weapon_index)
+static int pick_up_primary_or_energy(player_info &player_info, const primary_weapon_index weapon_index)
 {
 	const auto used = pick_up_primary(player_info, weapon_index);
-	if (used || (Game_mode & GM_MULTI))
+	if (used || +(Game_mode & GM_MULTI))
 		return used;
 	return pick_up_energy(player_info);
 }
@@ -247,7 +247,7 @@ static int pick_up_key(const int r, const int g, const int b, player_flags &play
 	auto &BuddyState = LevelUniqueObjectState.BuddyState;
 	invalidate_escort_goal(BuddyState);
 #endif
-	return (Game_mode & GM_MULTI) ? 0 : 1;
+	return +(Game_mode & GM_MULTI) ? 0 : 1;
 }
 
 //	returns true if powerup consumed
@@ -317,7 +317,7 @@ struct player_hit_headlight_powerup
 			: PLAYER_FLAG::HEADLIGHT;
 		powerup_basic(15, 0, 15, 0, "HEADLIGHT BOOST! (Headlight is O%s)", active ? "N" : "FF");
 		multi_digi_play_sample(Powerup_info[powerup_type_t::POW_HEADLIGHT].hit_sound, F1_0);
-		if (active && (Game_mode & GM_MULTI))
+		if (active && +(Game_mode & GM_MULTI))
 			multi_send_flags (Player_num);
 	}
 };
@@ -360,7 +360,7 @@ struct player_hit_quadlaser_powerup
 static int player_has_powerup(player_info &player_info, const char *const desc_have)
 {
 	HUD_init_message(HM_DEFAULT | HM_REDUNDANT | HM_MAYDUPL, "%s %s!", TXT_ALREADY_HAVE, desc_have);
-	return (Game_mode & GM_MULTI) ? 0 : pick_up_energy(player_info);
+	return +(Game_mode & GM_MULTI) ? 0 : pick_up_energy(player_info);
 }
 
 template <PLAYER_FLAG player_flag, typename F>
@@ -390,7 +390,7 @@ int do_powerup(const vmobjptridx_t obj)
 	if ((obj->ctype.powerup_info.flags & PF_SPAT_BY_PLAYER) && obj->ctype.powerup_info.creation_time>0 && GameTime64<obj->ctype.powerup_info.creation_time+i2f(2))
 		return 0;		//not enough time elapsed
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		/*
 		 * The fact: Collecting a powerup is decided Client-side and due to PING it takes time for other players to know if one collected a powerup actually. This may lead to the case two players collect the same powerup!
@@ -462,17 +462,17 @@ int do_powerup(const vmobjptridx_t obj)
 				if (Newdemo_state == ND_STATE_RECORDING)
 					newdemo_record_laser_level(level_before_powerup, level_after_powerup);
 				powerup_basic(10, 0, 10, LASER_SCORE, "%s %s %u", TXT_LASER, TXT_BOOSTED_TO, static_cast<unsigned>(level_after_powerup) + 1);
-				pick_up_primary(player_info, primary_weapon_index_t::LASER_INDEX);
+				pick_up_primary(player_info, primary_weapon_index::laser);
 				used=1;
 			}
 			if (!used && !(Game_mode & GM_MULTI) )
 				used = pick_up_energy(player_info);
 			break;
 		case powerup_type_t::POW_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::CONCUSSION_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::concussion, 1, Controls);
 			break;
 		case powerup_type_t::POW_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::CONCUSSION_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::concussion, 4, Controls);
 			break;
 
 		case powerup_type_t::POW_KEY_BLUE:
@@ -496,10 +496,10 @@ int do_powerup(const vmobjptridx_t obj)
 			used = pick_up_primary(player_info,
 #if DXX_BUILD_DESCENT == 2
 									(id == powerup_type_t::POW_GAUSS_WEAPON)
-				? primary_weapon_index_t::GAUSS_INDEX
+				? primary_weapon_index::gauss
 				:
 #endif
-				primary_weapon_index_t::VULCAN_INDEX
+				primary_weapon_index::vulcan
 			);
 			if (const auto ammo_used = pick_up_vulcan_ammo(player_info, obj->ctype.powerup_info.count))
 			{
@@ -512,7 +512,7 @@ int do_powerup(const vmobjptridx_t obj)
 					powerup_basic(7, 14, 21, VULCAN_AMMO_SCORE, "%s!", TXT_VULCAN_AMMO);
 					special_used = 1;
 					id = powerup_type_t::POW_VULCAN_AMMO;		//set new id for making sound at end of this function
-                                        if (Game_mode & GM_MULTI)
+					if (+(Game_mode & GM_MULTI))
                                                 multi_send_vulcan_weapon_ammo_adjust(obj); // let other players know how much ammo we took.
 				}
 			}
@@ -520,26 +520,26 @@ int do_powerup(const vmobjptridx_t obj)
 		}
 
 		case	powerup_type_t::POW_SPREADFIRE_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::SPREADFIRE_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::spreadfire);
 			break;
 		case	powerup_type_t::POW_PLASMA_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::PLASMA_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::plasma);
 			break;
 		case	powerup_type_t::POW_FUSION_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::FUSION_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::fusion);
 			break;
 
 #if DXX_BUILD_DESCENT == 2
 		case	powerup_type_t::POW_HELIX_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::HELIX_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::helix);
 			break;
 
 		case	powerup_type_t::POW_PHOENIX_WEAPON:
-			used = pick_up_primary_or_energy(player_info, primary_weapon_index_t::PHOENIX_INDEX);
+			used = pick_up_primary_or_energy(player_info, primary_weapon_index::phoenix);
 			break;
 
 		case	powerup_type_t::POW_OMEGA_WEAPON:
-			used = pick_up_primary(player_info, primary_weapon_index_t::OMEGA_INDEX);
+			used = pick_up_primary(player_info, primary_weapon_index::omega);
 			if (used)
 				player_info.Omega_charge = obj->ctype.powerup_info.count;
 			if (!used && !(Game_mode & GM_MULTI) )
@@ -548,48 +548,48 @@ int do_powerup(const vmobjptridx_t obj)
 #endif
 
 		case	powerup_type_t::POW_PROXIMITY_WEAPON:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::PROXIMITY_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::proximity, 4, Controls);
 			break;
 		case	powerup_type_t::POW_SMARTBOMB_WEAPON:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMART_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::smart, 1, Controls);
 			break;
 		case	powerup_type_t::POW_MEGA_WEAPON:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::MEGA_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::mega, 1, Controls);
 			break;
 #if DXX_BUILD_DESCENT == 2
 		case	powerup_type_t::POW_SMISSILE1_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE1_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::flash, 1, Controls);
 			break;
 		case	powerup_type_t::POW_SMISSILE1_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE1_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::flash, 4, Controls);
 			break;
 		case	powerup_type_t::POW_GUIDED_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::GUIDED_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::guided, 1, Controls);
 			break;
 		case	powerup_type_t::POW_GUIDED_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::GUIDED_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::guided, 4, Controls);
 			break;
 		case	powerup_type_t::POW_SMART_MINE:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMART_MINE_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::smart_mine, 4, Controls);
 			break;
 		case	powerup_type_t::POW_MERCURY_MISSILE_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE4_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::mercury, 1, Controls);
 			break;
 		case	powerup_type_t::POW_MERCURY_MISSILE_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE4_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::mercury, 4, Controls);
 			break;
 		case	powerup_type_t::POW_EARTHSHAKER_MISSILE:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::SMISSILE5_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::earthshaker, 1, Controls);
 			break;
 #endif
 		case	powerup_type_t::POW_VULCAN_AMMO:
 			used = pick_up_vulcan_ammo(player_info);
 			break;
 		case	powerup_type_t::POW_HOMING_AMMO_1:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::HOMING_INDEX, 1, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::homing, 1, Controls);
 			break;
 		case	powerup_type_t::POW_HOMING_AMMO_4:
-			used = pick_up_secondary(player_info, secondary_weapon_index_t::HOMING_INDEX, 4, Controls);
+			used = pick_up_secondary(player_info, secondary_weapon_index::homing, 4, Controls);
 			break;
 		case	powerup_type_t::POW_CLOAK:
 			if (player_info.powerup_flags & PLAYER_FLAGS_CLOAKED) {
@@ -599,7 +599,7 @@ int do_powerup(const vmobjptridx_t obj)
 				player_info.cloak_time = {GameTime64};	//	Not! changed by awareness events (like player fires laser).
 				player_info.powerup_flags |= PLAYER_FLAGS_CLOAKED;
 				ai_do_cloak_stuff();
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_cloak();
 				powerup_basic(-10,-10,-10, CLOAK_SCORE, "%s!",TXT_CLOAKING_DEVICE);
 				used = 1;
@@ -652,7 +652,7 @@ int do_powerup(const vmobjptridx_t obj)
 				if (Newdemo_state == ND_STATE_RECORDING)
 					newdemo_record_laser_level(old_level, player_info.laser_level);
 				powerup_basic(10, 0, 10, LASER_SCORE, "Super Boost to Laser level %u", static_cast<unsigned>(player_info.laser_level) + 1);
-				if (player_info.Primary_weapon != primary_weapon_index_t::LASER_INDEX)
+				if (player_info.Primary_weapon != primary_weapon_index::laser)
 					check_to_use_primary_super_laser(player_info);
 				used=1;
 			}

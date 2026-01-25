@@ -1174,38 +1174,38 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define _D2X_SECONDARY_SUPER_WEAPON_NAMES(u)
 #elif DXX_BUILD_DESCENT == 2
 #define _D2X_PRIMARY_SUPER_WEAPON_NAMES(u)	\
-	((u) == primary_weapon_index_t::SUPER_LASER_INDEX) ? TXT_W_SLASER :	\
-	((u) == primary_weapon_index_t::GAUSS_INDEX) ? TXT_W_SVULCAN :	\
-	((u) == primary_weapon_index_t::HELIX_INDEX) ? TXT_W_SSPREADFIRE :	\
-	((u) == primary_weapon_index_t::PHOENIX_INDEX) ? TXT_W_SPLASMA :	\
-	((u) == primary_weapon_index_t::OMEGA_INDEX) ? TXT_W_SFUSION :	\
+	((u) == primary_weapon_index::super_laser) ? TXT_W_SLASER :	\
+	((u) == primary_weapon_index::gauss) ? TXT_W_SVULCAN :	\
+	((u) == primary_weapon_index::helix) ? TXT_W_SSPREADFIRE :	\
+	((u) == primary_weapon_index::phoenix) ? TXT_W_SPLASMA :	\
+	((u) == primary_weapon_index::omega) ? TXT_W_SFUSION :	\
 
 #define _D2X_SECONDARY_SUPER_WEAPON_NAMES(u)	\
-	((u) == secondary_weapon_index_t::SMISSILE1_INDEX) ? TXT_W_SMISSILE1 :	\
-	((u) == secondary_weapon_index_t::GUIDED_INDEX) ? TXT_W_SMISSILE2 :	\
-	((u) == secondary_weapon_index_t::SMART_MINE_INDEX) ? TXT_W_SMISSILE3 :	\
-	((u) == secondary_weapon_index_t::SMISSILE4_INDEX) ? TXT_W_SMISSILE4 :	\
-	((u) == secondary_weapon_index_t::SMISSILE5_INDEX) ? TXT_W_SMISSILE5 :	\
+	((u) == secondary_weapon_index::flash) ? TXT_W_SMISSILE1 :	\
+	((u) == secondary_weapon_index::guided) ? TXT_W_SMISSILE2 :	\
+	((u) == secondary_weapon_index::smart_mine) ? TXT_W_SMISSILE3 :	\
+	((u) == secondary_weapon_index::mercury) ? TXT_W_SMISSILE4 :	\
+	((u) == secondary_weapon_index::earthshaker) ? TXT_W_SMISSILE5 :	\
 
 #endif
 #endif
 
 #define PRIMARY_WEAPON_NAMES(u)	(	\
-	((u) == primary_weapon_index_t::LASER_INDEX) ? TXT_W_LASER :	\
-	((u) == primary_weapon_index_t::VULCAN_INDEX) ? TXT_W_VULCAN :	\
-	((u) == primary_weapon_index_t::SPREADFIRE_INDEX) ? TXT_W_SPREADFIRE :	\
-	((u) == primary_weapon_index_t::PLASMA_INDEX) ? TXT_W_PLASMA :	\
-	((u) == primary_weapon_index_t::FUSION_INDEX) ? TXT_W_FUSION :	\
+	((u) == primary_weapon_index::laser) ? TXT_W_LASER :	\
+	((u) == primary_weapon_index::vulcan) ? TXT_W_VULCAN :	\
+	((u) == primary_weapon_index::spreadfire) ? TXT_W_SPREADFIRE :	\
+	((u) == primary_weapon_index::plasma) ? TXT_W_PLASMA :	\
+	((u) == primary_weapon_index::fusion) ? TXT_W_FUSION :	\
 	_D2X_PRIMARY_SUPER_WEAPON_NAMES((u))	\
 	(dxx_text_ensure_simple_expr(&(u), TXT_W_LASER))	\
 	)
 
 #define SECONDARY_WEAPON_NAMES(u)	(	\
-	((u) == secondary_weapon_index_t::CONCUSSION_INDEX) ? TXT_W_C_MISSILE :	\
-	((u) == secondary_weapon_index_t::HOMING_INDEX) ? TXT_W_H_MISSILE :	\
-	((u) == secondary_weapon_index_t::PROXIMITY_INDEX) ? TXT_W_P_BOMB :	\
-	((u) == secondary_weapon_index_t::SMART_INDEX) ? TXT_W_S_MISSILE :	\
-	((u) == secondary_weapon_index_t::MEGA_INDEX) ? TXT_W_M_MISSILE :	\
+	((u) == secondary_weapon_index::concussion) ? TXT_W_C_MISSILE :	\
+	((u) == secondary_weapon_index::homing) ? TXT_W_H_MISSILE :	\
+	((u) == secondary_weapon_index::proximity) ? TXT_W_P_BOMB :	\
+	((u) == secondary_weapon_index::smart) ? TXT_W_S_MISSILE :	\
+	((u) == secondary_weapon_index::mega) ? TXT_W_M_MISSILE :	\
 	_D2X_SECONDARY_SUPER_WEAPON_NAMES((u))	\
 	(dxx_text_ensure_simple_expr(&(u), TXT_W_C_MISSILE))	\
 	)

@@ -1084,22 +1084,22 @@ void newdemo_record_start_demo()
 	nd_write_byte(DEMO_GAME_TYPE);
 	nd_write_fix(0); // NOTE: This is supposed to write GameTime (in fix). Since our GameTime64 is fix64 and the demos do not NEED this time actually, just write 0.
 
-	nd_write_int((Game_mode & GM_MULTI) ? (underlying_value(Game_mode) | (Player_num << 16)) : underlying_value(Game_mode));
+	nd_write_int(+(Game_mode & GM_MULTI) ? (underlying_value(Game_mode) | (Player_num << 16)) : underlying_value(Game_mode));
 
-	if (Game_mode & GM_TEAM) {
+	if (+(Game_mode & GM_TEAM)) {
 		nd_write_byte(Netgame.team_vector);
 		nd_write_string(Netgame.team_name[team_number::blue]);
 		nd_write_string(Netgame.team_name[team_number::red]);
 	}
 
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		nd_write_byte(static_cast<int8_t>(N_players));
 		range_for (auto &i, partial_const_range(Players, N_players)) {
 			nd_write_string(static_cast<const char *>(i.callsign));
 			nd_write_byte(underlying_value(i.connected));
 
 			auto &pl_info = vcobjptr(i.objnum)->ctype.player_info;
-			if (Game_mode & GM_MULTI_COOP) {
+			if (+(Game_mode & GM_MULTI_COOP)) {
 				nd_write_int(pl_info.mission.score);
 			} else {
 				nd_write_short(pl_info.net_killed_total);
@@ -1117,7 +1117,7 @@ void newdemo_record_start_demo()
 	nd_record_v_secondary_ammo = -1;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+		nd_write_short(primary_weapon_index{i} == primary_weapon_index::vulcan ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);
@@ -1131,8 +1131,8 @@ void newdemo_record_start_demo()
 	nd_write_byte(nd_record_v_player_energy = static_cast<int8_t>(f2ir(player_info.energy)));
 	nd_write_byte(nd_record_v_player_shields = static_cast<int8_t>(f2ir(get_local_plrobj().shields)));
 	nd_write_int(nd_record_v_player_flags = player_info.powerup_flags.get_player_flags());        // be sure players flags are set
-	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon)));
-	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index>(player_info.Secondary_weapon)));
 	nd_record_v_start_frame = nd_record_v_frame_number = 0;
 #if DXX_BUILD_DESCENT == 2
 	nd_record_v_player_afterburner = 0;
@@ -1423,17 +1423,17 @@ static void newdemo_record_player_weapon(int weapon_num, int weapon_type)
 	nd_write_byte(static_cast<int8_t>(nd_record_v_weapon_num = weapon_num));
 	auto &player_info = get_local_plrobj().ctype.player_info;
 	nd_write_byte(weapon_type
-		? static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon))
-		: static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon))
+		? static_cast<int8_t>(static_cast<secondary_weapon_index>(player_info.Secondary_weapon))
+		: static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon))
 	);
 }
 
-void newdemo_record_player_weapon(const primary_weapon_index_t weapon_num)
+void newdemo_record_player_weapon(const primary_weapon_index weapon_num)
 {
 	newdemo_record_player_weapon(underlying_value(weapon_num), 0);
 }
 
-void newdemo_record_player_weapon(const secondary_weapon_index_t weapon_num)
+void newdemo_record_player_weapon(const secondary_weapon_index weapon_num)
 {
 	newdemo_record_player_weapon(underlying_value(weapon_num), 1);
 }
@@ -1808,7 +1808,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	change_playernum_to((recorded_demo_game_mode >> 16) & 0x7);
 	if (shareware)
 	{
-		if (Newdemo_game_mode & GM_TEAM)
+		if (+(Newdemo_game_mode & GM_TEAM))
 		{
 			nd_read_byte(&Netgame.team_vector);
 			if (purpose == purpose_type::rewrite)
@@ -1826,7 +1826,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	}
 	else
 	{
-		if (Newdemo_game_mode & GM_TEAM) {
+		if (+(Newdemo_game_mode & GM_TEAM)) {
 			nd_read_byte(&Netgame.team_vector);
 			nd_read_string(Netgame.team_name[team_number::blue].buffer());
 			nd_read_string(Netgame.team_name[team_number::red].buffer());
@@ -1837,7 +1837,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 				nd_write_string(Netgame.team_name[team_number::red]);
 			}
 		}
-		if (Newdemo_game_mode & GM_MULTI) {
+		if (+(Newdemo_game_mode & GM_MULTI)) {
 
 			if (purpose != purpose_type::rewrite)
 				multi_new_game();
@@ -1866,7 +1866,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 					nd_write_byte(underlying_value(i.connected));
 				}
 
-				if (Newdemo_game_mode & GM_MULTI_COOP) {
+				if (+(Newdemo_game_mode & GM_MULTI_COOP)) {
 					nd_read_int(&player_info.mission.score);
 					if (purpose == purpose_type::rewrite)
 						nd_write_int(player_info.mission.score);
@@ -1909,7 +1909,7 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX)
+		if (primary_weapon_index{i} == primary_weapon_index::vulcan)
 			player_info.vulcan_ammo = s;
 		if (purpose == purpose_type::rewrite)
 			nd_write_short(s);
@@ -1992,13 +1992,13 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		Primary_weapon = static_cast<primary_weapon_index_t>(v);
+		Primary_weapon = static_cast<primary_weapon_index>(v);
 	}
 	auto &Secondary_weapon = player_info.Secondary_weapon;
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		Secondary_weapon = static_cast<secondary_weapon_index_t>(v);
+		Secondary_weapon = static_cast<secondary_weapon_index>(v);
 	}
 	if (purpose == purpose_type::rewrite)
 	{
@@ -2018,8 +2018,8 @@ static int newdemo_read_demo_start(const purpose_type purpose)
 			auto flags = player_info.powerup_flags.get_player_flags();
 			energy = shield;
 			shield = static_cast<uint8_t>(flags);
-			Primary_weapon = static_cast<primary_weapon_index_t>(Secondary_weapon.get_active());
-			Secondary_weapon = static_cast<secondary_weapon_index_t>(c);
+			Primary_weapon = static_cast<primary_weapon_index>(Secondary_weapon.get_active());
+			Secondary_weapon = static_cast<secondary_weapon_index>(c);
 		} else
 			PHYSFS_seek(infile, PHYSFS_tell(infile) - 1);
 	}
@@ -2213,10 +2213,10 @@ static int newdemo_read_frame_information(int rewrite)
 					break;
 
 				obj_link_unchecked(Objects.vmptr, obj, Segments.vmptridx(segnum));
-				if ((obj->type == OBJ_PLAYER) && (Newdemo_game_mode & GM_MULTI)) {
+				if (obj->type == OBJ_PLAYER && +(Newdemo_game_mode & GM_MULTI)) {
 					int player;
 
-					if (Newdemo_game_mode & GM_TEAM)
+					if (+(Newdemo_game_mode & GM_TEAM))
 						player = static_cast<unsigned>(multi_get_team_from_player(Netgame, get_player_id(obj)));
 					else
 						player = get_player_id(obj);
@@ -2720,9 +2720,9 @@ static int newdemo_read_frame_information(int rewrite)
 
 			auto &player_info = get_local_plrobj().ctype.player_info;
 			if (weapon_type == 0)
-				player_info.Primary_weapon = static_cast<primary_weapon_index_t>(weapon_num);
+				player_info.Primary_weapon = static_cast<primary_weapon_index>(weapon_num);
 			else
-				player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(weapon_num);
+				player_info.Secondary_weapon = static_cast<secondary_weapon_index>(weapon_num);
 
 			break;
 		}
@@ -2744,14 +2744,14 @@ static int newdemo_read_frame_information(int rewrite)
 			auto &player_info = get_local_plrobj().ctype.player_info;
 			if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
 				if (weapon_type == 0)
-					player_info.Primary_weapon = static_cast<primary_weapon_index_t>(weapon_num);
+					player_info.Primary_weapon = static_cast<primary_weapon_index>(weapon_num);
 				else
-					player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(weapon_num);
+					player_info.Secondary_weapon = static_cast<secondary_weapon_index>(weapon_num);
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (weapon_type == 0)
-					player_info.Primary_weapon = static_cast<primary_weapon_index_t>(old_weapon);
+					player_info.Primary_weapon = static_cast<primary_weapon_index>(old_weapon);
 				else
-					player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(old_weapon);
+					player_info.Secondary_weapon = static_cast<secondary_weapon_index>(old_weapon);
 			}
 			break;
 		}
@@ -2966,11 +2966,11 @@ static int newdemo_read_frame_information(int rewrite)
 			auto &player_info = vmobjptr(vcplayerptr(static_cast<unsigned>(pnum))->objnum)->ctype.player_info;
 			if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				player_info.net_kills_total -= kill;
-				if (Newdemo_game_mode & GM_TEAM)
+				if (+(Newdemo_game_mode & GM_TEAM))
 					team_kills[multi_get_team_from_player(Netgame, pnum)] -= kill;
 			} else if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
 				player_info.net_kills_total += kill;
-				if (Newdemo_game_mode & GM_TEAM)
+				if (+(Newdemo_game_mode & GM_TEAM))
 					team_kills[multi_get_team_from_player(Netgame, pnum)] += kill;
 			}
 			Game_mode = Newdemo_game_mode;
@@ -3128,7 +3128,7 @@ static int newdemo_read_frame_information(int rewrite)
 				break;
 			auto &player_info = get_local_plrobj().ctype.player_info;
 #if DXX_BUILD_DESCENT == 2
-			if (player_info.Primary_weapon == primary_weapon_index_t::OMEGA_INDEX) // If Omega cannon, we need to update Omega_charge - not stored in primary_ammo
+			if (player_info.Primary_weapon == primary_weapon_index::omega) // If Omega cannon, we need to update Omega_charge - not stored in primary_ammo
 				player_info.Omega_charge = (value<=0?f1_0:value);
 			else
 #endif
@@ -3483,7 +3483,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 #if DXX_BUILD_DESCENT == 1
 	if (shareware)
 	{
-		if (Newdemo_game_mode & GM_MULTI) {
+		if (+(Newdemo_game_mode & GM_MULTI)) {
 			PHYSFSX_fseek(infile, -10, SEEK_END);
 			nd_read_byte(&cloaked);
 			for (playernum_t i = 0; i < MAX_PLAYERS; i++)
@@ -3513,7 +3513,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 
 	nd_read_short(&frame_length);
 	loc = PHYSFS_tell(infile);
-	if (Newdemo_game_mode & GM_MULTI)
+	if (+(Newdemo_game_mode & GM_MULTI))
 	{
 		nd_read_byte(&cloaked);
 		for (unsigned i = 0; i < MAX_PLAYERS; ++i)
@@ -3545,18 +3545,18 @@ window_event_result newdemo_goto_end(int to_rewrite)
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		player_info.Primary_weapon = static_cast<primary_weapon_index_t>(v);
+		player_info.Primary_weapon = static_cast<primary_weapon_index>(v);
 	}
 	{
 		int8_t v;
 		nd_read_byte(&v);
-		player_info.Secondary_weapon = static_cast<secondary_weapon_index_t>(v);
+		player_info.Secondary_weapon = static_cast<secondary_weapon_index>(v);
 	}
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
 	{
 		short s;
 		nd_read_short(&s);
-		if (primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX)
+		if (primary_weapon_index{i} == primary_weapon_index::vulcan)
 			player_info.vulcan_ammo = s;
 	}
 	range_for (auto &i, player_info.secondary_ammo)
@@ -3571,7 +3571,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 		player_info.laser_level = laser_level{i};
 	}
 
-	if (Newdemo_game_mode & GM_MULTI) {
+	if (+(Newdemo_game_mode & GM_MULTI)) {
 		nd_read_byte(&c);
 		N_players = static_cast<int>(c);
 		// see newdemo_read_start_demo for explanation of
@@ -3585,7 +3585,7 @@ window_event_result newdemo_goto_end(int to_rewrite)
 				i.connected = player_connection_status{connected};
 			}
 			auto &pl_info = vmobjptr(i.objnum)->ctype.player_info;
-			if (Newdemo_game_mode & GM_MULTI_COOP) {
+			if (+(Newdemo_game_mode & GM_MULTI_COOP)) {
 				nd_read_int(&pl_info.mission.score);
 			} else {
 				nd_read_short(&pl_info.net_killed_total);
@@ -3985,7 +3985,7 @@ static void newdemo_write_end()
 	unsigned short byte_count = 0;
 	nd_write_byte(ND_EVENT_EOF);
 	nd_write_short(nd_record_v_framebytes_written - 1);
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		for (unsigned i = 0; i < N_players; ++i)
 		{
 			const auto &&objp = vmobjptr(vcplayerptr(i)->objnum);
@@ -4008,12 +4008,12 @@ static void newdemo_write_end()
 	nd_write_byte(static_cast<int8_t>(f2ir(player_info.energy)));
 	nd_write_byte(static_cast<int8_t>(f2ir(get_local_plrobj().shields)));
 	nd_write_int(player_info.powerup_flags.get_player_flags());        // be sure players flags are set
-	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index_t>(player_info.Primary_weapon)));
-	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index_t>(player_info.Secondary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<primary_weapon_index>(player_info.Primary_weapon)));
+	nd_write_byte(static_cast<int8_t>(static_cast<secondary_weapon_index>(player_info.Secondary_weapon)));
 	byte_count += 8;
 
 	for (const uint8_t i : xrange(MAX_PRIMARY_WEAPONS))
-		nd_write_short(primary_weapon_index_t{i} == primary_weapon_index_t::VULCAN_INDEX ? player_info.vulcan_ammo : 0);
+		nd_write_short(primary_weapon_index{i} == primary_weapon_index::vulcan ? player_info.vulcan_ammo : 0);
 
 	range_for (auto &i, player_info.secondary_ammo)
 		nd_write_short(i);
@@ -4022,7 +4022,7 @@ static void newdemo_write_end()
 	nd_write_byte(static_cast<uint8_t>(player_info.laser_level));
 	byte_count++;
 
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		nd_write_byte(static_cast<int8_t>(N_players));
 		byte_count++;
 		range_for (auto &i, partial_const_range(Players, N_players)) {
@@ -4030,7 +4030,7 @@ static void newdemo_write_end()
 			byte_count += (strlen(static_cast<const char *>(i.callsign)) + 2);
 			nd_write_byte(underlying_value(i.connected));
 			auto &pl_info = vcobjptr(i.objnum)->ctype.player_info;
-			if (Game_mode & GM_MULTI_COOP) {
+			if (+(Game_mode & GM_MULTI_COOP)) {
 				nd_write_int(pl_info.mission.score);
 				byte_count += 5;
 			} else {

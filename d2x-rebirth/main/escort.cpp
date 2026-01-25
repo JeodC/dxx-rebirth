@@ -436,7 +436,7 @@ static uint8_t show_buddy_message()
 		return 0;
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		if (!Netgame.AllowGuidebot)
 			return 0;
@@ -614,7 +614,7 @@ void set_escort_special_goal(d_unique_buddy_state &BuddyState, const int raw_spe
 	say_escort_goal(BuddyState.Escort_special_goal);
 	BuddyState.Escort_goal_object = ESCORT_GOAL_UNSPECIFIED;
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_escort_goal(BuddyState);
 #endif
 }
@@ -1647,7 +1647,7 @@ static int maybe_steal_flag_item(object &playerobj, const PLAYER_FLAG flagval)
 }
 
 //	----------------------------------------------------------------------------
-static int maybe_steal_secondary_weapon(object &playerobj, const secondary_weapon_index_t weapon_num)
+static int maybe_steal_secondary_weapon(object &playerobj, const secondary_weapon_index weapon_num)
 {
 	auto &ThiefUniqueState = LevelUniqueObjectState.ThiefState;
 	auto &player_info = playerobj.ctype.player_info;
@@ -1673,19 +1673,19 @@ static int maybe_steal_secondary_weapon(object &playerobj, const secondary_weapo
 }
 
 //	----------------------------------------------------------------------------
-static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_index_t weapon_num)
+static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_index weapon_num)
 {
 	auto &ThiefUniqueState = LevelUniqueObjectState.ThiefState;
 	auto &player_info = playerobj.ctype.player_info;
 	bool is_energy_weapon = true;
-	switch (static_cast<primary_weapon_index_t>(weapon_num))
+	switch (static_cast<primary_weapon_index>(weapon_num))
 	{
-		case primary_weapon_index_t::LASER_INDEX:
+		case primary_weapon_index::laser:
 			if (player_info.laser_level == laser_level::_1)
 				return 0;
 			break;
-		case primary_weapon_index_t::VULCAN_INDEX:
-		case primary_weapon_index_t::GAUSS_INDEX:
+		case primary_weapon_index::vulcan:
+		case primary_weapon_index::gauss:
 			if (!player_info.vulcan_ammo)
 				return 0;
 			is_energy_weapon = false;
@@ -1699,7 +1699,7 @@ static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_in
 	{
 		if ((
 #if DXX_USE_MULTIPLAYER
-				(Game_mode & GM_MULTI)
+			+(Game_mode & GM_MULTI)
 				? Netgame.ThiefModifierFlags
 				:
 #endif
@@ -1709,7 +1709,7 @@ static int maybe_steal_primary_weapon(object &playerobj, const primary_weapon_in
 	{
 		if (d_rand() < THIEF_PROBABILITY) {
 			powerup_type_t primary_weapon_powerup;
-			if (weapon_num == primary_weapon_index_t::LASER_INDEX)
+			if (weapon_num == primary_weapon_index::laser)
 			{
 				auto &laser_level = player_info.laser_level;
 				primary_weapon_powerup = (laser_level > MAX_LASER_LEVEL)
@@ -1756,7 +1756,7 @@ static int attempt_to_steal_item_3(object &thief, object &player_num)
 
 	//	If primary weapon = laser, first try to rip away those nasty quad lasers!
 	const auto Primary_weapon = player_num.ctype.player_info.Primary_weapon;
-	if (Primary_weapon == primary_weapon_index_t::LASER_INDEX)
+	if (Primary_weapon == primary_weapon_index::laser)
 		if (auto r = maybe_steal_flag_item(player_num, PLAYER_FLAGS_QUAD_LASERS))
 			return r;
 
@@ -1791,9 +1791,9 @@ static int attempt_to_steal_item_3(object &thief, object &player_num)
 		return r;
 
 	for (int i=MAX_SECONDARY_WEAPONS-1; i>=0; i--) {
-		if (auto r = maybe_steal_primary_weapon(player_num, static_cast<primary_weapon_index_t>(i)))
+		if (auto r = maybe_steal_primary_weapon(player_num, static_cast<primary_weapon_index>(i)))
 			return r;
-		if (auto r = maybe_steal_secondary_weapon(player_num, static_cast<secondary_weapon_index_t>(i)))
+		if (auto r = maybe_steal_secondary_weapon(player_num, static_cast<secondary_weapon_index>(i)))
 			return r;
 	}
 
@@ -1851,7 +1851,7 @@ void attempt_to_steal_item(const vmobjptridx_t thiefp, const robot_info &robptr,
 	ailp.mode = ai_mode::AIM_THIEF_RETREAT;
 	if (rval) {
 		PALETTE_FLASH_ADD(30, 15, -20);
-                if (Game_mode & GM_NETWORK)
+		if (+(Game_mode & GM_NETWORK))
                  multi_send_stolen_items();
 	}
 }
@@ -2010,7 +2010,7 @@ void do_escort_menu(void)
 	int	next_goal;
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		if (!check_warn_local_player_can_control_guidebot(vcobjptr, BuddyState, Netgame))
 			return;
 	}

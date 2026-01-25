@@ -173,24 +173,24 @@ static void paging_touch_weapon(const d_vclip_array &Vclip, const weapon_info &w
 
 	switch(weapon.render)
 	{
-	case WEAPON_RENDER_VCLIP:
+	case weapon_info::render_type::vclip:
 		paging_touch_vclip(Vclip, weapon.weapon_vclip);
 		break;
-	case WEAPON_RENDER_NONE:
+	case weapon_info::render_type::None:
 	case weapon_info::render_type::laser:
 		break;
-	case WEAPON_RENDER_POLYMODEL:
+	case weapon_info::render_type::polymodel:
 		paging_touch_model(weapon.model_num);
 		break;
-	case WEAPON_RENDER_BLOB:
+	case weapon_info::render_type::blob:
 		PIGGY_PAGE_IN(weapon.bitmap);
 		break;
 	}
 }
 
-static void paging_touch_weapon(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const uint_fast32_t weapon_type)
+static void paging_touch_weapon(const d_vclip_array &Vclip, const weapon_info_array &Weapon_info, const weapon_id_type weapon_type)
 {
-	if (weapon_type < N_weapon_types)
+	if (weapon_type < N_weapon_types) [[likely]]
 		paging_touch_weapon(Vclip, Weapon_info[weapon_type]);
 }
 

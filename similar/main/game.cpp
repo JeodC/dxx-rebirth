@@ -646,7 +646,7 @@ void calc_frame_time()
 	const auto vsync{CGameCfg.VSync};
 	const auto bound = f1_0 / (likely(vsync) ? MAXIMUM_FPS : CGameArg.SysMaxFPS);
 	const auto may_sleep = !CGameArg.SysNoNiceFPS && !vsync;
-	const auto multiplayer{Game_mode & GM_MULTI};
+	const auto multiplayer{+(Game_mode & GM_MULTI)};
 	for (;;)
 	{
 		const auto timer_value = timer_update();
@@ -1134,7 +1134,7 @@ static void do_invulnerable_stuff(player_info &player_info)
 				return;
 			}
 				multi_digi_play_sample(sound_effect::SOUND_INVULNERABILITY_OFF, F1_0);
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					maybe_drop_net_powerup(powerup_type_t::POW_INVULNERABILITY, 1, 0);
 				}
@@ -1173,7 +1173,7 @@ static void do_afterburner_stuff(object_array &Objects)
 	if (Endlevel_sequence || Player_dead_state != player_dead_state::no)
 	{
 		digi_kill_sound_linked_to_object(plobj);
-		if (Game_mode & GM_MULTI && func_play)
+		if (+(Game_mode & GM_MULTI) && func_play)
 		{
 			multi_send_sound_function (0,0);
 			func_play = 0;
@@ -1183,7 +1183,7 @@ static void do_afterburner_stuff(object_array &Objects)
 	if ((Controls.state.afterburner != Last_afterburner_state && Last_afterburner_charge) || (Last_afterburner_state && Last_afterburner_charge && !Afterburner_charge)) {
 		if (Afterburner_charge && Controls.state.afterburner && have_afterburner) {
 			digi_link_sound_to_object3(sound_effect::SOUND_AFTERBURNER_IGNITE, plobj, 1, F1_0, sound_stack::allow_stacking, vm_distance{i2f(256)}, AFTERBURNER_LOOP_START, AFTERBURNER_LOOP_END);
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 			{
 				multi_send_sound_function (3,sound_effect::SOUND_AFTERBURNER_IGNITE);
 				func_play = 1;
@@ -1191,7 +1191,7 @@ static void do_afterburner_stuff(object_array &Objects)
 		} else {
 			digi_kill_sound_linked_to_object(plobj);
 			digi_link_sound_to_object2(sound_effect::SOUND_AFTERBURNER_PLAY, plobj, 0, F1_0, sound_stack::allow_stacking, vm_distance{i2f(256)});
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 			{
 			 	multi_send_sound_function (0,0);
 				func_play = 0;
@@ -1780,24 +1780,24 @@ window_event_result game_window::event_handler(const d_event &event)
 			if (time_paused)
 				start_time();
 
-			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+			if (!(+(Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+			{
 				digi_resume_digi_sounds();
-
-			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 				palette_restore();
+			}
 			
 			reset_cockpit();
 			break;
 
 		case event_type::window_deactivated:
-			if (!(((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)) && (!Endlevel_sequence)) )
+			if (!((+(Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)) && (!Endlevel_sequence)) )
 				stop_time();
 
-			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+			if (!(+(Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+			{
 				digi_pause_digi_sounds();
-
-			if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 				full_palette_save();
+			}
 
 			event_toggle_focus(0);
 			key_toggle_repeat(1);
@@ -2030,7 +2030,7 @@ window_event_result GameProcessFrame(const d_level_shared_robot_info_state &Leve
 		if (headlight_should_turn_off)
 		{
 			pl_flags &= ~PLAYER_FLAGS_HEADLIGHT_ON;
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_flags(Player_num);
 		}
 	}
@@ -2042,7 +2042,7 @@ window_event_result GameProcessFrame(const d_level_shared_robot_info_state &Leve
 #endif
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		result = std::max(multi_do_frame(), result);
 		if (Netgame.PlayTimeAllowed.count())
@@ -2114,7 +2114,7 @@ window_event_result GameProcessFrame(const d_level_shared_robot_info_state &Leve
 		auto laser_firing_count = FireLaser(player_info, Controls);
 		if (auto &Auto_fire_fusion_cannon_time = player_info.Auto_fire_fusion_cannon_time)
 		{
-			if (player_info.Primary_weapon != primary_weapon_index_t::FUSION_INDEX)
+			if (player_info.Primary_weapon != primary_weapon_index::fusion)
 				Auto_fire_fusion_cannon_time = 0;
 			else if ((laser_firing_count = (GameTime64 + FrameTime/2 >= Auto_fire_fusion_cannon_time)))
 			{
@@ -2158,7 +2158,7 @@ window_event_result GameProcessFrame(const d_level_shared_robot_info_state &Leve
 #endif
 
 	// Check if we have to close in-game menus for multiplayer
-	if ((Game_mode & GM_MULTI) && get_local_player().connected == player_connection_status::playing)
+	if (+(Game_mode & GM_MULTI) && get_local_player().connected == player_connection_status::playing)
 	{
 		if (Endlevel_sequence || Player_dead_state != player_was_dead || local_player_shields_ref < player_shields || (LevelUniqueControlCenterState.Control_center_destroyed && LevelUniqueControlCenterState.Countdown_seconds_left < 10))
                         game_leave_menus();
@@ -2224,7 +2224,7 @@ static void slide_textures(void)
 		{
 			for (const auto sidenum : MAX_SIDES_PER_SEGMENT)
 			{
-				if (slide_seg & build_sidemask(sidenum))
+				if (+(slide_seg & build_sidemask(sidenum)))
 				{
 					auto &side = useg.sides[sidenum];
 					const auto texture1_index{get_texture_index(side.tmap_num)};
@@ -2346,7 +2346,7 @@ bool FireLaser(player_info &player_info, const control_info &Controls)
 		/* Retail data sets fire_count=1 for all primary weapons */
 		return false;
 
-	if (Primary_weapon == primary_weapon_index_t::FUSION_INDEX)
+	if (Primary_weapon == primary_weapon_index::fusion)
 	{
 		auto energy{player_info.energy};
 		auto &Auto_fire_fusion_cannon_time = player_info.Auto_fire_fusion_cannon_time;
@@ -2387,7 +2387,7 @@ bool FireLaser(player_info &player_info, const control_info &Controls)
 				if (Fusion_charge > F1_0*2) {
 					digi_play_sample(sound_effect::SOUND_BADASS_EXPLOSION, F1_0 );
 #if DXX_BUILD_DESCENT == 1
-					if(Game_mode & GM_MULTI)
+					if (+(Game_mode & GM_MULTI))
 						multi_send_play_sound(sound_effect::SOUND_BADASS_EXPLOSION, F1_0, sound_stack::allow_stacking);
 #endif
 					const auto cobjp = vmobjptridx(ConsoleObject);

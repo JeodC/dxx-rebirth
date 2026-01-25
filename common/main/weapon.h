@@ -32,6 +32,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #ifdef __cplusplus
 #include "dxxsconf.h"
 #include "dsx-ns.h"
+#include "d_bit_enum.h"
 #include "objnum.h"
 #include "pack.h"
 #include "fwd-valptridx.h"
@@ -67,20 +68,11 @@ enum class has_secondary_weapon_result : bool
 	present,
 };
 
-static constexpr has_primary_weapon_result operator&(const has_primary_weapon_result r, const has_primary_weapon_result m)
-{
-	return static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) & static_cast<uint8_t>(m));
-}
+template <>
+inline constexpr bool enable_bit_enum_and<has_primary_weapon_result, has_primary_weapon_result>{true};
 
-static constexpr has_primary_weapon_result operator|(const has_primary_weapon_result r, const has_primary_weapon_result m)
-{
-	return static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) | static_cast<uint8_t>(m));
-}
-
-static constexpr has_primary_weapon_result &operator|=(has_primary_weapon_result &r, const has_primary_weapon_result m)
-{
-	return r = static_cast<has_primary_weapon_result>(static_cast<uint8_t>(r) | static_cast<uint8_t>(m));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<has_primary_weapon_result, has_primary_weapon_result>{true};
 
 static constexpr uint8_t has_weapon(const has_primary_weapon_result r)
 {
@@ -170,11 +162,14 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 	sbyte   destroyable;        // If !0, this weapon can be destroyed by another weapon.
 
 	sbyte   homing_flag;        // Set if this weapon can home in on a target.
+#if DXX_BUILD_DESCENT == 2
+	uint8_t flags;	// WIF_PLACABLE or 0
+#endif
+
+	bitmap_index bitmap;        // Pointer to bitmap if rendertype==0 or 1.
 
 	fix energy_usage;           // How much fuel is consumed to fire this weapon.
 	fix fire_wait;              // Time until this weapon can be fired again.
-
-	bitmap_index bitmap;        // Pointer to bitmap if rendertype==0 or 1.
 
 	fix blob_size;              // Size of blob if blob type
 	fix flash_size;             // How big to draw the flash
@@ -194,9 +189,6 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 	bitmap_index    picture;    // a picture of the weapon for the cockpit
 #elif DXX_BUILD_DESCENT == 2
 	ubyte   speedvar;           // allowed variance in speed below average, /128: 64 = 50% meaning if speed = 100, can be 50..100
-
-	ubyte   flags;              // see values above
-
 	sbyte   flash;              // Flash effect
 	sbyte   afterburner_size;   // Size of blobs in F1_0/16 units, specify in bitmaps.tbl as floating point.  Player afterburner size = 2.5.
 
@@ -214,45 +206,45 @@ struct weapon_info : prohibit_void_ptr<weapon_info>
 #endif
 };
 
-enum class primary_weapon_index_t : uint8_t
+enum class primary_weapon_index : uint8_t
 {
-	LASER_INDEX = 0,
-	VULCAN_INDEX = 1,
-	SPREADFIRE_INDEX = 2,
-	PLASMA_INDEX = 3,
-	FUSION_INDEX = 4,
+	laser = 0,
+	vulcan = 1,
+	spreadfire = 2,
+	plasma = 3,
+	fusion = 4,
 #if DXX_BUILD_DESCENT == 2
-	SUPER_LASER_INDEX = 5,
-	GAUSS_INDEX = 6,
-	HELIX_INDEX = 7,
-	PHOENIX_INDEX = 8,
-	OMEGA_INDEX = 9,
+	super_laser = 5,
+	gauss = 6,
+	helix = 7,
+	phoenix = 8,
+	omega = 9,
 #endif
 };
 
-enum class secondary_weapon_index_t : uint8_t
+enum class secondary_weapon_index : uint8_t
 {
-	CONCUSSION_INDEX = 0,
-	HOMING_INDEX = 1,
-	PROXIMITY_INDEX = 2,
-	SMART_INDEX = 3,
-	MEGA_INDEX = 4,
+	concussion = 0,
+	homing = 1,
+	proximity = 2,
+	smart = 3,
+	mega = 4,
 #if DXX_BUILD_DESCENT == 2
-	SMISSILE1_INDEX = 5,
-	GUIDED_INDEX = 6,
-	SMART_MINE_INDEX = 7,
-	SMISSILE4_INDEX = 8,
-	SMISSILE5_INDEX = 9,
+	flash = 5,
+	guided = 6,
+	smart_mine = 7,
+	mercury = 8,
+	earthshaker = 9,
 #endif
 };
 
 //given a weapon index, return the flag value
-static constexpr unsigned HAS_PRIMARY_FLAG(const primary_weapon_index_t w)
+static constexpr unsigned HAS_PRIMARY_FLAG(const primary_weapon_index w)
 {
 	return 1 << static_cast<unsigned>(w);
 }
 
-static constexpr unsigned HAS_SECONDARY_FLAG(const secondary_weapon_index_t w)
+static constexpr unsigned HAS_SECONDARY_FLAG(const secondary_weapon_index w)
 {
 	return 1 << static_cast<unsigned>(w);
 }
@@ -262,19 +254,19 @@ void delayed_autoselect(player_info &, const control_info &Controls);
 
 //return which bomb will be dropped next time the bomb key is pressed
 #if DXX_BUILD_DESCENT == 1
-static constexpr secondary_weapon_index_t which_bomb(const player_info &)
+static constexpr secondary_weapon_index which_bomb(const player_info &)
 {
-	return secondary_weapon_index_t::PROXIMITY_INDEX;
+	return secondary_weapon_index::proximity;
 }
 
-static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index_t id)
+static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
-	return id == primary_weapon_index_t::VULCAN_INDEX;
+	return id == primary_weapon_index::vulcan;
 }
 
-static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
+static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
 {
-	return id == secondary_weapon_index_t::PROXIMITY_INDEX;
+	return id == secondary_weapon_index::proximity;
 }
 
 //multiply ammo by this before displaying
@@ -283,17 +275,17 @@ static constexpr unsigned vulcan_ammo_scale(const unsigned v)
 	return (v * 0xcc180u) >> 16;
 }
 #elif DXX_BUILD_DESCENT == 2
-secondary_weapon_index_t which_bomb(player_info &player_info);
-secondary_weapon_index_t which_bomb(const player_info &player_info);
+secondary_weapon_index which_bomb(player_info &player_info);
+secondary_weapon_index which_bomb(const player_info &player_info);
 
-static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index_t id)
+static constexpr int weapon_index_uses_vulcan_ammo(const primary_weapon_index id)
 {
-	return id == primary_weapon_index_t::VULCAN_INDEX || id == primary_weapon_index_t::GAUSS_INDEX;
+	return id == primary_weapon_index::vulcan || id == primary_weapon_index::gauss;
 }
 
-static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index_t id)
+static constexpr int weapon_index_is_player_bomb(const secondary_weapon_index id)
 {
-	return id == secondary_weapon_index_t::PROXIMITY_INDEX || id == secondary_weapon_index_t::SMART_MINE_INDEX;
+	return id == secondary_weapon_index::proximity || id == secondary_weapon_index::smart_mine;
 }
 
 //multiply ammo by this before displaying

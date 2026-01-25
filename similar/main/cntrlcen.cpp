@@ -169,7 +169,7 @@ window_event_result do_controlcen_dead_frame()
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptridx = Objects.vmptridx;
-	if ((Game_mode & GM_MULTI) && (get_local_player().connected != player_connection_status::playing)) // if out of level already there's no need for this
+	if (+(Game_mode & GM_MULTI) && (get_local_player().connected != player_connection_status::playing)) // if out of level already there's no need for this
 		return window_event_result::ignored;
 
 	const auto Dead_controlcen_object_num = LevelUniqueControlCenterState.Dead_controlcen_object_num;
@@ -208,7 +208,7 @@ window_event_result do_countdown_frame()
 		{
 			if (!(Game_mode & GM_MULTI))
 				return window_event_result::ignored;
-			if (Game_mode & GM_MULTI_ROBOTS)
+			if (+(Game_mode & GM_MULTI_ROBOTS))
 				return window_event_result::ignored;
 		}
 	}
@@ -300,7 +300,7 @@ void do_controlcen_destroyed_stuff(const imobjidx_t objp)
 	int i;
 
 #if DXX_BUILD_DESCENT == 2
-	if ((Game_mode & GM_MULTI_ROBOTS) && LevelUniqueControlCenterState.Control_center_destroyed)
+	if (+(Game_mode & GM_MULTI_ROBOTS) && LevelUniqueControlCenterState.Control_center_destroyed)
 		return; // Don't allow resetting if control center and boss on same level
 #endif
 
@@ -370,7 +370,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 			// never goes through ai_do_frame, I'm making it so the control
 			// center can spot cloaked dudes.
 
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				Believed_player_pos = plrobj.pos;
 
 			//	Hack for special control centers which are isolated and not reachable because the
@@ -437,7 +437,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 			}
 	
 #if DXX_USE_MULTIPLAYER
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_controlcen_fire(vec_to_goal, best_gun_num, obj);	
 #endif
 			Laser_create_new_easy(Robot_info, vec_to_goal, obj->ctype.reactor_info.gun_pos[best_gun_num], obj, weapon_id_type::CONTROLCEN_WEAPON_NUM, weapon_sound_flag::audible);
@@ -457,7 +457,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 				vm_vec_scale_add2(vec_to_goal, make_random_vector(), F1_0/scale_divisor);
 				vm_vec_normalize_quick(vec_to_goal);
 #if DXX_USE_MULTIPLAYER
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_controlcen_fire(vec_to_goal, best_gun_num, obj);
 #endif
 				Laser_create_new_easy(Robot_info, vec_to_goal, obj->ctype.reactor_info.gun_pos[best_gun_num], obj, weapon_id_type::CONTROLCEN_WEAPON_NUM, count == 0 ? weapon_sound_flag::audible : weapon_sound_flag::silent);
@@ -471,7 +471,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 				delta_fire_time += F1_0/2;
 #endif
 
-			if (Game_mode & GM_MULTI) // slow down rate of fire in multi player
+			if (+(Game_mode & GM_MULTI)) // slow down rate of fire in multi player
 				delta_fire_time *= 2;
 
 			LevelUniqueControlCenterState.Frametime_until_next_fire = delta_fire_time;
@@ -506,7 +506,7 @@ void init_controlcen_for_level(const d_robot_info_array &Robot_info)
 		}
 	}
 
-	if (boss_objp != nullptr && !((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)))
+	if (boss_objp != nullptr && !(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_ROBOTS)))
 	{
 		/* If boss is present ... */
 		if (cntrlcen_objp != nullptr)

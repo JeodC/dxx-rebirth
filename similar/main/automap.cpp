@@ -419,18 +419,18 @@ d_marker_state MarkerState;
 
 game_marker_index convert_player_marker_index_to_game_marker_index(const game_mode_flags game_mode, const unsigned max_numplayers, const unsigned player_num, const player_marker_index player_marker_num)
 {
-	if (game_mode & GM_MULTI_COOP)
+	if (+(game_mode & GM_MULTI_COOP))
 		return static_cast<game_marker_index>((player_num * MAX_DROP_MULTI_COOP) + static_cast<unsigned>(player_marker_num));
-	if (game_mode & GM_MULTI)
+	if (+(game_mode & GM_MULTI))
 		return static_cast<game_marker_index>((player_num * MAX_DROP_MULTI_COMPETITIVE) + static_cast<unsigned>(player_marker_num));
 	return static_cast<game_marker_index>(player_marker_num);
 }
 
 unsigned d_marker_state::get_markers_per_player(const game_mode_flags game_mode, const unsigned max_numplayers)
 {
-	if (game_mode & GM_MULTI_COOP)
+	if (+(game_mode & GM_MULTI_COOP))
 		return MAX_DROP_MULTI_COOP;
-	if (game_mode & GM_MULTI)
+	if (+(game_mode & GM_MULTI))
 		return MAX_DROP_MULTI_COMPETITIVE;
 	return MAX_DROP_SINGLE;
 }
@@ -444,7 +444,7 @@ xrange<player_marker_index> get_player_marker_range(const unsigned maxdrop)
 playernum_t get_marker_owner(const game_mode_flags game_mode, const game_marker_index gmi, const unsigned max_numplayers)
 {
 	const auto ugmi{static_cast<unsigned>(gmi)};
-	if (game_mode & GM_MULTI_COOP)
+	if (+(game_mode & GM_MULTI_COOP))
 	{
 		/* This is split out to encourage the compiler to recognize that
 		 * the divisor is a constant in every path, and in every path,
@@ -455,7 +455,7 @@ playernum_t get_marker_owner(const game_mode_flags game_mode, const game_marker_
 			return ugmi / MAX_DROP_MULTI_COOP_0;
 		return ugmi / MAX_DROP_MULTI_COOP_1;
 	}
-	if (game_mode & GM_MULTI)
+	if (+(game_mode & GM_MULTI))
 		return ugmi / MAX_DROP_MULTI_COMPETITIVE;
 	return 0;
 }
@@ -571,7 +571,7 @@ static void DropMarker(fvmobjptridx &vmobjptridx, fvmsegptridx &vmsegptridx, con
 
 	marker_objidx = drop_marker_object(plrobj.pos, vmsegptridx(plrobj.segnum), plrobj.orient, marker_num);
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_drop_marker(Player_num, plrobj.pos, player_marker_num, MarkerState.message[marker_num]);
 #else
 	(void)player_marker_num;
@@ -969,8 +969,8 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am, fix eye = 0)
 	
 	// Draw player(s)...
 #if DXX_USE_MULTIPLAYER
-	const unsigned show_all_players{(Game_mode & GM_MULTI_COOP) || underlying_value(Netgame.game_flag & netgame_rule_flags::show_all_players_on_automap)};
-	if (show_all_players || (Game_mode & GM_TEAM))
+	const unsigned show_all_players{+(Game_mode & GM_MULTI_COOP) || underlying_value(Netgame.game_flag & netgame_rule_flags::show_all_players_on_automap)};
+	if (show_all_players || +(Game_mode & GM_TEAM))
 	{
 		const auto local_player_team{multi_get_team_from_player(Netgame, Player_num)};
 		const auto n_players{N_players};
@@ -1053,7 +1053,7 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am, fix eye = 0)
 	const auto vsync{CGameCfg.VSync};
 	const auto bound{F1_0 / (vsync ? MAXIMUM_FPS : CGameArg.SysMaxFPS)};
 	const auto may_sleep{!CGameArg.SysNoNiceFPS && !vsync};
-	const auto multiplayer{Game_mode & GM_MULTI};
+	const auto multiplayer{+(Game_mode & GM_MULTI)};
 	while (am.t2 - am.t1 < bound) // ogl is fast enough that the automap can read the input too fast and you start to turn really slow.  So delay a bit (and free up some cpu :)
 	{
 		if (multiplayer)
@@ -1287,7 +1287,7 @@ window_event_result automap::event_handler(const d_event &event)
 			Game_wind->set_visible(1);
 			Automap_active = 0;
 #if DXX_USE_MULTIPLAYER
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_msgsend_state(msgsend_state::none);
 #endif
 			return window_event_result::ignored;	// continue closing
@@ -1317,7 +1317,7 @@ void do_automap()
 	am->drawingListBright = std::make_unique<Edge_info *[]>(max_edges);
 
 	init_automap_colors(*am);
-	am->pause_game = !((Game_mode & GM_MULTI) && (!Endlevel_sequence)); // Set to 1 if everything is paused during automap...No pause during net.
+	am->pause_game = !(+(Game_mode & GM_MULTI) && (!Endlevel_sequence)); // Set to 1 if everything is paused during automap...No pause during net.
 
 	if (am->pause_game) {
 		Game_wind->set_visible(0);
@@ -1361,7 +1361,7 @@ void do_automap()
 	gr_palette_load( gr_palette );
 	Automap_active = 1;
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_msgsend_state(msgsend_state::automap);
 #endif
 }
@@ -1803,7 +1803,7 @@ void InitMarkerInput ()
 		}
 		if (++ iter == me)		//no free slot
 		{
-			if (game_mode & GM_MULTI)
+			if (+(game_mode & GM_MULTI))
 			{
 				//in multi, replace oldest
 				MarkerState.MarkerBeingDefined = static_cast<player_marker_index>((static_cast<unsigned>(MarkerState.LastMarkerDropped) + 1) & (maxdrop - 1));

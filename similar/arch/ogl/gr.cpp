@@ -139,7 +139,6 @@ void gr_set_mode_from_window_size()
 
 #if DXX_USE_OGLES && SDL_MAJOR_VERSION == 1 
 static EGLDisplay eglDisplay=EGL_NO_DISPLAY;
-static EGLConfig eglConfig;
 static EGLSurface eglSurface=EGL_NO_SURFACE;
 static EGLContext eglContext=EGL_NO_CONTEXT;
 
@@ -354,24 +353,7 @@ static int ogl_init_window(int w, int h)
 	SDL_SysWMinfo info;
 	Window    x11Window = 0;
 	Display*  x11Display = 0;
-	EGLint    ver_maj, ver_min;
-	EGLint configAttribs[] =
-	{
-		EGL_RED_SIZE, 5,
-		EGL_GREEN_SIZE, 6,
-		EGL_BLUE_SIZE, 5,
-		EGL_DEPTH_SIZE, 16,
-		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT,
-		EGL_NONE, EGL_NONE
-	};
 
-	// explicitely request an OpenGL ES 1.x context
-        EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 1, EGL_NONE, EGL_NONE };
-	// explicitely request a doublebuffering window
-        EGLint winAttribs[] = { EGL_RENDER_BUFFER, EGL_BACK_BUFFER, EGL_NONE, EGL_NONE };
-
-	int iConfigs;
 #endif // OGLES
 
 #if SDL_MAJOR_VERSION == 1
@@ -442,6 +424,7 @@ static int ogl_init_window(int w, int h)
 			con_printf(CON_URGENT, "EGL: Error querying EGL Display");
 		}
 
+		EGLint ver_maj, ver_min;
 		if (!eglInitialize(eglDisplay, &ver_maj, &ver_min)) {
 			con_printf(CON_URGENT, "EGL: Error initializing EGL");
 		} else {
@@ -456,13 +439,28 @@ static int ogl_init_window(int w, int h)
 	}
 #endif
 
+	static EGLConfig eglConfig;
 	if (eglSurface == EGL_NO_SURFACE) {
+		static const EGLint configAttribs[]{
+			EGL_RED_SIZE, 5,
+			EGL_GREEN_SIZE, 6,
+			EGL_BLUE_SIZE, 5,
+			EGL_DEPTH_SIZE, 16,
+			EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+			EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT,
+			EGL_NONE, EGL_NONE
+		};
+		int iConfigs;
 		if (!eglChooseConfig(eglDisplay, configAttribs, &eglConfig, 1, &iConfigs) || (iConfigs != 1)) {
 			con_printf(CON_URGENT, "EGL: Error choosing config");
 		} else {
 			con_printf(CON_DEBUG, "EGL: config chosen");
 		}
 
+		// explicitly request a doublebuffering window
+		static const EGLint winAttribs[]{
+			EGL_RENDER_BUFFER, EGL_BACK_BUFFER, EGL_NONE, EGL_NONE
+		};
 #ifdef RPI
 		eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig, static_cast<EGLNativeWindowType>(&nativewindow), winAttribs);
 #else
@@ -476,6 +474,10 @@ static int ogl_init_window(int w, int h)
 	}
 	
 	if (eglContext == EGL_NO_CONTEXT) {
+		// explicitly request an OpenGL ES 1.x context
+		static const EGLint contextAttribs[]{
+			EGL_CONTEXT_CLIENT_VERSION, 1, EGL_NONE, EGL_NONE
+		};
 		eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs);
 		if ((!TestEGLError("eglCreateContext")) || eglContext == EGL_NO_CONTEXT) {
 			con_printf(CON_URGENT, "EGL: Error creating context");
@@ -866,7 +868,8 @@ int gr_init()
 		return -1;
 	SDL_GetWindowPosition(SDLWindow, &g_iRebirthWindowX, &g_iRebirthWindowY);
 	g_pRebirthSDLMainWindow = SDLWindow;
-	SDL_GL_CreateContext(SDLWindow);
+	if (!SDL_GL_CreateContext(SDLWindow))
+		Error("Failed to create SDL GL context: %s", SDL_GetError());
 	if (const auto window_icon = SDL_LoadBMP(DXX_SDL_WINDOW_ICON_BITMAP))
 		SDL_SetWindowIcon(SDLWindow, window_icon);
 #endif

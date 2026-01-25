@@ -39,6 +39,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdexcept>
 #include "fwd-segment.h"
 #include "countarray.h"
+#include "d_bit_enum.h"
 #include "valptridx.h"
 #include "objnum.h"
 #include "pack.h"
@@ -164,20 +165,17 @@ enum class sidemask_t : uint8_t
 	front =	1u << static_cast<uint8_t>(sidenum_t::WFRONT),
 };
 
-static constexpr uint8_t operator&(const sidemask_t a, const sidemask_t b)
-{
-	return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
-}
+template <>
+inline constexpr bool enable_bit_enum_and<sidemask_t, sidemask_t>{true};
 
-static constexpr sidemask_t operator~(const sidemask_t a)
-{
-	return static_cast<sidemask_t>(~static_cast<uint8_t>(a));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<sidemask_t, sidemask_t>{true};
 
-static constexpr sidemask_t &operator|=(sidemask_t &a, const sidemask_t b)
-{
-	return a = static_cast<sidemask_t>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<sidemask_t>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_boolnot<sidemask_t>{true};
 
 [[nodiscard]]
 static constexpr sidemask_t build_sidemask(const sidenum_t s)

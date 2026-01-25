@@ -1343,7 +1343,7 @@ player_led: ;
 	Laser_create_new_easy(Robot_info, fire_vec, fire_point, obj, weapon_type, weapon_sound_flag::audible);
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		ai_multi_send_robot_position(obj, -1);
 		multi_send_robot_fire(obj, obj->ctype.ai_info.CURRENT_GUN, fire_vec);
@@ -1989,7 +1989,7 @@ int ai_door_is_openable(
 	if (robptr->companion)
 	{
 		const auto wt{wall.type};
-		if (wall.flags & wall_flag::buddy_proof) {
+		if (+(wall.flags & wall_flag::buddy_proof)) {
 			if (wt == WALL_DOOR && wall.state == wall_state::closed)
 				return 0;
 			else if (wt == WALL_CLOSED)
@@ -2024,7 +2024,7 @@ int ai_door_is_openable(
 			if (wt == WALL_CLOSED)
 				return 0;
 			if (wt == WALL_DOOR) {
-				if ((wall.flags & wall_flag::door_locked) && (wall.state == wall_state::closed))
+				if (+(wall.flags & wall_flag::door_locked) && (wall.state == wall_state::closed))
 					return 0;
 			}
 		}
@@ -2095,7 +2095,7 @@ static std::optional<sidenum_t> openable_doors_in_segment(fvcwallptr &vcwallptr,
 				continue;
 			if (w.state != wall_state::closed)
 				continue;
-			if (w.flags & wall_flag::door_locked)
+			if (+(w.flags & wall_flag::door_locked))
 				continue;
 #if DXX_BUILD_DESCENT == 2
 			if (WallAnims[w.clip_num].flags & WCF_HIDDEN)
@@ -2428,7 +2428,7 @@ static void teleport_boss(const d_robot_info_array &Robot_info, const d_vclip_ar
 	Assert(rand_segnum <= Highest_segment_index);
 
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_boss_teleport(objp, rand_segnum);
 #endif
 
@@ -2654,7 +2654,7 @@ static int ai_multiplayer_awareness(const vmobjptridx_t objp, int awareness_leve
 {
 	int rval{1};
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		if (awareness_level == 0)
 			return 0;
 		rval = multi_can_move_robot(objp, awareness_level);
@@ -2726,7 +2726,7 @@ static void do_d1_boss_stuff(const d_robot_info_array &Robot_info, fvmsegptridx 
 					BossUniqueState.Boss_cloak_start_time = {GameTime64};
 					objp->ctype.ai_info.CLOAKED = 1;
 #if DXX_USE_MULTIPLAYER
-					if (Game_mode & GM_MULTI)
+					if (+(Game_mode & GM_MULTI))
 						multi_send_boss_cloak(objp);
 #endif
 				}
@@ -2746,7 +2746,7 @@ static void do_super_boss_stuff(const d_robot_info_array &Robot_info, fvmsegptri
 	do_d1_boss_stuff(Robot_info, vmsegptridx, objp, player_visibility);
 
 	// Only master player can cause gating to occur.
-	const auto multiplayer{Game_mode & GM_MULTI};
+	const auto multiplayer{+(Game_mode & GM_MULTI)};
 #if DXX_USE_MULTIPLAYER
 	if (multiplayer && !multi_i_am_master())
                 return;
@@ -2843,7 +2843,7 @@ static void do_d2_boss_stuff(fvmsegptridx &vmsegptridx, const vmobjptridx_t objp
 				BossUniqueState.Boss_cloak_start_time = {GameTime64};
 				objp->ctype.ai_info.CLOAKED = 1;
 #if DXX_USE_MULTIPLAYER
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_boss_cloak(objp);
 #endif
 			}
@@ -2856,7 +2856,7 @@ static void do_d2_boss_stuff(fvmsegptridx &vmsegptridx, const vmobjptridx_t objp
 static void ai_multi_send_robot_position(object &obj, int force)
 {
 #if DXX_USE_MULTIPLAYER
-	if (Game_mode & GM_MULTI) 
+	if (+(Game_mode & GM_MULTI)) 
 		multi_send_robot_position(obj, force != -1 ? multi_send_robot_position_priority::_2 : multi_send_robot_position_priority::_1);
 #else
 	(void)obj;
@@ -2869,7 +2869,7 @@ static void ai_multi_send_robot_position(object &obj, int force)
 //	Returns true if this object should be allowed to fire at the player.
 static int maybe_ai_do_actual_firing_stuff(object &obj)
 {
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		auto &aip = obj.ctype.ai_info;
 		if (aip.GOAL_STATE != ai_static_state::AIS_FLIN && get_robot_id(obj) != robot_id::brain)
@@ -3516,7 +3516,7 @@ _exit_cheat:
 		}
 			break;
 	}
-	const auto multiplayer{Game_mode & GM_MULTI};
+	const auto multiplayer{+(Game_mode & GM_MULTI)};
 	// - -  - -  - -  - -  - -  - -  - -  - -  - -  - -  - -  - -  - -  - -  - 
 	// Occasionally make non-still robots make a path to the player.  Based on agitation and distance from player.
 #if DXX_BUILD_DESCENT == 1
@@ -4574,7 +4574,7 @@ static int add_awareness_event(const object_base &objp, player_awareness_type_t 
 void create_awareness_event(object &objp, player_awareness_type_t type, d_level_unique_robot_awareness_state &LevelUniqueRobotAwarenessState)
 {
 	// If not in multiplayer, or in multiplayer with robots, do this, else unnecessary!
-	if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS))
+	if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_ROBOTS))
 	{
 		if (add_awareness_event(objp, type, LevelUniqueRobotAwarenessState))
 		{
@@ -4592,7 +4592,7 @@ namespace {
 static unsigned process_awareness_events(fvcsegptridx &vcsegptridx, d_level_unique_robot_awareness_state &LevelUniqueRobotAwarenessState, awareness_t &New_awareness)
 {
 	unsigned result{0};
-	if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS))
+	if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_ROBOTS))
 	{
 		const auto Num_awareness_events = std::exchange(LevelUniqueRobotAwarenessState.Num_awareness_events, 0);
 		if (!Num_awareness_events)

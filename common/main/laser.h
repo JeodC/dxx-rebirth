@@ -93,7 +93,7 @@ void Flare_create(vmobjptridx_t obj);
 bool laser_are_related(vcobjptridx_t o1, vcobjptridx_t o2);
 
 void do_laser_firing_player(object &);
-void do_missile_firing(const secondary_weapon_index_t weapon, const vmobjptridx_t plrobjidx);
+void do_missile_firing(const secondary_weapon_index weapon, const vmobjptridx_t plrobjidx);
 
 // Fires a laser-type weapon (a Primary weapon)
 // Fires from object objnum, weapon type weapon_id.
@@ -102,7 +102,7 @@ void do_missile_firing(const secondary_weapon_index_t weapon, const vmobjptridx_
 // Returns the number of shots actually fired, which will typically be
 // 1, but could be higher for low frame rates when rapidfire weapons,
 // such as vulcan or plasma are fired.
-int do_laser_firing(vmobjptridx_t objnum, primary_weapon_index_t weapon_id, laser_level level, unsigned flags, vms_vector shot_orientation, icobjidx_t Network_laser_track);
+int do_laser_firing(vmobjptridx_t objnum, primary_weapon_index weapon_id, laser_level level, unsigned flags, vms_vector shot_orientation, icobjidx_t Network_laser_track);
 
 imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &position, vmsegptridx_t segnum, vmobjptridx_t parent, weapon_id_type type, weapon_sound_flag make_sound);
 // Easier to call than Laser_create_new because it determines the
@@ -144,39 +144,49 @@ extern std::array<muzzle_info, MUZZLE_QUEUE_MAX> Muzzle_data;
 }
 
 #ifdef DXX_BUILD_DESCENT
-namespace d1x {
-
-static inline int is_proximity_bomb_or_player_smart_mine(const weapon_id_type id)
-{
-	return id == weapon_id_type::PROXIMITY_ID;
-}
-
-static inline int is_proximity_bomb_or_player_smart_mine_or_placed_mine(const weapon_id_type id)
-{
-	/* Descent 1 has no smart mines or placed mines. */
-	return id == weapon_id_type::PROXIMITY_ID;
-}
-
-}
+namespace dsx {
 
 #if DXX_BUILD_DESCENT == 2
-namespace dsx {
 // Omega cannon stuff.
 #define MAX_OMEGA_CHARGE    (F1_0)  //  Maximum charge level for omega cannonw
-
-static inline int is_proximity_bomb_or_player_smart_mine(const weapon_id_type id)
-{
-	if (id == weapon_id_type::SUPERPROX_ID)
-		return 1;
-	return ::d1x::is_proximity_bomb_or_player_smart_mine(id);
-}
-
-static inline int is_proximity_bomb_or_player_smart_mine_or_placed_mine(const weapon_id_type id)
-{
-	if (id == weapon_id_type::PMINE_ID)
-		return 1;
-	return is_proximity_bomb_or_player_smart_mine(id);
-}
-}
 #endif
+
+static constexpr uint8_t is_proximity_bomb_or_player_smart_mine(const weapon_id_type id)
+{
+	switch (id)
+	{
+#if DXX_BUILD_DESCENT == 2
+		case weapon_id_type::SUPERPROX_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::SUPERPROX_ID) != 0);
+			[[fallthrough]];
+#endif
+		case weapon_id_type::PROXIMITY_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::PROXIMITY_ID) != 0);
+			return static_cast<uint8_t>(id);
+		default:
+			return 0;
+	}
+}
+
+static constexpr uint8_t is_proximity_bomb_or_player_smart_mine_or_placed_mine(const weapon_id_type id)
+{
+	switch (id)
+	{
+#if DXX_BUILD_DESCENT == 2
+		case weapon_id_type::SUPERPROX_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::SUPERPROX_ID) != 0);
+			[[fallthrough]];
+		case weapon_id_type::PMINE_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::PMINE_ID) != 0);
+			[[fallthrough]];
+#endif
+		case weapon_id_type::PROXIMITY_ID:
+			static_assert(static_cast<uint8_t>(weapon_id_type::PROXIMITY_ID) != 0);
+			return static_cast<uint8_t>(id);
+		default:
+			return 0;
+	}
+}
+
+}
 #endif

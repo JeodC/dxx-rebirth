@@ -45,6 +45,8 @@ constexpr std::integral_constant<unsigned, 10> MAX_WALLS_PER_LINK{};
 }
 
 #ifdef DXX_BUILD_DESCENT
+#include "d_bit_enum.h"
+
 // Trigger types
 enum class trigger_action : uint8_t
 {
@@ -67,7 +69,6 @@ enum class trigger_action : uint8_t
 };
 
 #if DXX_BUILD_DESCENT == 2
-#define NUM_TRIGGER_TYPES   14
 
 // Trigger flags
 
@@ -80,28 +81,20 @@ enum class trigger_behavior_flags : uint8_t
 	disabled = 4,	// Set after one-shot fires
 };
 
-enum class trigger_behavior_flag_mask : uint8_t;
+namespace dcx {
 
-static constexpr trigger_behavior_flag_mask operator~(const trigger_behavior_flags value)
-{
-	return static_cast<trigger_behavior_flag_mask>(~static_cast<uint8_t>(value));
-}
+template <>
+inline constexpr bool enable_bit_enum_and<trigger_behavior_flags, trigger_behavior_flags>{true};
 
-static constexpr uint8_t operator&(const trigger_behavior_flags value, const trigger_behavior_flags mask)
-{
-	return static_cast<uint8_t>(value) & static_cast<uint8_t>(mask);
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<trigger_behavior_flags>{true};
 
-static constexpr trigger_behavior_flags &operator|=(trigger_behavior_flags &value, const trigger_behavior_flags mask)
-{
-	value = static_cast<trigger_behavior_flags>(static_cast<uint8_t>(value) | static_cast<uint8_t>(mask));
-	return value;
-}
+template <>
+inline constexpr bool enable_bit_enum_boolnot<trigger_behavior_flags>{true};
 
-static constexpr trigger_behavior_flags &operator&=(trigger_behavior_flags &value, const trigger_behavior_flag_mask mask)
-{
-	value = static_cast<trigger_behavior_flags>(static_cast<uint8_t>(value) & static_cast<uint8_t>(mask));
-	return value;
+template <>
+inline constexpr bool enable_bit_enum_or<trigger_behavior_flags, trigger_behavior_flags>{true};
+
 }
 
 //old trigger structs

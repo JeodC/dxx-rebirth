@@ -369,7 +369,7 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 	const int ForceFieldHit = 0;
 #elif DXX_BUILD_DESCENT == 2
 	int ForceFieldHit{0};
-	if (tmi1.flags & tmapinfo_flag::force_field)
+	if (+(tmi1.flags & tmapinfo_flag::force_field))
 	{
 		vms_vector force;
 
@@ -404,7 +404,7 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 			 * walls will not deal damage, and so are a free hit.
 			 */
 			constexpr auto tmi_no_damage{(tmapinfo_flag::water | tmapinfo_flag::lava)};
-			if (tmi1.flags & tmi_no_damage)
+			if (+(tmi1.flags & tmi_no_damage))
 				return 0;
 			const auto tmap_num2{hitseg->unique_segment::sides[hitwall].tmap_num2};
 			if (tmap_num2 != texture2_value::None)
@@ -412,7 +412,7 @@ static void collide_player_and_wall(const vmobjptridx_t playerobj, const fix hit
 				const auto texture2_index{get_texture_index(tmap_num2)};
 				if (texture2_index >= TmapInfo.size()) [[unlikely]]
 					return 0;
-				if (TmapInfo[texture2_index].flags & tmi_no_damage)
+				if (+(TmapInfo[texture2_index].flags & tmi_no_damage))
 					return 0;
 			}
 	// Note: Does quad damage if hit a force field - JL
@@ -473,7 +473,7 @@ volatile_wall_result check_volatile_wall(const vmobjptridx_t obj, const unique_s
 	const fix d = tmi1.damage;
 	if (d > 0
 #if DXX_BUILD_DESCENT == 2
-		|| (tmi1.flags & tmapinfo_flag::water)
+		|| +(tmi1.flags & tmapinfo_flag::water)
 #endif
 		)
 	{
@@ -589,7 +589,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 	if (is_trigger)
 	{
 		if (force_blowup_flag || (
-				(Game_mode & GM_MULTI)
+				+(Game_mode & GM_MULTI)
 	// If this wall has a trigger and the blower-upper is not the player or the buddy, abort!
 	// For Multiplayer perform an additional check to see if it's a local-player hit. If a remote player hits, a packet is expected (remote 1) which would be followed by MULTI_TRIGGER to ensure sync with the switch and the actual trigger.
 				? (!(blower.parent_type == OBJ_PLAYER && (blower.parent_num == get_local_player().objnum || remote)))
@@ -664,7 +664,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 #endif
 			{		//not trans, thus on effect
 #if DXX_BUILD_DESCENT == 2
-				if ((Game_mode & GM_MULTI) && Netgame.AlwaysLighting)
+				if (+(Game_mode & GM_MULTI) && Netgame.AlwaysLighting)
 					if (!(ec != eclip_none && db != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT)))
 						return 0;
 
@@ -674,7 +674,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 				subtract_light(LevelSharedDestructibleLightState, seg, side);
 
 				// we blew up something connected to a trigger. Send it to others!
-				if ((Game_mode & GM_MULTI) && is_trigger && !remote && !force_blowup_flag)
+				if (+(Game_mode & GM_MULTI) && is_trigger && !remote && !force_blowup_flag)
 					multi_send_effect_blowup(seg, side, pnt);
 #endif
 				if (Newdemo_state == ND_STATE_RECORDING)
@@ -796,7 +796,7 @@ static window_event_result collide_weapon_and_wall(
 		return window_event_result::ignored;
 	auto &tmi1{TmapInfo[texture1_index]};
 	//if an energy weapon hits a forcefield, let it bounce
-	if ((tmi1.flags & tmapinfo_flag::force_field) &&
+	if (+(tmi1.flags & tmapinfo_flag::force_field) &&
 		 !(weapon->type == OBJ_WEAPON && Weapon_info[get_weapon_id(weapon)].energy_usage==0)) {
 
 		//make sound
@@ -864,7 +864,7 @@ static window_event_result collide_weapon_and_wall(
 
 	const auto Difficulty_level = GameUniqueState.Difficulty_level;
 	// Wall is volatile if either tmap 1 or 2 is volatile
-	if (const auto texture_flags{get_side_combined_tmapinfo_flags(TmapInfo, uhitside)}; texture_flags & tmapinfo_flag::lava)
+	if (const auto texture_flags{get_side_combined_tmapinfo_flags(TmapInfo, uhitside)}; +(texture_flags & tmapinfo_flag::lava))
 	{
 		weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 
@@ -891,7 +891,7 @@ static window_event_result collide_weapon_and_wall(
 		weapon->flags |= OF_SHOULD_BE_DEAD;		//make flares die in lava
 	}
 #if DXX_BUILD_DESCENT == 2
-	else if (texture_flags & tmapinfo_flag::water)
+	else if (+(texture_flags & tmapinfo_flag::water))
 	{
 		weapon_info *wi = &Weapon_info[get_weapon_id(weapon)];
 
@@ -976,7 +976,7 @@ static window_event_result collide_weapon_and_wall(
 				weapon->flags |= OF_SHOULD_BE_DEAD;
 
 			//don't let flares stick in force fields
-			if ((get_weapon_id(weapon) == weapon_id_type::FLARE_ID) && (tmi1.flags & tmapinfo_flag::force_field))
+			if ((get_weapon_id(weapon) == weapon_id_type::FLARE_ID) && +(tmi1.flags & tmapinfo_flag::force_field))
 				weapon->flags |= OF_SHOULD_BE_DEAD;
 #endif
 
@@ -1114,7 +1114,10 @@ static void collide_robot_and_player(const d_robot_info_array &Robot_info, const
 			digi_link_sound_to_pos(sound_effect::SOUND_ROBOT_HIT_PLAYER, player_segp, sidenum_t::WLEFT, collision_point, 0, F1_0);
 
 		if (collision_seg != segment_none)
-			object_create_explosion_without_damage(Vclip, collision_seg, collision_point, Weapon_info[0].impact_size, Weapon_info[0].wall_hit_vclip);
+		{
+			auto &wi{Weapon_info[weapon_id_type::LASER_ID_L1]};
+			object_create_explosion_without_damage(Vclip, collision_seg, collision_point, wi.impact_size, wi.wall_hit_vclip);
+		}
 	}
 
 	bump_two_objects(Robot_info, robot, playerobj, 1);
@@ -1153,7 +1156,7 @@ void apply_damage_to_controlcen(const d_robot_info_array &Robot_info, const vmob
 		return;
 	}
 
-	if ((Game_mode & GM_MULTI) &&
+	if (+(Game_mode & GM_MULTI) &&
 		!(Game_mode & GM_MULTI_COOP))
 	{
 		auto &player = get_local_player();
@@ -1179,7 +1182,7 @@ void apply_damage_to_controlcen(const d_robot_info_array &Robot_info, const vmob
 	if ( (controlcen->shields < 0) && !(controlcen->flags&(OF_EXPLODING|OF_DESTROYED)) ) {
 		do_controlcen_destroyed_stuff(controlcen);
 
-		if (Game_mode & GM_MULTI) {
+		if (+(Game_mode & GM_MULTI)) {
 			if (get_player_id(who) == Player_num)
 				add_points_to_score(ConsoleObject->ctype.player_info, CONTROL_CEN_SCORE, Game_mode);
 			multi_send_destroy_controlcen(controlcen, get_player_id(who) );
@@ -1218,7 +1221,7 @@ static void collide_player_and_marker(const d_robot_info_array &, const object_b
 		const auto marker_id = get_marker_id(marker);
 		auto &msg = MarkerState.message[marker_id];
 		auto &p = msg[0u];
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			const auto marker_owner = get_marker_owner(Game_mode, marker_id, Netgame.max_numplayers);
 			drawn = HUD_init_message(HM_DEFAULT|HM_MAYDUPL, "MARKER %s: %s", vcplayerptr(marker_owner)->callsign.operator const char *(), &p);
@@ -1474,7 +1477,7 @@ int apply_damage_to_robot(const d_robot_info_array &Robot_info, const vmobjptrid
 		if (PLAYING_BUILTIN_MISSION && Current_level_num == Current_mission->last_level)
 			if (robot->shields < 0)
 			 {
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				  {
 					 if (!multi_all_players_alive(Objects.vcptr, partial_range(Players, N_players))) // everyones gotta be alive
 					   robot->shields=1;
@@ -1499,7 +1502,7 @@ int apply_damage_to_robot(const d_robot_info_array &Robot_info, const vmobjptrid
 		auto &plr = get_local_player();
 		plr.num_kills_level++;
 		plr.num_kills_total++;
-		if (Game_mode & GM_MULTI) {
+		if (+(Game_mode & GM_MULTI)) {
 			if (multi_explode_robot_sub(Robot_info, robot))
 			{
 				multi_send_robot_explode(robot, killer_objnum);
@@ -1572,14 +1575,14 @@ static boss_weapon_collision_result do_boss_weapon_collision(const d_robot_info_
 					if (spew != object_none)
 					{
 						BossUniqueState.Last_gate_time = GameTime64 - GameUniqueState.Boss_gate_interval - 1;	//	Force allowing spew of another bot.
-						if (Game_mode & GM_MULTI)
+						if (+(Game_mode & GM_MULTI))
 							multi_send_boss_create_robot(robotptridx, spew);
 					}
 				}
 			const auto &&spew = boss_spew_robot(Robot_info, robot, collision_point);
 			if (spew != object_none)
 			{
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_boss_create_robot(robotptridx, spew);
 			}
 		}
@@ -1844,7 +1847,7 @@ static void collide_hostage_and_player(const d_robot_info_array &, const vmobjpt
 		// Remove the hostage object.
 		hostage->flags |= OF_SHOULD_BE_DEAD;
 
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_remobj(hostage);
 	}
 	return;
@@ -1858,7 +1861,7 @@ static void collide_player_and_player(const d_robot_info_array &Robot_info, cons
 		digi_link_sound_to_pos(sound_effect::SOUND_ROBOT_HIT_PLAYER, vcsegptridx(player1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
 
 	// Multi is special - as always. Clients do the bump damage locally but the remote players do their collision result (change velocity) on their own. So after our initial collision, ignore further collision damage till remote players (hopefully) react.
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		damage_flag = 0;
 		if (!(get_player_id(player1) == Player_num || get_player_id(player2) == Player_num))
@@ -1866,7 +1869,7 @@ static void collide_player_and_player(const d_robot_info_array &Robot_info, cons
 		auto &last_player_bump = ((get_player_id(player1) == Player_num)
 			? player2
 			: player1)->ctype.player_info.Last_bumped_local_player;
-		if (last_player_bump + (F1_0/Netgame.PacketsPerSec) < GameTime64 || last_player_bump > GameTime64)
+		if ((Netgame.PacketsPerSec && last_player_bump + (F1_0 / Netgame.PacketsPerSec) < GameTime64) || last_player_bump > GameTime64)
 		{
 			last_player_bump = {GameTime64};
 			damage_flag = 1;
@@ -1875,7 +1878,7 @@ static void collide_player_and_player(const d_robot_info_array &Robot_info, cons
 	bump_two_objects(Robot_info, player1, player2, damage_flag);
 }
 
-static imobjptridx_t maybe_drop_primary_weapon_egg(const object &playerobj, const primary_weapon_index_t weapon_index)
+static imobjptridx_t maybe_drop_primary_weapon_egg(const object &playerobj, const primary_weapon_index weapon_index)
 {
 	int weapon_flag = HAS_PRIMARY_FLAG(weapon_index);
 	const auto powerup_num = Primary_weapon_to_powerup[weapon_index];
@@ -1886,19 +1889,19 @@ static imobjptridx_t maybe_drop_primary_weapon_egg(const object &playerobj, cons
 		return object_none;
 }
 
-static void maybe_drop_secondary_weapon_egg(const object_base &playerobj, const secondary_weapon_index_t weapon_index, const unsigned count)
+static void maybe_drop_secondary_weapon_egg(const object_base &playerobj, const secondary_weapon_index weapon_index, const unsigned count)
 {
 	const auto powerup_num = Secondary_weapon_to_powerup[weapon_index];
 	call_object_create_egg(playerobj, std::min(count, 3u), powerup_num);
 }
 
-static void maybe_drop_primary_weapon_with_adjustment(const object &playerobj, const primary_weapon_index_t weapon_index, auto adjust)
+static void maybe_drop_primary_weapon_with_adjustment(const object &playerobj, const primary_weapon_index weapon_index, auto adjust)
 {
 	if (const auto objp{maybe_drop_primary_weapon_egg(playerobj, weapon_index)}; objp != object_none)
 		adjust(*objp);
 }
 
-static void maybe_drop_primary_vulcan_based_weapon(const object &playerobj, const primary_weapon_index_t weapon_index, const uint16_t ammo)
+static void maybe_drop_primary_vulcan_based_weapon(const object &playerobj, const primary_weapon_index weapon_index, const uint16_t ammo)
 {
 	maybe_drop_primary_weapon_with_adjustment(playerobj, weapon_index,
 		[ammo](object &weapon) {
@@ -1925,16 +1928,16 @@ static void maybe_drop_primary_vulcan_weapons(const object &playerobj)
 		gauss_ammo -= vulcan_ammo;
 	}
 #endif
-	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index_t::VULCAN_INDEX, vulcan_ammo);
+	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::vulcan, vulcan_ammo);
 #if DXX_BUILD_DESCENT == 2
-	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index_t::GAUSS_INDEX, gauss_ammo);
+	maybe_drop_primary_vulcan_based_weapon(playerobj, primary_weapon_index::gauss, gauss_ammo);
 #endif
 }
 
 #if DXX_BUILD_DESCENT == 2
 static void maybe_drop_primary_omega_weapon(const object &playerobj)
 {
-	maybe_drop_primary_weapon_with_adjustment(playerobj, primary_weapon_index_t::OMEGA_INDEX,
+	maybe_drop_primary_weapon_with_adjustment(playerobj, primary_weapon_index::omega,
 		[&playerobj](object &weapon) {
 			weapon.ctype.powerup_info.count = (get_player_id(playerobj) == Player_num) ? playerobj.ctype.player_info.Omega_charge : MAX_OMEGA_CHARGE;
 		}
@@ -1942,7 +1945,7 @@ static void maybe_drop_primary_omega_weapon(const object &playerobj)
 }
 #endif
 
-static void drop_missile_1_or_4(const object &playerobj, const secondary_weapon_index_t missile_index)
+static void drop_missile_1_or_4(const object &playerobj, const secondary_weapon_index missile_index)
 {
 	unsigned num_missiles = playerobj.ctype.player_info.secondary_ammo[missile_index];
 	const auto powerup_id = Secondary_weapon_to_powerup[missile_index];
@@ -1961,13 +1964,13 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 	if ((playerobj->type == OBJ_PLAYER) || (playerobj->type == OBJ_GHOST)) {
 		// Seed the random number generator so in net play the eggs will always
 		// drop the same way
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			Net_create_loc = 0;
 		}
 		auto &player_info = playerobj->ctype.player_info;
 		auto &plr_laser_level = player_info.laser_level;
-		if (const auto GrantedItems = (Game_mode & GM_MULTI) ? (d_srand(5483L), Netgame.SpawnGrantedItems) : netgrant_flag::None)
+		if (const auto GrantedItems{+(Game_mode & GM_MULTI) ? (d_srand(5483L), Netgame.SpawnGrantedItems) : netgrant_flag::None})
 		{
 			if (const auto granted_laser_level = map_granted_flags_to_laser_level(GrantedItems); granted_laser_level != laser_level::_1)
 			{
@@ -2027,11 +2030,11 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 			}
 		}
 		};
-		drop_armed_bomb(secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX], weapon_id_type::SUPERPROX_ID);
+		drop_armed_bomb(secondary_ammo[secondary_weapon_index::smart_mine], weapon_id_type::SUPERPROX_ID);
 
 		//	If the player had proximity bombs, maybe arm one of them.
-		if (Game_mode & GM_MULTI)
-			drop_armed_bomb(secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX], weapon_id_type::PROXIMITY_ID);
+		if (+(Game_mode & GM_MULTI))
+			drop_armed_bomb(secondary_ammo[secondary_weapon_index::proximity], weapon_id_type::PROXIMITY_ID);
 #endif
 
 		//	If the player dies and he has powerful lasers, create the powerups here.
@@ -2091,38 +2094,38 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		maybe_drop_primary_vulcan_weapons(playerobj);
 
 		//	Drop the rest of the primary weapons
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::SPREADFIRE_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::PLASMA_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::FUSION_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::spreadfire);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::plasma);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::fusion);
 
 #if DXX_BUILD_DESCENT == 2
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::HELIX_INDEX);
-		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index_t::PHOENIX_INDEX);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::helix);
+		maybe_drop_primary_weapon_egg(playerobj, primary_weapon_index::phoenix);
 		maybe_drop_primary_omega_weapon(playerobj);
 #endif
 
 		//	Drop the secondary weapons
 		//	Note, proximity weapon only comes in packets of 4.  So drop n/2, but a max of 3 (handled inside maybe_drop..)  Make sense?
 
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::PROXIMITY_INDEX, secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX] / 4);
+		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::proximity, secondary_ammo[secondary_weapon_index::proximity] / 4);
 
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::SMART_INDEX, secondary_ammo[secondary_weapon_index_t::SMART_INDEX]);
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::MEGA_INDEX, secondary_ammo[secondary_weapon_index_t::MEGA_INDEX]);
+		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::smart, secondary_ammo[secondary_weapon_index::smart]);
+		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::mega, secondary_ammo[secondary_weapon_index::mega]);
 
 #if DXX_BUILD_DESCENT == 2
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::SMART_MINE_INDEX, secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX] / 4);
-		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index_t::SMISSILE5_INDEX, secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX]);
+		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::smart_mine, secondary_ammo[secondary_weapon_index::smart_mine] / 4);
+		maybe_drop_secondary_weapon_egg(playerobj, secondary_weapon_index::earthshaker, secondary_ammo[secondary_weapon_index::earthshaker]);
 #endif
 
 		//	Drop the player's missiles in packs of 1 and/or 4
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::HOMING_INDEX);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::homing);
 #if DXX_BUILD_DESCENT == 2
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::GUIDED_INDEX);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::guided);
 #endif
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::CONCUSSION_INDEX);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::concussion);
 #if DXX_BUILD_DESCENT == 2
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::SMISSILE1_INDEX);
-		drop_missile_1_or_4(playerobj, secondary_weapon_index_t::SMISSILE4_INDEX);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::flash);
+		drop_missile_1_or_4(playerobj, secondary_weapon_index::mercury);
 #endif
 
 		//	If player has vulcan ammo, but no vulcan or gauss cannon, drop the ammo.
@@ -2143,7 +2146,7 @@ void drop_player_eggs(const vmobjptridx_t playerobj)
 		}
 
 		//	Always drop a shield and energy powerup.
-		if (Game_mode & GM_MULTI) {
+		if (+(Game_mode & GM_MULTI)) {
 			call_object_create_egg(playerobj, powerup_type_t::POW_SHIELD_BOOST);
 			call_object_create_egg(playerobj, powerup_type_t::POW_ENERGY);
 		}
@@ -2225,7 +2228,7 @@ static void collide_player_and_weapon(const d_robot_info_array &Robot_info, cons
 
 	damage = fixmul(damage, weapon->ctype.laser_info.multiplier);
 #if DXX_BUILD_DESCENT == 2
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		damage = fixmul(damage, Weapon_info[get_weapon_id(weapon)].multi_damage_scale);
 #endif
 
@@ -2365,7 +2368,7 @@ void collide_live_local_player_and_powerup(const vmobjptridx_t powerup)
 	if (do_powerup(powerup))
 	{
 		powerup->flags |= OF_SHOULD_BE_DEAD;
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_remobj(powerup);
 	}
 }
@@ -2382,7 +2385,7 @@ static void collide_player_and_powerup(const d_robot_info_array &, object &playe
 	{
 		collide_live_local_player_and_powerup(powerup);
 	}
-	else if ((Game_mode & GM_MULTI_COOP) && (get_player_id(playerobj) != Player_num))
+	else if (+(Game_mode & GM_MULTI_COOP) && (get_player_id(playerobj) != Player_num))
 	{
 		switch (get_powerup_id(powerup)) {
 			case powerup_type_t::POW_KEY_BLUE:
@@ -2418,7 +2421,9 @@ namespace {
 
 int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptridx_t weapon1, object &weapon2, const vms_vector &collision_point)
 {
-	if ( Weapon_info[get_weapon_id(weapon1)].damage_radius ) {
+	auto &wi1{Weapon_info[get_weapon_id(weapon1)]};
+	const auto damage_radius{wi1.damage_radius};
+	if (damage_radius) {
 		auto dist = vm_vec_dist_quick(weapon1->pos, weapon2.pos);
 		if (dist < F1_0*5) {
 			maybe_kill_weapon(weapon1,weapon2);
@@ -2428,55 +2433,62 @@ int maybe_detonate_weapon(const d_robot_info_array &Robot_info, const vmobjptrid
 #elif DXX_BUILD_DESCENT == 2
 				explode_badass_weapon(Robot_info, weapon1, collision_point);
 #endif
-				digi_link_sound_to_pos(Weapon_info[get_weapon_id(weapon1)].robot_hit_sound, vcsegptridx(weapon1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
+				digi_link_sound_to_pos(wi1.robot_hit_sound, vcsegptridx(weapon1->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
 			}
-			return 1;
 		} else {
 			weapon1->lifeleft = min(static_cast<fix>(dist) / 64, F1_0);
-			return 1;
 		}
-	} else
-		return 0;
+	}
+	return damage_radius;
 }
 
 static void collide_weapon_and_weapon(const d_robot_info_array &Robot_info, const vmobjptridx_t weapon1, const vmobjptridx_t weapon2, const vms_vector &collision_point)
 {
+	const auto w1id{get_weapon_id(weapon1)};
+	const auto w2id{get_weapon_id(weapon2)};
 #if DXX_BUILD_DESCENT == 2
 	// -- Does this look buggy??:  if (weapon1->id == PMINE_ID && weapon1->id == PMINE_ID)
-	if (get_weapon_id(weapon1) == weapon_id_type::PMINE_ID && get_weapon_id(weapon2) == weapon_id_type::PMINE_ID)
+	if (w1id == weapon_id_type::PMINE_ID && w2id == weapon_id_type::PMINE_ID)
 		return;		//these can't blow each other up
 
-	if (get_weapon_id(weapon1) == weapon_id_type::OMEGA_ID) {
+	if (w1id == weapon_id_type::OMEGA_ID) {
 		if (!ok_to_do_omega_damage(weapon1)) // see comment in laser.c
 			return;
-	} else if (get_weapon_id(weapon2) == weapon_id_type::OMEGA_ID) {
+	} else if (w2id == weapon_id_type::OMEGA_ID) {
 		if (!ok_to_do_omega_damage(weapon2)) // see comment in laser.c
 			return;
 	}
 #endif
 
-	if ((Weapon_info[get_weapon_id(weapon1)].destroyable) || (Weapon_info[get_weapon_id(weapon2)].destroyable)) {
+	const auto &wi1{Weapon_info[w1id]};
+	const auto &wi2{Weapon_info[w2id]};
+	const auto w1destroyable{wi1.destroyable};
+	const auto w2destroyable{wi2.destroyable};
+	if (w1destroyable || w2destroyable) {
+		if (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num)
+		{
+			//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
+			if (w1id == w2id)
+				return;
 		// shooting Plasma will make bombs explode one drops at the same time since hitboxes overlap. Small HACK to get around this issue. if the player moves away from the bomb at least...
-		if ((GameTime64 < weapon1->ctype.laser_info.creation_time + (F1_0/5)) && (GameTime64 < weapon2->ctype.laser_info.creation_time + (F1_0/5)) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))
+		if ((GameTime64 < weapon1->ctype.laser_info.creation_time + (F1_0/5)) && (GameTime64 < weapon2->ctype.laser_info.creation_time + (F1_0/5)))
 			return;
-		//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
-		if ((get_weapon_id(weapon1) == get_weapon_id(weapon2)) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))
-			return;
+		}
 
 #if DXX_BUILD_DESCENT == 1
-		if (Weapon_info[get_weapon_id(weapon1)].destroyable)
+		if (w1destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point))
 				maybe_kill_weapon(weapon2,weapon1);
 
-		if (Weapon_info[get_weapon_id(weapon2)].destroyable)
+		if (w2destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point))
 				maybe_kill_weapon(weapon1,weapon2);
 #elif DXX_BUILD_DESCENT == 2
-		if (Weapon_info[get_weapon_id(weapon1)].destroyable)
+		if (w1destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point))
 				maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point);
 
-		if (Weapon_info[get_weapon_id(weapon2)].destroyable)
+		if (w2destroyable)
 			if (maybe_detonate_weapon(Robot_info, weapon2, weapon1, collision_point))
 				maybe_detonate_weapon(Robot_info, weapon1, weapon2, collision_point);
 #endif

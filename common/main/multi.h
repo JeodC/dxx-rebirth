@@ -57,6 +57,7 @@ static inline player_ship_color get_player_color(const playernum_t pnum)
 #include <span>
 #include <type_traits>
 #include <ranges>
+#include "d_bit_enum.h"
 #include "fwd-partial_range.h"
 #include "player.h"
 #include "player-callsign.h"
@@ -106,7 +107,7 @@ struct _sockaddr
 #endif
 	};
 	using presentation_buffer = std::array<char, DXX_IPv6(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)>;
-	static constexpr std::integral_constant<int, DXX_IPv6(AF_INET, AF_INET6)> address_family{};
+	static constexpr auto address_family{DXX_IPv6(AF_INET, AF_INET6)};
 #undef DXX_IPv6
 };
 
@@ -160,7 +161,6 @@ constexpr std::uint16_t MULTI_PROTO_VERSION{16};
 // PROTOCOL VARIABLES AND DEFINES - END
 
 // limits for Packets (i.e. positional updates) per sec
-#define DEFAULT_PPS 30
 #define MIN_PPS 5
 #define MAX_PPS 40
 
@@ -401,11 +401,11 @@ void multi_digi_link_sound_to_pos(sound_effect soundnum, vcsegptridx_t segnum, s
 void multi_object_to_object_rw(const object &obj, object_rw *obj_rw);
 void multi_object_rw_to_object(const object_rw *obj_rw, object &obj);
 
-using GMNames_array = std::array<char[MULTI_GAME_NAME_LENGTH], MULTI_GAME_TYPE_COUNT>;
+using GMNames_array = enumerated_array<char[MULTI_GAME_NAME_LENGTH], MULTI_GAME_TYPE_COUNT, network_game_type>;
 extern const GMNames_array GMNames;
 using multi_allow_powerup_text_array = std::array<char[MULTI_ALLOW_POWERUP_TEXT_LENGTH], MULTI_ALLOW_POWERUP_MAX>;
 extern const multi_allow_powerup_text_array multi_allow_powerup_text;
-extern const std::array<char[8], MULTI_GAME_TYPE_COUNT> GMNamesShrt;
+extern const enumerated_array<char[8], MULTI_GAME_TYPE_COUNT, network_game_type> GMNamesShrt;
 }
 
 namespace dcx {
@@ -658,33 +658,17 @@ enum class netgame_rule_flags : uint8_t
 	/* endif */
 };
 
-[[nodiscard]]
-constexpr netgame_rule_flags operator~(const netgame_rule_flags a)
-{
-	return netgame_rule_flags{static_cast<uint8_t>(~static_cast<uint8_t>(a))};
-}
+template <>
+inline constexpr bool enable_bit_enum_and<netgame_rule_flags, netgame_rule_flags>{true};
 
-[[nodiscard]]
-constexpr netgame_rule_flags operator&(const netgame_rule_flags a, const netgame_rule_flags b)
-{
-	return netgame_rule_flags{static_cast<uint8_t>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b))};
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<netgame_rule_flags>{true};
 
-constexpr netgame_rule_flags &operator&=(netgame_rule_flags &a, const netgame_rule_flags b)
-{
-	return a = a & b;
-}
+template <>
+inline constexpr bool enable_bit_enum_boolnot<netgame_rule_flags>{true};
 
-[[nodiscard]]
-constexpr netgame_rule_flags operator|(const netgame_rule_flags a, const netgame_rule_flags b)
-{
-	return netgame_rule_flags{static_cast<uint8_t>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b))};
-}
-
-constexpr netgame_rule_flags &operator|=(netgame_rule_flags &a, const netgame_rule_flags b)
-{
-	return a = a | b;
-}
+template <>
+inline constexpr bool enable_bit_enum_or<netgame_rule_flags, netgame_rule_flags>{true};
 
 #if DXX_USE_TRACKER
 enum TrackerNATHolePunchWarn : uint8_t
@@ -743,7 +727,14 @@ void init_hoard_data(d_vclip_array &Vclip);
 void multi_apply_goal_textures();
 void multi_send_escort_goal(const d_unique_buddy_state &);
 
-int HoardEquipped();
+enum class hoard_availability_state : uint8_t
+{
+	Missing,	/* Check was done, no file found */
+	Found,	/* Check was done, file exists */
+	None,	/* No check has been done */
+};
+
+hoard_availability_state HoardEquipped();
 #if DXX_USE_EDITOR
 void save_hoard_data(void);
 #endif
@@ -869,7 +860,7 @@ struct netgame_info : prohibit_void_ptr<netgame_info>
 	fix						level_time;
 	int						control_invul_time;
 	int						monitor_vector;
-	short						PacketsPerSec;
+	uint8_t	PacketsPerSec{30};
 	ubyte						PacketLossPrevention;
 	ubyte						NoFriendlyFire;
 	per_team_array<callsign_t>						team_name;
@@ -925,7 +916,7 @@ static inline team_number multi_get_team_from_player(const netgame_info &Netgame
 
 static inline player_ship_color get_player_or_team_color(const netgame_info &Netgame, const game_mode_flags Game_mode, const playernum_t pnum)
 {
-	return Game_mode & GM_TEAM
+	return +(Game_mode & GM_TEAM)
 		? get_team_color(multi_get_team_from_player(Netgame, pnum))
 		: get_player_color(pnum);
 }

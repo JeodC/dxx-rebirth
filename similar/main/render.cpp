@@ -1205,7 +1205,7 @@ static void build_object_lists(object_array &Objects, fvcsegptr &vcsegptr, const
 						for (const auto sn : MAX_SIDES_PER_SEGMENT)
 						{
 							const auto sf = build_sidemask(sn);
-							if (sidemask & sf)
+							if (+(sidemask & sf))
 							{
 #if DXX_BUILD_DESCENT == 1
 								const cscusegment &&seg = vcsegptr(obj->segnum);
@@ -1306,7 +1306,7 @@ void render_frame(grs_canvas &canvas, fix eye_offset, window_rendered_data &wind
 		(Rear_view && Viewer == ConsoleObject)
 		? vm_matrix_x_matrix(Viewer->orient, vm_angles_2_matrix(vms_angvec{0, 0, INT16_MAX}))
 		: Viewer->orient, /* Render_zoom = */ {
-		(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)
+		+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)
 			/* In competitive multiplayer, ignore command line adjustment, for fairness.
 			 * In all other game modes, allow the adjustment.
 			 */

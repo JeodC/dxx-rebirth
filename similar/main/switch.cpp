@@ -203,7 +203,7 @@ static int do_change_walls(const trigger &t, const uint8_t new_wall_type)
 			switch (t.type)
 			{
 				case trigger_action::open_wall:
-					if ((TmapInfo[get_texture_index(segp->unique_segment::sides[side].tmap_num)].flags & tmapinfo_flag::force_field))
+					if (+(TmapInfo[get_texture_index(segp->unique_segment::sides[side].tmap_num)].flags & tmapinfo_flag::force_field))
 					{
 						ret |= 2;
 						digi_link_sound_to_pos(sound_effect::SOUND_FORCEFIELD_OFF, segp, side, compute_center_point_on_side(vcvertptr, segp, side), 0, F1_0);
@@ -220,7 +220,7 @@ static int do_change_walls(const trigger &t, const uint8_t new_wall_type)
 					break;
 
 				case trigger_action::close_wall:
-					if ((TmapInfo[get_texture_index(segp->unique_segment::sides[side].tmap_num)].flags & tmapinfo_flag::force_field))
+					if (+(TmapInfo[get_texture_index(segp->unique_segment::sides[side].tmap_num)].flags & tmapinfo_flag::force_field))
 					{
 						ret |= 2;
 						{
@@ -311,7 +311,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
 	auto result = window_event_result::ignored;
 
-	if ((Game_mode & GM_MULTI) && vcplayerptr(pnum)->connected != player_connection_status::playing) // as a host we may want to handle triggers for our clients. to do that properly we must check wether we (host) or client is actually playing.
+	if (+(Game_mode & GM_MULTI) && vcplayerptr(pnum)->connected != player_connection_status::playing) // as a host we may want to handle triggers for our clients. to do that properly we must check wether we (host) or client is actually playing.
 		return window_event_result::handled;
 	auto &Triggers = LevelUniqueWallSubsystemState.Triggers;
 	auto &vmtrgptr = Triggers.vmptr;
@@ -340,9 +340,9 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 			if (Newdemo_state == ND_STATE_RECORDING)		// stop demo recording
 				Newdemo_state = ND_STATE_PAUSED;
 
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_endlevel_start(multi_endlevel_type::secret);
-			if (Game_mode & GM_NETWORK)
+			if (+(Game_mode & GM_NETWORK))
 				multi::dispatch->do_protocol_frame(1, 1);
 			result = std::max(PlayerFinishedLevel(next_level_request_secret_flag::use_secret), result);
 			LevelUniqueControlCenterState.Control_center_destroyed = 0;
@@ -363,7 +363,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 	}
 
 	if (trigger.flags & TRIGGER_MATCEN) {
-		if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS))
+		if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_ROBOTS))
 			do_matcen(trigger);
 	}
 
@@ -375,10 +375,10 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 		do_il_off(vcsegptridx, vmwallptr, trigger);
 	}
 #elif DXX_BUILD_DESCENT == 2
-	if (trigger.flags & trigger_behavior_flags::disabled)
+	if (+(trigger.flags & trigger_behavior_flags::disabled))
 		return window_event_result::handled;		// don't send trigger hit to other players
 
-	if (trigger.flags & trigger_behavior_flags::one_shot)		//if this is a one-shot...
+	if (+(trigger.flags & trigger_behavior_flags::one_shot))		//if this is a one-shot...
 		trigger.flags |= trigger_behavior_flags::disabled;		//..then don't let it happen again
 
 	auto &LevelSharedDestructibleLightState = LevelSharedSegmentState.DestructibleLights;
@@ -428,7 +428,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 				break;
 			}
 
-			if (Game_mode & GM_MULTI) {
+			if (+(Game_mode & GM_MULTI)) {
 				HUD_init_message_literal(HM_DEFAULT, "Secret Level Teleporter disabled in multiplayer!");
 				digi_play_sample( sound_effect::SOUND_BAD_SELECTION, F1_0 );
 				break;
@@ -493,7 +493,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 			break;
 
 		case trigger_action::matcen:
-			if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS))
+			if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_ROBOTS))
 				do_matcen(trigger);
 			break;
 
@@ -531,7 +531,7 @@ window_event_result check_trigger_sub(object &plrobj, const trgnum_t trigger_num
 // Checks for a trigger whenever an object hits a trigger side.
 window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side, object &plrobj, const vcobjptridx_t objnum, int shot)
 {
-	if ((Game_mode & GM_MULTI) && (get_local_player().connected != player_connection_status::playing)) // as a host we may want to handle triggers for our clients. so this function may be called when we are not playing.
+	if (+(Game_mode & GM_MULTI) && (get_local_player().connected != player_connection_status::playing)) // as a host we may want to handle triggers for our clients. so this function may be called when we are not playing.
 		return window_event_result::ignored;
 
 #if DXX_BUILD_DESCENT == 1
@@ -565,7 +565,7 @@ window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side,
 				return result;
 		}
 
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_trigger(trigger_num);
 	}
 
@@ -799,7 +799,7 @@ void v29_trigger_write(PHYSFS_File *fp, const trigger &rt)
 #if DXX_BUILD_DESCENT == 1
 	PHYSFS_writeSLE16(fp, t->flags);
 #elif DXX_BUILD_DESCENT == 2
-	const auto one_shot_flag = (t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{0};
+	const auto one_shot_flag{+(t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{}};
 	switch (t->type)
 	{
 		case trigger_action::open_door:
@@ -890,7 +890,7 @@ void v30_trigger_write(PHYSFS_File *fp, const trigger &rt)
 #if DXX_BUILD_DESCENT == 1
 	PHYSFS_writeSLE16(fp, t->flags);
 #elif DXX_BUILD_DESCENT == 2
-	const auto one_shot_flag = (t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{0};
+	const auto one_shot_flag{+(t->flags & trigger_behavior_flags::one_shot) ? TRIGGER_ONE_SHOT : TRIGGER_FLAG{}};
 	switch (t->type)
 	{
 		case trigger_action::open_door:

@@ -267,7 +267,7 @@ static unsigned generate_extra_starts_by_copying(object_array &Objects, valptrid
 			auto &old_player_ref = *Players.vcptr(old_player_idx);
 			const auto &&old_player_ptridx = Objects.vcptridx(old_player_ref.objnum);
 			auto &old_player_obj = *old_player_ptridx;
-			if (player_init_segment_capacity_flag[old_player_idx] & build_sidemask(side))
+			if (+(player_init_segment_capacity_flag[old_player_idx] & build_sidemask(side)))
 			{
 				auto &&segp = Segments.vmptridx(old_player_obj.segnum);
 				/* Copy the start exactly.  The next loop in the caller will
@@ -430,10 +430,10 @@ static void gameseq_init_network_players(const d_robot_info_array &Robot_info, o
 
 	ConsoleObject = &Objects.front();
 	unsigned j{0}, k = 0;
-	const auto multiplayer_coop = Game_mode & GM_MULTI_COOP;
+	const auto multiplayer_coop{+(Game_mode & GM_MULTI_COOP)};
 #if DXX_BUILD_DESCENT == 2
 	const auto remove_thief = Netgame.ThiefModifierFlags & ThiefModifier::Absent;
-	const auto multiplayer{Game_mode & GM_MULTI};
+	const auto multiplayer{+(Game_mode & GM_MULTI)};
 	const auto retain_guidebot{Netgame.AllowGuidebot};
 #endif
 	auto &vmobjptridx = Objects.vmptridx;
@@ -501,7 +501,7 @@ void gameseq_remove_unused_players(const d_robot_info_array &Robot_info)
 	auto &vmobjptridx = Objects.vmptridx;
 	// 'Remove' the unused players
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		for (unsigned i = 0; i < NumNetPlayerPositions; ++i)
 		{
@@ -596,7 +596,7 @@ static void init_ammo_and_energy(object &plrobj)
 			shields = StartingShields;
 	}
 	const unsigned minimum_missiles = get_starting_concussion_missile_count();
-	auto &concussion = player_info.secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX];
+	auto &concussion = player_info.secondary_ammo[secondary_weapon_index::concussion];
 	if (concussion < minimum_missiles)
 		concussion = minimum_missiles;
 }
@@ -642,7 +642,7 @@ static void init_player_stats_level(player &plr, object &plrobj, const secret_re
 		DXX_MAKE_VAR_UNDEFINED(player_info.invulnerable_time);
 
 		const auto all_keys = PLAYER_FLAGS_BLUE_KEY | PLAYER_FLAGS_GOLD_KEY | PLAYER_FLAGS_RED_KEY;
-		if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
+		if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))
 			powerup_flags |= all_keys;
 		else
 			powerup_flags &= ~all_keys;
@@ -679,7 +679,7 @@ void init_player_stats_new_ship(const playernum_t pnum)
 	player_info.secondary_ammo = {{{
 		static_cast<uint8_t>(get_starting_concussion_missile_count())
 	}}};
-	const auto GrantedItems = (Game_mode & GM_MULTI) ? Netgame.SpawnGrantedItems : packed_spawn_granted_items{};
+	const auto GrantedItems{+(Game_mode & GM_MULTI) ? Netgame.SpawnGrantedItems : packed_spawn_granted_items{}};
 	player_info.vulcan_ammo = map_granted_flags_to_vulcan_ammo(GrantedItems);
 	const auto granted_laser_level = map_granted_flags_to_laser_level(GrantedItems);
 	player_info.laser_level = granted_laser_level;
@@ -700,7 +700,7 @@ void init_player_stats_new_ship(const playernum_t pnum)
 	DXX_MAKE_VAR_UNDEFINED(player_info.invulnerable_time);
 	if (pnum == Player_num)
 	{
-		if (Game_mode & GM_MULTI && Netgame.InvulAppear)
+		if (+(Game_mode & GM_MULTI) && Netgame.InvulAppear)
 		{
 			player_info.powerup_flags |= PLAYER_FLAGS_INVULNERABLE;
 			player_info.invulnerable_time = GameTime64 - (i2f(58 - Netgame.InvulAppear) >> 1);
@@ -711,10 +711,10 @@ void init_player_stats_new_ship(const playernum_t pnum)
 			{
 				if (underlying_value(i) >= MAX_PRIMARY_WEAPONS)
 					break;
-				if (i == primary_weapon_index_t::LASER_INDEX)
+				if (i == primary_weapon_index::laser)
 					break;
 #if DXX_BUILD_DESCENT == 2
-				if (i == primary_weapon_index_t::SUPER_LASER_INDEX)
+				if (i == primary_weapon_index::super_laser)
 				{
 					if (granted_laser_level <= laser_level::_4)
 						/* Granted lasers are not super lasers */
@@ -728,17 +728,17 @@ void init_player_stats_new_ship(const playernum_t pnum)
 				if (HAS_PRIMARY_FLAG(i) & static_cast<unsigned>(granted_primary_weapon_flags))
 					return i;
 			}
-			return primary_weapon_index_t::LASER_INDEX;
+			return primary_weapon_index::laser;
 		}());
 #if DXX_BUILD_DESCENT == 2
 		auto primary_last_was_super = player_info.Primary_last_was_super;
-		for (uint8_t i = static_cast<uint8_t>(primary_weapon_index_t::VULCAN_INDEX), mask = 1 << i; i != static_cast<uint8_t>(primary_weapon_index_t::SUPER_LASER_INDEX); ++i, mask <<= 1)
+		for (uint8_t i = static_cast<uint8_t>(primary_weapon_index::vulcan), mask = 1 << i; i != static_cast<uint8_t>(primary_weapon_index::super_laser); ++i, mask <<= 1)
 		{
 			/* If no super granted, force to non-super. */
-			if (!(HAS_PRIMARY_FLAG(primary_weapon_index_t{static_cast<uint8_t>(i + 5)}) & granted_primary_weapon_flags))
+			if (!(HAS_PRIMARY_FLAG(primary_weapon_index{static_cast<uint8_t>(i + 5)}) & granted_primary_weapon_flags))
 				primary_last_was_super &= ~mask;
 			/* If only super granted, force to super. */
-			else if (!(HAS_PRIMARY_FLAG(primary_weapon_index_t{i}) & granted_primary_weapon_flags))
+			else if (!(HAS_PRIMARY_FLAG(primary_weapon_index{i}) & granted_primary_weapon_flags))
 				primary_last_was_super |= mask;
 			/* else both granted, so leave as-is. */
 			else
@@ -1390,7 +1390,7 @@ static void do_screen_message(const char *msg) dxx_compiler_attribute_nonnull();
 static void do_screen_message(const char *msg)
 {
 	
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		return;
 	using items_type = std::array<newmenu_item, 1>;
 	struct glitz_menu : items_type, passive_newmenu
@@ -1703,7 +1703,7 @@ window_event_result (PlayerFinishedLevel)(
 #elif DXX_BUILD_DESCENT == 2
 	constexpr auto secret_flag = next_level_request_secret_flag::only_normal_level;
 #endif
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 		get_local_player().connected = player_connection_status::waiting; // Finished but did not die
 
 	last_drawn_cockpit = cockpit_mode_t{UINT8_MAX};
@@ -1759,13 +1759,13 @@ static void DoEndGame()
 
 	key_flush();
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_endlevel_score();
 	else
 		// NOTE LINK TO ABOVE
 		DoEndLevelScoreGlitz();
 
-	if (PLAYING_BUILTIN_MISSION && !((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))) {
+	if (PLAYING_BUILTIN_MISSION && !(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))) {
 		gr_set_default_canvas();
 		gr_clear_canvas(*grd_curcanv, BM_XRGB(0,0,0));
 #if DXX_BUILD_DESCENT == 2
@@ -1798,7 +1798,7 @@ static window_event_result (AdvanceLevel)(
 #endif
 	if (Current_level_num != Current_mission->last_level)
 	{
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 		{
 			const auto result = multi_endlevel_score();
 			if (result == kmatrix_result::abort)
@@ -1811,7 +1811,7 @@ static window_event_result (AdvanceLevel)(
 
 	LevelUniqueControlCenterState.Control_center_destroyed = 0;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		int result;
 		result = multi::dispatch->end_current_level(
@@ -1861,7 +1861,7 @@ window_event_result DoPlayerDead()
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
-	const bool pause = !(((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)) && (!Endlevel_sequence));
+	const bool pause{!((+(Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)) && (!Endlevel_sequence))};
 	auto result = window_event_result::handled;
 
 	if (pause)
@@ -1874,11 +1874,11 @@ window_event_result DoPlayerDead()
 	dead_player_end();		//terminate death sequence (if playing)
 
 	auto &plr = get_local_player();
-	if ( Game_mode&GM_MULTI )
+	if (!(Game_mode & GM_MULTI))
 	{
-	}
-	else
-	{				//Note link to above else!
+
+
+
 		-- plr.lives;
 		if (plr.lives == 0)
 		{
@@ -2011,7 +2011,7 @@ window_event_result StartNewLevelSub(const d_robot_info_array &Robot_info, const
 	Assert(N_players <= NumNetPlayerPositions);
 		//If this assert fails, there's not enough start positions
 
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		multi_prep_level_objects(Powerup_info, Vclip);
 		if (multi::dispatch->level_sync() == window_event_result::close) // After calling this, Player_num is set
@@ -2038,7 +2038,7 @@ window_event_result StartNewLevelSub(const d_robot_info_array &Robot_info, const
 #endif
 	gr_palette_load(gr_palette);
 
-	if ((Game_mode & GM_MULTI_COOP) && Network_rejoined)
+	if (+(Game_mode & GM_MULTI_COOP) && Network_rejoined)
 	{
 		for (playernum_t i = 0; i < N_players; ++i)
 		{
@@ -2047,7 +2047,7 @@ window_event_result StartNewLevelSub(const d_robot_info_array &Robot_info, const
 		}
 	}
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		multi_prep_level_player();
 	}
@@ -2104,7 +2104,7 @@ window_event_result StartNewLevelSub(const d_robot_info_array &Robot_info, const
 
 	// Initialise for palette_restore()
 	// Also takes care of nm_draw_background() possibly being called
-	if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
+	if (!(+(Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 		full_palette_save();
 
 	if (!Game_wind)
@@ -2294,7 +2294,7 @@ static void InitPlayerPosition(fvmobjptridx &vmobjptridx, fvmsegptridx &vmsegptr
 	reset_cruise();
 	int NewPlayer{0};
 
-	if (! ((Game_mode & GM_MULTI) && !(Game_mode&GM_MULTI_COOP)) ) // If not deathmatch
+	if (! (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP))) // If not deathmatch
 		NewPlayer = Player_num;
 	else if (random_flag == 1)
 	{
@@ -2404,9 +2404,9 @@ static void StartLevel(int random_flag)
 	// create_player_appearance_effect(ConsoleObject);
 	Do_appearance_effect = 1;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
-		if (Game_mode & GM_MULTI_COOP)
+		if (+(Game_mode & GM_MULTI_COOP))
 			multi_send_score();
 	 	multi_send_reappear();
 		multi::dispatch->do_protocol_frame(1, 1);

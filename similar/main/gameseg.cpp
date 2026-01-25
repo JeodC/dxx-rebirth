@@ -58,6 +58,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 using std::min;
 
 namespace dcx {
+
 namespace {
 
 class abs_vertex_lists_predicate
@@ -965,11 +966,6 @@ struct fcd_data
 	vm_distance dist;
 };
 
-static constexpr sidemask_t &operator&=(sidemask_t &a, const sidemask_t b)
-{
-	return a = static_cast<sidemask_t>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
-}
-
 fix64	Last_fcd_flush_time;
 unsigned Fcd_index;
 std::array<fcd_data, 8> Fcd_cache;
@@ -1714,7 +1710,7 @@ int subtract_light(const d_level_shared_destructible_light_state &LevelSharedDes
 	unique_segment &useg = segnum;
 	auto &light_subtracted = useg.light_subtracted;
 	const auto mask = build_sidemask(sidenum);
-	if (light_subtracted & mask)
+	if (+(light_subtracted & mask))
 		return 0;
 	light_subtracted |= mask;
 	change_light(LevelSharedDestructibleLightState, segnum, sidenum, -1);
@@ -1745,7 +1741,7 @@ void apply_all_changed_light(const d_level_shared_destructible_light_state &Leve
 		for (const auto j : MAX_SIDES_PER_SEGMENT)
 		{
 			unique_segment &useg = segp;
-			if (useg.light_subtracted & build_sidemask(j))
+			if (+(useg.light_subtracted & build_sidemask(j)))
 				change_light(LevelSharedDestructibleLightState, segp, j, -1);
 		}
 	}
@@ -1796,8 +1792,8 @@ void set_ambient_sound_flags()
 			 * both ternary expressions have finished.
 			 */
 			sound_ambient_flags sound_flag{};
-			const auto pl = (texture_flags & tmapinfo_flag::lava) ? (sound_flag |= sound_ambient_flags::lava, &segdepth_lava) : nullptr;
-			const auto pw = (texture_flags & tmapinfo_flag::water) ? (sound_flag |= sound_ambient_flags::water, &segdepth_water) : nullptr;
+			const auto pl{+(texture_flags & tmapinfo_flag::lava) ? (sound_flag |= sound_ambient_flags::lava, &segdepth_lava) : nullptr};
+			const auto pw{+(texture_flags & tmapinfo_flag::water) ? (sound_flag |= sound_ambient_flags::water, &segdepth_water) : nullptr};
 			if (sound_flag != sound_ambient_flags::None)
 				ambient_mark_bfs(segp, pl, pw, AMBIENT_SEGMENT_DEPTH, sound_flag);
 		}

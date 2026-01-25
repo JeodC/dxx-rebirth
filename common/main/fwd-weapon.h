@@ -59,12 +59,6 @@ struct weapon_info;
 
 #define WEAPON_DEFAULT_LIFETIME     (F1_0*12)   // Lifetime of an object if a bozo forgets to define it.
 
-#define WEAPON_RENDER_NONE          weapon_info::render_type::None
-#define WEAPON_RENDER_LASER         weapon_info::render_type::laser
-#define WEAPON_RENDER_BLOB          weapon_info::render_type::blob
-#define WEAPON_RENDER_POLYMODEL     weapon_info::render_type::polymodel
-#define WEAPON_RENDER_VCLIP         weapon_info::render_type::vclip
-
 #if DXX_BUILD_DESCENT == 1
 constexpr std::integral_constant<unsigned, 30> MAX_WEAPON_TYPES{};
 
@@ -83,13 +77,13 @@ enum class pig_hamfile_version : uint8_t;
 extern pig_hamfile_version Piggy_hamfile_version;
 #endif
 
-enum class primary_weapon_index_t : uint8_t;
-enum class secondary_weapon_index_t : uint8_t;
+enum class primary_weapon_index : uint8_t;
+enum class secondary_weapon_index : uint8_t;
 
 template <typename T>
-	using per_primary_weapon_array = enumerated_array<T, MAX_PRIMARY_WEAPONS, primary_weapon_index_t>;
+	using per_primary_weapon_array = enumerated_array<T, MAX_PRIMARY_WEAPONS, primary_weapon_index>;
 template <typename T>
-	using per_secondary_weapon_array = enumerated_array<T, MAX_SECONDARY_WEAPONS, secondary_weapon_index_t>;
+	using per_secondary_weapon_array = enumerated_array<T, MAX_SECONDARY_WEAPONS, secondary_weapon_index>;
 extern const per_primary_weapon_array<weapon_id_type> Primary_weapon_to_weapon_info;
 //for each primary weapon, what kind of powerup gives weapon
 extern const per_primary_weapon_array<powerup_type_t> Primary_weapon_to_powerup;
@@ -100,40 +94,39 @@ extern const per_secondary_weapon_array<uint8_t>    Secondary_ammo_max;
 /*
  * reads n weapon_info structs from a PHYSFS_File
  */
-using weapon_info_array = std::array<weapon_info, MAX_WEAPON_TYPES>;
+using weapon_info_array = enumerated_array<weapon_info, MAX_WEAPON_TYPES, weapon_id_type>;
 extern weapon_info_array Weapon_info;
-void weapon_info_read_n(weapon_info_array &wi, std::size_t count, NamedPHYSFS_File fp,
+void weapon_info_read_current_version(weapon_info_array &wi, std::size_t offset, std::size_t count, NamedPHYSFS_File fp);
 #if DXX_BUILD_DESCENT == 2
-						pig_hamfile_version file_version,
+void weapon_info_read_specified_version(weapon_info_array &wi, std::size_t offset, std::size_t count, NamedPHYSFS_File fp, pig_hamfile_version file_version);
 #endif
-						std::size_t offset);
 
 // Weapon flags, if player->weapon_flags & WEAPON_FLAG is set, then the player has this weapon
-#define HAS_LASER_FLAG      HAS_PRIMARY_FLAG(primary_weapon_index_t::LASER_INDEX)
-#define HAS_VULCAN_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::VULCAN_INDEX)
-#define HAS_SPREADFIRE_FLAG HAS_PRIMARY_FLAG(primary_weapon_index_t::SPREADFIRE_INDEX)
-#define HAS_PLASMA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::PLASMA_INDEX)
-#define HAS_FUSION_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::FUSION_INDEX)
+#define HAS_LASER_FLAG      HAS_PRIMARY_FLAG(primary_weapon_index::laser)
+#define HAS_VULCAN_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::vulcan)
+#define HAS_SPREADFIRE_FLAG HAS_PRIMARY_FLAG(primary_weapon_index::spreadfire)
+#define HAS_PLASMA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::plasma)
+#define HAS_FUSION_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::fusion)
 
 #define NUM_SMART_CHILDREN  6   // Number of smart children created by default.
 #if DXX_BUILD_DESCENT == 1
-#define	NUM_SHAREWARE_WEAPONS	3		//in shareware, old get first 3 of each
 #elif DXX_BUILD_DESCENT == 2
-#define HAS_SUPER_LASER_FLAG	HAS_PRIMARY_FLAG(primary_weapon_index_t::SUPER_LASER_INDEX)
-#define HAS_GAUSS_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::GAUSS_INDEX)
-#define HAS_HELIX_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::HELIX_INDEX)
-#define HAS_PHOENIX_FLAG   HAS_PRIMARY_FLAG(primary_weapon_index_t::PHOENIX_INDEX)
-#define HAS_OMEGA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index_t::OMEGA_INDEX)
-#define SUPER_WEAPON        5
+#define HAS_SUPER_LASER_FLAG	HAS_PRIMARY_FLAG(primary_weapon_index::super_laser)
+#define HAS_GAUSS_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::gauss)
+#define HAS_HELIX_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::helix)
+#define HAS_PHOENIX_FLAG   HAS_PRIMARY_FLAG(primary_weapon_index::phoenix)
+#define HAS_OMEGA_FLAG     HAS_PRIMARY_FLAG(primary_weapon_index::omega)
 
-static constexpr bool is_super_weapon(const primary_weapon_index_t i)
+static constexpr uint8_t SUPER_WEAPON{5};
+
+static constexpr bool is_super_weapon(const primary_weapon_index i)
 {
-	return static_cast<unsigned>(i) >= SUPER_WEAPON;
+	return static_cast<uint8_t>(i) >= SUPER_WEAPON;
 }
 
-static constexpr bool is_super_weapon(const secondary_weapon_index_t i)
+static constexpr bool is_super_weapon(const secondary_weapon_index i)
 {
-	return static_cast<unsigned>(i) >= SUPER_WEAPON;
+	return static_cast<uint8_t>(i) >= SUPER_WEAPON;
 }
 
 //flags whether the last time we use this weapon, it was the 'super' version
@@ -178,14 +171,14 @@ public:
 namespace dsx {
 
 struct player_info;
-void do_primary_weapon_select(player_info &, primary_weapon_index_t weapon_num);
-void do_secondary_weapon_select(player_info &, secondary_weapon_index_t weapon_num);
+void do_primary_weapon_select(player_info &, primary_weapon_index weapon_num);
+void do_secondary_weapon_select(player_info &, secondary_weapon_index weapon_num);
 void auto_select_primary_weapon(player_info &);
 void auto_select_secondary_weapon(player_info &);
-void set_primary_weapon(player_info &, primary_weapon_index_t weapon_num);
-void select_primary_weapon(player_info &, const char *weapon_name, primary_weapon_index_t weapon_num, int wait_for_rearm);
+void set_primary_weapon(player_info &, primary_weapon_index weapon_num);
+void select_primary_weapon(player_info &, const char *weapon_name, primary_weapon_index weapon_num, int wait_for_rearm);
 void set_secondary_weapon_to_concussion(player_info &);
-void select_secondary_weapon(player_info &, const char *weapon_name, secondary_weapon_index_t weapon_num, int wait_for_rearm);
+void select_secondary_weapon(player_info &, const char *weapon_name, secondary_weapon_index weapon_num, int wait_for_rearm);
 
 }
 #endif
@@ -198,13 +191,13 @@ void select_secondary_weapon(player_info &, const char *weapon_name, secondary_w
 //      HAS_AMMO_FLAG
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
-has_primary_weapon_result player_has_primary_weapon(const player_info &, primary_weapon_index_t weapon_num);
-has_secondary_weapon_result player_has_secondary_weapon(const player_info &, secondary_weapon_index_t weapon_num);
+has_primary_weapon_result player_has_primary_weapon(const player_info &, primary_weapon_index weapon_num);
+has_secondary_weapon_result player_has_secondary_weapon(const player_info &, secondary_weapon_index weapon_num);
 
 //called when one of these weapons is picked up
 //when you pick up a secondary, you always get the weapon & ammo for it
-int pick_up_primary(player_info &, primary_weapon_index_t weapon_index);
-int pick_up_secondary(player_info &, secondary_weapon_index_t weapon_index, int count, const control_info &Controls);
+int pick_up_primary(player_info &, primary_weapon_index weapon_index);
+int pick_up_secondary(player_info &, secondary_weapon_index weapon_index, int count, const control_info &Controls);
 
 //called when a primary weapon is picked up
 //returns true if actually picked up

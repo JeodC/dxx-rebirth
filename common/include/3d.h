@@ -34,6 +34,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "fwd-gr.h"
 #include <array>
 #include <span>
+#include "d_bit_enum.h"
 
 #if DXX_USE_OGL
 #if defined(__APPLE__) && defined(__MACH__)
@@ -42,6 +43,8 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <GL/gl.h>
 #endif
 #endif
+
+namespace dcx {
 
 //Structure for storing u,v,light values.  This structure doesn't have a
 //prefix because it was defined somewhere else before it was moved here
@@ -66,30 +69,11 @@ enum class clipping_code : uint8_t
 	behind = 0x80,
 };
 
-static constexpr clipping_code operator&(const clipping_code a, const clipping_code b)
-{
-	return static_cast<clipping_code>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
-}
+template <>
+inline constexpr bool enable_bit_enum_and<clipping_code, clipping_code>{true};
 
-static constexpr clipping_code &operator&=(clipping_code &a, const clipping_code b)
-{
-	return a = (a & b);
-}
-
-static constexpr clipping_code operator|(const clipping_code a, const clipping_code b)
-{
-	return static_cast<clipping_code>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-static constexpr clipping_code &operator|=(clipping_code &a, const clipping_code b)
-{
-	return a = (a | b);
-}
-
-static constexpr clipping_code operator~(const clipping_code a)
-{
-	return static_cast<clipping_code>(~static_cast<uint8_t>(a));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<clipping_code, clipping_code>{true};
 
 //Stucture to store clipping codes in a word
 struct g3s_codes {
@@ -110,32 +94,17 @@ enum class projection_flag : uint8_t
 #endif
 };
 
-static constexpr uint8_t operator&(const projection_flag a, const projection_flag b)
-{
-	return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
-}
+template <>
+inline constexpr bool enable_bit_enum_and<projection_flag, projection_flag>{true};
 
-static constexpr projection_flag &operator&=(projection_flag &a, const projection_flag b)
-{
-	return a = static_cast<projection_flag>(a & b);
-}
+template <>
+inline constexpr bool enable_bit_enum_or<projection_flag, projection_flag>{true};
 
-static constexpr projection_flag operator|(const projection_flag a, const projection_flag b)
-{
-	return static_cast<projection_flag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
+template <>
+inline constexpr bool enable_bit_enum_bitnot<projection_flag>{true};
 
-static constexpr projection_flag &operator|=(projection_flag &a, const projection_flag b)
-{
-	return a = (a | b);
-}
-
-static constexpr projection_flag operator~(const projection_flag a)
-{
-	return static_cast<projection_flag>(~static_cast<uint8_t>(a));
-}
-
-namespace dcx {
+template <>
+inline constexpr bool enable_bit_enum_boolnot<projection_flag>{true};
 
 struct g3_instance_context
 {

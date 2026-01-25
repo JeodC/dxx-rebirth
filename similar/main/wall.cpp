@@ -180,7 +180,7 @@ static wall_is_doorway_result wall_is_doorway(const GameBitmaps_array &GameBitma
 
 	const auto flags{w.flags};
 	if (type == WALL_ILLUSION) {
-		if (flags & wall_flag::illusion_off)
+		if (+(flags & wall_flag::illusion_off))
 			return wall_is_doorway_result::no_wall;
 		else {
 			if (check_transparency(GameBitmaps, Textures, uside))
@@ -191,7 +191,7 @@ static wall_is_doorway_result wall_is_doorway(const GameBitmaps_array &GameBitma
 	}
 
 	if (type == WALL_BLASTABLE) {
-	 	if (flags & wall_flag::blasted)
+	 	if (+(flags & wall_flag::blasted))
 			return wall_is_doorway_result::transillusory_wall;
 	}	
 	else
@@ -383,7 +383,7 @@ void wall_damage(const vmsegptridx_t seg, const sidenum_t side, fix damage)
 		
 		if (w0.hps < WALL_HPS*1/n) {
 			blast_blastable_wall(seg, side, w0);
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_door_open(seg, side, w0.flags);
 		}
 		else
@@ -716,7 +716,7 @@ static unsigned check_poke(fvcvertptr &vcvertptr, const object_base &obj, const 
 	//note: don't let objects with zero size block door
 	if (!obj.size)
 		return 0;
-	return get_seg_masks(vcvertptr, obj.pos, seg, obj.size).sidemask & build_sidemask(side);		//pokes through side!
+	return +(get_seg_masks(vcvertptr, obj.pos, seg, obj.size).sidemask & build_sidemask(side));		//pokes through side!
 }
 
 }
@@ -942,7 +942,7 @@ static bool do_door_close(active_door &d)
 	const auto &&seg0 = vmsegptridx(w0.segnum);
 
 	//check for objects in doorway before closing
-	if (w0.flags & wall_flag::door_auto)
+	if (+(w0.flags & wall_flag::door_auto))
 		if (is_door_obstructed(vcobjptridx, vcsegptr, seg0, w0.sidenum))
 		{
 #if DXX_BUILD_DESCENT == 2
@@ -1091,7 +1091,7 @@ namespace {
 //	Allowed to open the normally locked special boss door if in multiplayer mode.
 static int special_boss_opening_allowed(const segnum_t segnum, const sidenum_t sidenum)
 {
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		return (Current_level_num == BOSS_LOCKED_DOOR_LEVEL) && (segnum == BOSS_LOCKED_DOOR_SEG) && (sidenum == BOSS_LOCKED_DOOR_SIDE);
 	else
 		return 0;
@@ -1171,7 +1171,7 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 
 	if (w->type == WALL_DOOR)
 	{
-		if ((w->flags & wall_flag::door_locked) && !special_boss_opening_allowed(seg, side))
+		if (+(w->flags & wall_flag::door_locked) && !special_boss_opening_allowed(seg, side))
 		{
 				if (show_message)
 				{
@@ -1184,7 +1184,7 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 			if (w->state != wall_state::opening)
 			{
 				wall_open_door(seg, side);
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 #if DXX_BUILD_DESCENT == 1
 					const wall_flags flags{};
@@ -1405,7 +1405,7 @@ static void process_exploding_walls(const d_robot_info_array &Robot_info)
 		auto &Walls = LevelUniqueWallSubsystemState.Walls;
 		for (auto &w1 : Walls.vmptr)
 		{
-			if (w1.flags & wall_flag::exploding)
+			if (+(w1.flags & wall_flag::exploding))
 			{
 				assert(num_exploding_walls);
 				const auto n = do_exploding_wall_frame(Robot_info, w1);
@@ -1450,7 +1450,7 @@ void d_level_unique_stuck_object_state::add_stuck_object(fvcwallptr &vcwallptr, 
 	const auto wallnum = segp.sides[sidenum].wall_num;
 	if (wallnum != wall_none)
 	{
-		if (vcwallptr(wallnum)->flags & wall_flag::blasted)
+		if (+(vcwallptr(wallnum)->flags & wall_flag::blasted))
 		{
 			objp->flags |= OF_SHOULD_BE_DEAD;
 			return;

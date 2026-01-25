@@ -80,6 +80,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "automap.h"
 #include "event.h"
 #include "d_array.h"
+#include "d_bit_enum.h"
 #include "d_enumerate.h"
 #include "d_levelstate.h"
 #include "d_range.h"
@@ -92,6 +93,22 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define array_snprintf(array,fmt,arg1,...)	std::snprintf(array.data(), array.size(), fmt, arg1, ## __VA_ARGS__)
 
 constexpr std::integral_constant<int8_t, -1> owner_none{};
+
+namespace dcx {
+
+template <>
+inline constexpr bool enable_bit_enum_and<netflag_flag, netflag_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_or<netflag_flag, netflag_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_bitnot<netflag_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_or<netgrant_flag, netgrant_flag>{true};
+
+}
 
 namespace dsx {
 
@@ -108,26 +125,6 @@ static void multi_add_lifetime_killed();
 #if !(!defined(RELEASE) && DXX_BUILD_DESCENT == 2)
 static void multi_add_lifetime_kills(int count);
 #endif
-
-static constexpr netflag_flag operator~(const netflag_flag a)
-{
-	return static_cast<netflag_flag>(~static_cast<uint32_t>(a));
-}
-
-static constexpr netflag_flag operator|(const netflag_flag a, const netflag_flag b)
-{
-	return static_cast<netflag_flag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-}
-
-static constexpr netflag_flag operator&(const netflag_flag a, const netflag_flag b)
-{
-	return static_cast<netflag_flag>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-}
-
-static constexpr netgrant_flag operator|(const netgrant_flag a, const netgrant_flag b)
-{
-	return static_cast<netgrant_flag>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-}
 
 }
 
@@ -172,7 +169,7 @@ using kill_name_storage = std::array<char, (CALLSIGN_LEN * 2) + 4>;
 static const char *prepare_kill_name(fvcplayerptr &vcplayerptr, const game_mode_flags Game_mode, const netgame_info &Netgame, const vcplayeridx_t pnum, kill_name_storage &buf)
 {
 	const char *const callsign = vcplayerptr(pnum)->callsign;
-	if (Game_mode & GM_TEAM)
+	if (+(Game_mode & GM_TEAM))
 	{
 		const auto r = std::data(buf);
 		snprintf(r, std::size(buf), "%s (%s)", callsign, Netgame.team_name[multi_get_team_from_player(Netgame, pnum)].operator const char *());
@@ -317,7 +314,7 @@ int multi_quit_game{0};
 
 namespace dsx {
 
-const GMNames_array GMNames = {{
+constexpr GMNames_array GMNames{{{
 	"Anarchy",
 	"Team Anarchy",
 	"Robo Anarchy",
@@ -332,8 +329,8 @@ const GMNames_array GMNames = {{
 	"Team Hoard",
 #endif
 	"Bounty"
-}};
-const std::array<char[8], MULTI_GAME_TYPE_COUNT> GMNamesShrt = {{
+}}};
+constexpr enumerated_array<char[8], MULTI_GAME_TYPE_COUNT, network_game_type> GMNamesShrt{{{
 	"ANRCHY",
 	"TEAM",
 	"ROBO",
@@ -348,7 +345,7 @@ const std::array<char[8], MULTI_GAME_TYPE_COUNT> GMNamesShrt = {{
 	"TMHOARD",
 #endif
 	"BOUNTY"
-}};
+}}};
 
 }
 
@@ -580,7 +577,7 @@ kmatrix_result multi_endlevel_score()
 	player_connection_status old_connect{};
 
 	// Save connect state and change to new connect state
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		auto &plr = get_local_player();
 		old_connect = plr.connected;
@@ -594,7 +591,7 @@ kmatrix_result multi_endlevel_score()
 
 	// Restore connect state
 
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		get_local_player().connected = old_connect;
 	}
@@ -617,7 +614,7 @@ kmatrix_result multi_endlevel_score()
 	 * version would make one pass if in a cooperative game, then make
 	 * an unconditional pass to try to clear PLAYER_FLAGS_FLAG.
 	 */
-	const auto clear_flags = (Game_mode & GM_MULTI_COOP)
+	const auto clear_flags{+(Game_mode & GM_MULTI_COOP)
 		// Reset keys
 		? ~player_flags(PLAYER_FLAGS_BLUE_KEY | PLAYER_FLAGS_GOLD_KEY | PLAYER_FLAGS_RED_KEY)
 		:
@@ -631,7 +628,7 @@ kmatrix_result multi_endlevel_score()
 		// Clear capture flag
 		~player_flags(PLAYER_FLAGS_FLAG)
 #endif
-		;
+	};
 	range_for (auto &i, partial_const_range(Players, Netgame.max_numplayers))
 	{
 		auto &obj = *vmobjptr(i.objnum);
@@ -750,7 +747,7 @@ void multi_sort_kill_list()
 		if (o == object_none)
 			return -1;
 		auto &player_info = vcobjptr(o)->ctype.player_info;
-		if (game_mode & GM_MULTI_COOP)
+		if (+(game_mode & GM_MULTI_COOP))
 			return {player_info.mission.score};
 		const auto net_kills_total{player_info.net_kills_total};
 #if DXX_BUILD_DESCENT == 2
@@ -859,7 +856,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	const auto killer_type = killer->type;
 	if (killer_type == OBJ_CNTRLCEN)
 	{
-		if (Game_mode & GM_TEAM)
+		if (+(Game_mode & GM_TEAM))
 			-- team_kills[multi_get_team_from_player(Netgame, killed_pnum)];
 		++ killed.ctype.player_info.net_killed_total;
 		-- killed.ctype.player_info.net_kills_total;
@@ -920,7 +917,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	{
 		if (!game_mode_hoard(Game_mode))
 		{
-			if (Game_mode & GM_TEAM)
+			if (+(Game_mode & GM_TEAM))
 			{
 				team_kills[multi_get_team_from_player(Netgame, killed_pnum)] -= 1;
 			}
@@ -941,7 +938,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 			HUD_init_message(HM_MULTI, "%s %s", killed_name, TXT_SUICIDE);
 
 		/* Bounty mode needs some lovin' */
-		if( Game_mode & GM_BOUNTY && killed_pnum == Bounty_target && multi_i_am_master() )
+		if (+(Game_mode & GM_BOUNTY) && killed_pnum == Bounty_target && multi_i_am_master() )
 		{
 			update_bounty_target();
 		}
@@ -958,7 +955,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 		team_number killed_team{}, killer_team{};
 		DXX_MAKE_VAR_UNDEFINED(killed_team);
 		DXX_MAKE_VAR_UNDEFINED(killer_team);
-		const auto is_team_game = Game_mode & GM_TEAM;
+		const auto is_team_game{+(Game_mode & GM_TEAM)};
 		if (is_team_game)
 		{
 			killed_team = multi_get_team_from_player(Netgame, killed_pnum);
@@ -974,7 +971,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 				killer->ctype.player_info.net_kills_total += adjust;
 				killer->ctype.player_info.KillGoalCount += adjust;
 			}
-			else if( Game_mode & GM_BOUNTY )
+			else if (+(Game_mode & GM_BOUNTY))
 			{
 				/* Did the target die?  Did the target get a kill? */
 				if( killed_pnum == Bounty_target || killer_pnum == Bounty_target )
@@ -1001,7 +998,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 		++ killed.ctype.player_info.net_killed_total;
 		const char *name0, *name1;
 		if (killer_pnum == Player_num) {
-			if (Game_mode & GM_MULTI_COOP)
+			if (+(Game_mode & GM_MULTI_COOP))
 			{
 				auto &player_info = get_local_plrobj().ctype.player_info;
 				const auto local_player_score = player_info.mission.score;
@@ -1025,7 +1022,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	if (Netgame.KillGoal>0)
 	{
 		const auto TheGoal = Netgame.KillGoal * 5;
-		if (((Game_mode & GM_TEAM)
+		if ((+(Game_mode & GM_TEAM)
 				? team_kills[multi_get_team_from_player(Netgame, killer_pnum)]
 				: killer->ctype.player_info.KillGoalCount
 			) >= TheGoal)
@@ -1067,7 +1064,7 @@ window_event_result multi_do_frame()
 		return window_event_result::ignored;
 	}
 
-	if ((Game_mode & GM_NETWORK) && Netgame.PlayTimeAllowed.count() && lasttime != ThisLevelTime)
+	if (+(Game_mode & GM_NETWORK) && Netgame.PlayTimeAllowed.count() && lasttime != ThisLevelTime)
 	{
 		for (unsigned i = 0; i < N_players; ++i)
 			if (vcplayerptr(i)->connected != player_connection_status::disconnected)
@@ -1106,7 +1103,7 @@ window_event_result multi_do_frame()
 
 	multi_send_message(); // Send any waiting messages
 
-	if (Game_mode & GM_MULTI_ROBOTS)
+	if (+(Game_mode & GM_MULTI_ROBOTS))
 	{
 		multi_check_robot_timeout();
 	}
@@ -1189,7 +1186,7 @@ namespace {
 
 void multi_show_player_list()
 {
-	if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_COOP))
+	if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_COOP))
 		return;
 
 	if (Show_kill_list != show_kill_list_mode::None)
@@ -1247,7 +1244,7 @@ static void multi_message_feedback(void)
 	if (!(!(colon = strstr(Network_message.data(), ": ")) || colon == Network_message.data() || colon - Network_message.data() > CALLSIGN_LEN))
 	{
 		std::size_t feedlen = snprintf(feedback_result, sizeof(feedback_result), "%s ", TXT_MESSAGE_SENT_TO);
-		if (Game_mode & GM_TEAM)
+		if (+(Game_mode & GM_TEAM))
 		{
 			if (const auto o = Netgame.team_name.valid_index(Network_message[0u] - '1'))
 			{
@@ -1334,7 +1331,7 @@ void multi_send_macro(const int fkey)
 
 void multi_send_message_start()
 {
-	if (Game_mode&GM_MULTI) {
+	if (+(Game_mode & GM_MULTI)) {
 		multi_sending_message[Player_num] = msgsend_state::typing;
 		multi_send_msgsend_state(msgsend_state::typing);
 		multi_message_index = 0;
@@ -1388,7 +1385,7 @@ static void multi_send_message_end(const d_robot_info_array &Robot_info, fvmobjp
 	}
 	else if (!d_strnicmp(Network_message.data(), "/move: "))
 	{
-		if ((Game_mode & GM_NETWORK) && (Game_mode & GM_TEAM))
+		if (+(Game_mode & GM_NETWORK) && +(Game_mode & GM_TEAM))
 		{
 			if (!multi_i_am_master())
 			{
@@ -1443,7 +1440,7 @@ static void multi_send_message_end(const d_robot_info_array &Robot_info, fvmobjp
 		}
 	}
 
-	else if (!d_strnicmp(Network_message.data(), "/kick: ") && (Game_mode & GM_NETWORK))
+	else if (!d_strnicmp(Network_message.data(), "/kick: ") && +(Game_mode & GM_NETWORK))
 	{
 		if (!multi_i_am_master())
 		{
@@ -1513,7 +1510,7 @@ static void multi_send_message_end(const d_robot_info_array &Robot_info, fvmobjp
 				return;
 			}
 	}
-	else if (!d_stricmp (Network_message.data(), "/killreactor") && (Game_mode & GM_NETWORK) && !LevelUniqueControlCenterState.Control_center_destroyed)
+	else if (!d_stricmp (Network_message.data(), "/killreactor") && +(Game_mode & GM_NETWORK) && !LevelUniqueControlCenterState.Control_center_destroyed)
 	{
 		if (!multi_i_am_master())
 			HUD_init_message(HM_MULTI, "Only %s can kill the reactor this way!", static_cast<const char *>(Players[multi_who_is_master()].callsign));
@@ -1667,7 +1664,7 @@ static void multi_do_fire(fvmobjptridx &vmobjptridx, const playernum_t pnum, con
 		Laser_player_fire(LevelSharedRobotInfoState.Robot_info, obj, weapon_id_type::FLARE_ID, player_gun_number::center, weapon_sound_flag::audible, shot_orientation, object_none);
 	else if (const uint8_t untrusted_missile_adjusted_weapon = untrusted_raw_weapon - MISSILE_ADJUST; untrusted_missile_adjusted_weapon < MAX_SECONDARY_WEAPONS)
 	{
-		const auto weapon = secondary_weapon_index_t{untrusted_missile_adjusted_weapon};
+		const auto weapon = secondary_weapon_index{untrusted_missile_adjusted_weapon};
 		const auto weapon_id = Secondary_weapon_to_weapon_info[weapon];
 		const auto base_weapon_gun = Secondary_weapon_to_gun_num[weapon];
 		const auto weapon_gun = (base_weapon_gun == player_gun_number::_4)
@@ -1680,11 +1677,11 @@ static void multi_do_fire(fvmobjptridx &vmobjptridx, const playernum_t pnum, con
 	}
 	else if (const uint8_t untrusted_weapon = untrusted_raw_weapon; untrusted_weapon < MAX_PRIMARY_WEAPONS)
 	{
-		const auto weapon = primary_weapon_index_t{untrusted_weapon};
-		if (weapon == primary_weapon_index_t::FUSION_INDEX) {
+		const auto weapon = primary_weapon_index{untrusted_weapon};
+		if (weapon == primary_weapon_index::fusion) {
 			obj->ctype.player_info.Fusion_charge = flags << 12;
 		}
-		if (weapon == primary_weapon_index_t::LASER_INDEX)
+		if (weapon == primary_weapon_index::laser)
 		{
 			auto &powerup_flags = obj->ctype.player_info.powerup_flags;
 			if (flags & LASER_QUAD)
@@ -1719,7 +1716,7 @@ static void multi_do_message(const playernum_t pnum, const multiplayer_rspan<mul
 		 * then show it.  Otherwise, hide it.
 		 */
 		if ( (!d_strnicmp(static_cast<const char *>(get_local_player().callsign), buf+loc, colon-(buf+loc))) ||
-			((Game_mode & GM_TEAM) && ({
+			(+(Game_mode & GM_TEAM) && ({
 				const auto local_player_team = multi_get_team_from_player(Netgame, Player_num);
 				(buf + loc + 1 == colon && ({
 					/* The length is correct, so this might or might not be a team number. */
@@ -1841,18 +1838,18 @@ static void multi_do_player_deres(const d_robot_info_array &Robot_info, object_a
 	count++;
 
 	auto &secondary_ammo = player_info.secondary_ammo;
-	secondary_ammo[secondary_weapon_index_t::HOMING_INDEX] = buf[count];                count++;
-	secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX] = buf[count];count++;
-	secondary_ammo[secondary_weapon_index_t::SMART_INDEX] = buf[count];         count++;
-	secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] = buf[count];          count++;
-	secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::homing] = buf[count];                count++;
+	secondary_ammo[secondary_weapon_index::concussion] = buf[count];count++;
+	secondary_ammo[secondary_weapon_index::smart] = buf[count];         count++;
+	secondary_ammo[secondary_weapon_index::mega] = buf[count];          count++;
+	secondary_ammo[secondary_weapon_index::proximity] = buf[count]; count++;
 
 #if DXX_BUILD_DESCENT == 2
-	secondary_ammo[secondary_weapon_index_t::SMISSILE1_INDEX] = buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::GUIDED_INDEX]    = buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX]= buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] = buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::flash] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::guided]    = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::smart_mine]= buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::mercury] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::earthshaker] = buf[count]; count++;
 #endif
 
 	player_info.vulcan_ammo = GET_INTEL_SHORT(&buf[count]); count += 2;
@@ -1946,7 +1943,7 @@ static void multi_do_kill_client(object_array &Objects, const playernum_t pnum, 
 
 	multi_compute_kill(LevelSharedRobotInfoState.Robot_info, Objects.imptridx(killer), Objects.vmptridx(killed));
 
-	if (Game_mode & GM_BOUNTY) // update in case if needed... we could attach this to this packet but... meh...
+	if (+(Game_mode & GM_BOUNTY)) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
 }
 
@@ -1994,7 +1991,7 @@ static void multi_do_escape(fvmobjptridx &vmobjptridx, const playernum_t pnum, c
 		connected = player_connection_status::escape_tunnel;
 	}
 	HUD_init_message(HM_MULTI, "%s %s", static_cast<const char *>(plr.callsign), txt);
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 		plr.connected = connected;
 	create_player_appearance_effect(Vclip, objnum);
 	multi_make_player_ghost(buf[1]);
@@ -2058,7 +2055,7 @@ void multi_disconnect_player(const playernum_t pnum)
 			newdemo_record_multi_disconnect(pnum);
 
 		// Bounty target left - select a new one
-		if( Game_mode & GM_BOUNTY && pnum == Bounty_target && multi_i_am_master() )
+		if(+(Game_mode & GM_BOUNTY) && pnum == Bounty_target && multi_i_am_master())
 		{
 			update_bounty_target();
 			/* Send this new data */
@@ -2476,10 +2473,10 @@ static void multi_reset_object_texture(object_base &objp)
                 return;
 
 	const auto player_id = get_player_id(objp);
-	const auto id = (Game_mode & GM_TEAM)
+	const auto id{+(Game_mode & GM_TEAM)
 		? static_cast<unsigned>(multi_get_team_from_player(Netgame, player_id))
-		: player_id;
-
+		: player_id
+	};
 	auto &pobj_info = objp.rtype.pobj_info;
 	pobj_info.alt_textures = id;
 	if (id)
@@ -2675,7 +2672,7 @@ void multi_send_endlevel_start()
 #endif
 
 	multi_send_data(buf, multiplayer_data_priority::_2);
-	if (Game_mode & GM_NETWORK)
+	if (+(Game_mode & GM_NETWORK))
 	{
 		get_local_player().connected = player_connection_status::escape_tunnel;
 		multi::dispatch->send_endlevel_packet();
@@ -2711,18 +2708,18 @@ void multi_send_player_deres(deres_type_t type)
 	multibuf[count++] = game_mode_hoard(Game_mode) ? static_cast<char>(player_info.hoard.orbs) : 0;
 
 	auto &secondary_ammo = player_info.secondary_ammo;
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::HOMING_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMART_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::MEGA_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::homing];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::concussion];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::smart];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::mega];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::proximity];
 
 #if DXX_BUILD_DESCENT == 2
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMISSILE1_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::GUIDED_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::flash];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::guided];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::smart_mine];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::mercury];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::earthshaker];
 #endif
 
 	PUT_INTEL_SHORT(&multibuf[count], player_info.vulcan_ammo);
@@ -2869,7 +2866,7 @@ void multi_send_kill(const vmobjptridx_t objnum)
 
 	multi_strip_robots(Player_num);
 
-	if (Game_mode & GM_BOUNTY && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
+	if (+(Game_mode & GM_BOUNTY) && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
 }
 
@@ -3045,7 +3042,7 @@ static void multi_digi_play_sample(const sound_effect soundnum, const fix max_vo
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptridx = Objects.vcptridx;
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_play_sound(soundnum, max_volume, once);
 	digi_link_sound_to_object(soundnum, vcobjptridx(Viewer), 0, max_volume, once);
 }
@@ -3066,7 +3063,7 @@ namespace dsx {
 
 void multi_digi_link_sound_to_pos(const sound_effect soundnum, const vcsegptridx_t segnum, const sidenum_t sidenum, const vms_vector &pos, const int forever, const fix max_volume)
 {
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		multi_send_play_sound(soundnum, max_volume, sound_stack::allow_stacking);
 	digi_link_sound_to_pos(soundnum, segnum, sidenum, pos, forever, max_volume);
 }
@@ -3095,7 +3092,7 @@ void multi_send_score()
 	// synced.
 	int count{0};
 
-	if (Game_mode & GM_MULTI_COOP) {
+	if (+(Game_mode & GM_MULTI_COOP)) {
 		multi_sort_kill_list();
 		count += 1;
 		multi_command<multiplayer_command_t::MULTI_SCORE> multibuf;
@@ -3570,7 +3567,7 @@ texture_index find_goal_texture(const d_level_unique_tmap_info_state &LevelUniqu
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
 	const auto &&r = partial_const_range(TmapInfo, NumTextures);
 	const auto &&predicate = [tmi_flag](const tmap_info &i) {
-		return (i.flags & tmi_flag);
+		return +(i.flags & tmi_flag);
 	};
 	const auto begin = r.begin();
 	return static_cast<texture_index>(std::distance(begin, std::ranges::find_if(begin, r.end(), predicate)));
@@ -3759,7 +3756,7 @@ void multi_update_objects_for_non_cooperative()
 		const auto obj_type = objp->type;
 		if (obj_type == OBJ_PLAYER || obj_type == OBJ_GHOST)
 			continue;
-		else if (obj_type == OBJ_ROBOT && (game_mode & GM_MULTI_ROBOTS))
+		else if (obj_type == OBJ_ROBOT && +(game_mode & GM_MULTI_ROBOTS))
 			continue;
 		else if (obj_type == OBJ_POWERUP)
 		{
@@ -4415,7 +4412,7 @@ void multi_do_orb_bonus(const playernum_t pnum, const multiplayer_rspan<multipla
 	if (pnum==Player_num)
 		digi_start_sound_queued (sound_effect::SOUND_HUD_YOU_GOT_GOAL,F1_0*2);
 	else
-		digi_play_sample((Game_mode & GM_TEAM)
+		digi_play_sample(+(Game_mode & GM_TEAM)
 			? (multi_get_team_from_player(Netgame, pnum) == team_number::blue
 				? sound_effect::SOUND_HUD_BLUE_GOT_GOAL
 				: sound_effect::SOUND_HUD_RED_GOT_GOAL
@@ -4510,7 +4507,7 @@ static void multi_do_got_orb (const playernum_t pnum)
 	auto &vmobjptr = Objects.vmptr;
 	assert(game_mode_hoard(Game_mode));
 
-	digi_play_sample((Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == multi_get_team_from_player(Netgame, Player_num)
+	digi_play_sample(+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, pnum) == multi_get_team_from_player(Netgame, Player_num)
 		? sound_effect::SOUND_FRIEND_GOT_ORB
 		: sound_effect::SOUND_OPPONENT_GOT_ORB, F1_0*2);
 
@@ -4828,7 +4825,7 @@ void multi_add_lifetime_killed ()
 	// This function adds a "killed" to lifetime stats of this player, and possibly
 	// gives a demotion.  If so, it will tell everyone else
 
-	if (Game_mode & GM_MULTI_COOP)
+	if (+(Game_mode & GM_MULTI_COOP))
 		return;
 
 	multi_adjust_lifetime_ranking(PlayerCfg.NetlifeKilled, 1);
@@ -4880,9 +4877,9 @@ int multi_maybe_disable_friendly_fire(const object_base *const killer)
 		return 0;
 	if (killer->type != OBJ_PLAYER) // not a player -> harm me!
 		return 0;
-	if (auto is_coop = Game_mode & GM_MULTI_COOP) // coop mode -> don't harm me!
+	if (const auto is_coop{+(Game_mode & GM_MULTI_COOP)}) // coop mode -> don't harm me!
 		return is_coop;
-	else if (Game_mode & GM_TEAM) // team mode - find out if killer is in my team
+	else if (+(Game_mode & GM_TEAM)) // team mode - find out if killer is in my team
 	{
 		if (multi_get_team_from_player(Netgame, Player_num) == multi_get_team_from_player(Netgame, get_player_id(*killer))) // in my team -> don't harm me!
 			return 1;
@@ -5182,7 +5179,7 @@ void multi_send_gmode_update()
 {
 	if (!multi_i_am_master())
 		return;
-	if (!(Game_mode & GM_TEAM || Game_mode & GM_BOUNTY)) // expand if necessary
+	if (!(+(Game_mode & GM_TEAM) || +(Game_mode & GM_BOUNTY))) // expand if necessary
 		return;
 	multi_command<multiplayer_command_t::MULTI_GMODE_UPDATE> multibuf;
 	multibuf[1] = Netgame.team_vector;
@@ -5197,7 +5194,7 @@ static void multi_do_gmode_update(const multiplayer_rspan<multiplayer_command_t:
 	auto &vmobjptr = Objects.vmptr;
 	if (multi_i_am_master())
 		return;
-	if (Game_mode & GM_TEAM)
+	if (+(Game_mode & GM_TEAM))
 	{
 		if (buf[1] != Netgame.team_vector)
 		{
@@ -5208,7 +5205,7 @@ static void multi_do_gmode_update(const multiplayer_rspan<multiplayer_command_t:
 			reset_cockpit();
 		}
 	}
-	if (Game_mode & GM_BOUNTY)
+	if (+(Game_mode & GM_BOUNTY))
 	{
 		Bounty_target = buf[2]; // accept silently - message about change we SHOULD have gotten due to kill computation
 	}
@@ -5236,18 +5233,18 @@ void multi_send_player_inventory(const multiplayer_data_priority priority)
 	multibuf[count++] = static_cast<char>(player_info.laser_level);
 
 	auto &secondary_ammo = player_info.secondary_ammo;
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::HOMING_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMART_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::MEGA_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::homing];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::concussion];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::smart];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::mega];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::proximity];
 
 #if DXX_BUILD_DESCENT == 2
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMISSILE1_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::GUIDED_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX];
-	multibuf[count++] = secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::flash];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::guided];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::smart_mine];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::mercury];
+	multibuf[count++] = secondary_ammo[secondary_weapon_index::earthshaker];
 #endif
 
 	PUT_INTEL_SHORT(&multibuf[count], player_info.vulcan_ammo);
@@ -5287,18 +5284,18 @@ static void multi_do_player_inventory(const playernum_t pnum, const multiplayer_
 	count++;
 
 	auto &secondary_ammo = player_info.secondary_ammo;
-	secondary_ammo[secondary_weapon_index_t::HOMING_INDEX] = buf[count];                count++;
-	secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX] = buf[count];count++;
-	secondary_ammo[secondary_weapon_index_t::SMART_INDEX] = buf[count];         count++;
-	secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] = buf[count];          count++;
-	secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::homing] = buf[count];                count++;
+	secondary_ammo[secondary_weapon_index::concussion] = buf[count];count++;
+	secondary_ammo[secondary_weapon_index::smart] = buf[count];         count++;
+	secondary_ammo[secondary_weapon_index::mega] = buf[count];          count++;
+	secondary_ammo[secondary_weapon_index::proximity] = buf[count]; count++;
 
 #if DXX_BUILD_DESCENT == 2
-	secondary_ammo[secondary_weapon_index_t::SMISSILE1_INDEX] = buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::GUIDED_INDEX]    = buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX]= buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] = buf[count]; count++;
-	secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::flash] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::guided]    = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::smart_mine]= buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::mercury] = buf[count]; count++;
+	secondary_ammo[secondary_weapon_index::earthshaker] = buf[count]; count++;
 #endif
 
 	player_info.vulcan_ammo = GET_INTEL_SHORT(&buf[count]); count += 2;
@@ -5314,7 +5311,7 @@ static void MultiLevelInv_CountLevelPowerups()
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptridx = Objects.vmptridx;
-        if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_COOP))
+        if (!(Game_mode & GM_MULTI) || +(Game_mode & GM_MULTI_COOP))
                 return;
         MultiLevelInv.Current = {};
 
@@ -5428,44 +5425,44 @@ static void MultiLevelInv_CountPlayerInventory()
 						accumulate_flags_count<player_flags, PLAYER_FLAG> powerup_flags(Current, player_info.powerup_flags);
 						accumulate_flags_count<player_info::primary_weapon_flag_type, unsigned> primary_weapon_flags(Current, player_info.primary_weapon_flags);
 						powerup_flags.process(PLAYER_FLAGS_QUAD_LASERS, powerup_type_t::POW_QUAD_FIRE);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::VULCAN_INDEX), powerup_type_t::POW_VULCAN_WEAPON);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::SPREADFIRE_INDEX), powerup_type_t::POW_SPREADFIRE_WEAPON);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::PLASMA_INDEX), powerup_type_t::POW_PLASMA_WEAPON);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::FUSION_INDEX), powerup_type_t::POW_FUSION_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::vulcan), powerup_type_t::POW_VULCAN_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::spreadfire), powerup_type_t::POW_SPREADFIRE_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::plasma), powerup_type_t::POW_PLASMA_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::fusion), powerup_type_t::POW_FUSION_WEAPON);
 						powerup_flags.process(PLAYER_FLAGS_CLOAKED, powerup_type_t::POW_CLOAK);
 						powerup_flags.process(PLAYER_FLAGS_INVULNERABLE, powerup_type_t::POW_INVULNERABILITY);
                         // NOTE: The following can probably be simplified.
 #if DXX_BUILD_DESCENT == 2
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::GAUSS_INDEX), powerup_type_t::POW_GAUSS_WEAPON);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::HELIX_INDEX), powerup_type_t::POW_HELIX_WEAPON);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::PHOENIX_INDEX), powerup_type_t::POW_PHOENIX_WEAPON);
-						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index_t::OMEGA_INDEX), powerup_type_t::POW_OMEGA_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::gauss), powerup_type_t::POW_GAUSS_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::helix), powerup_type_t::POW_HELIX_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::phoenix), powerup_type_t::POW_PHOENIX_WEAPON);
+						primary_weapon_flags.process(HAS_PRIMARY_FLAG(primary_weapon_index::omega), powerup_type_t::POW_OMEGA_WEAPON);
 						powerup_flags.process(PLAYER_FLAGS_MAP_ALL, powerup_type_t::POW_FULL_MAP);
 						powerup_flags.process(PLAYER_FLAGS_CONVERTER, powerup_type_t::POW_CONVERTER);
 						powerup_flags.process(PLAYER_FLAGS_AMMO_RACK, powerup_type_t::POW_AMMO_RACK);
 						powerup_flags.process(PLAYER_FLAGS_AFTERBURNER, powerup_type_t::POW_AFTERBURNER);
 						powerup_flags.process(PLAYER_FLAGS_HEADLIGHT, powerup_type_t::POW_HEADLIGHT);
-                        if ((Game_mode & GM_CAPTURE) && (player_info.powerup_flags & PLAYER_FLAGS_FLAG))
+                        if (+(Game_mode & GM_CAPTURE) && (player_info.powerup_flags & PLAYER_FLAGS_FLAG))
                         {
 							++Current[(multi_get_team_from_player(Netgame, i) == team_number::blue) ? powerup_type_t::POW_FLAG_RED : powerup_type_t::POW_FLAG_BLUE];
                         }
 #endif
 		Current[powerup_type_t::POW_VULCAN_AMMO] += player_info.vulcan_ammo;
-		Current[powerup_type_t::POW_MISSILE_1] += player_info.secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX];
-		Current[powerup_type_t::POW_HOMING_AMMO_1] += player_info.secondary_ammo[secondary_weapon_index_t::HOMING_INDEX];
-		Current[powerup_type_t::POW_PROXIMITY_WEAPON] += player_info.secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX];
-		Current[powerup_type_t::POW_SMARTBOMB_WEAPON] += player_info.secondary_ammo[secondary_weapon_index_t::SMART_INDEX];
-		Current[powerup_type_t::POW_MEGA_WEAPON] += player_info.secondary_ammo[secondary_weapon_index_t::MEGA_INDEX];
+		Current[powerup_type_t::POW_MISSILE_1] += player_info.secondary_ammo[secondary_weapon_index::concussion];
+		Current[powerup_type_t::POW_HOMING_AMMO_1] += player_info.secondary_ammo[secondary_weapon_index::homing];
+		Current[powerup_type_t::POW_PROXIMITY_WEAPON] += player_info.secondary_ammo[secondary_weapon_index::proximity];
+		Current[powerup_type_t::POW_SMARTBOMB_WEAPON] += player_info.secondary_ammo[secondary_weapon_index::smart];
+		Current[powerup_type_t::POW_MEGA_WEAPON] += player_info.secondary_ammo[secondary_weapon_index::mega];
 #if DXX_BUILD_DESCENT == 2
-		Current[powerup_type_t::POW_SMISSILE1_1] += player_info.secondary_ammo[secondary_weapon_index_t::SMISSILE1_INDEX];
-		Current[powerup_type_t::POW_GUIDED_MISSILE_1] += player_info.secondary_ammo[secondary_weapon_index_t::GUIDED_INDEX];
-		Current[powerup_type_t::POW_SMART_MINE] += player_info.secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX];
-		Current[powerup_type_t::POW_MERCURY_MISSILE_1] += player_info.secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX];
-		Current[powerup_type_t::POW_EARTHSHAKER_MISSILE] += player_info.secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX];
+		Current[powerup_type_t::POW_SMISSILE1_1] += player_info.secondary_ammo[secondary_weapon_index::flash];
+		Current[powerup_type_t::POW_GUIDED_MISSILE_1] += player_info.secondary_ammo[secondary_weapon_index::guided];
+		Current[powerup_type_t::POW_SMART_MINE] += player_info.secondary_ammo[secondary_weapon_index::smart_mine];
+		Current[powerup_type_t::POW_MERCURY_MISSILE_1] += player_info.secondary_ammo[secondary_weapon_index::mercury];
+		Current[powerup_type_t::POW_EARTHSHAKER_MISSILE] += player_info.secondary_ammo[secondary_weapon_index::earthshaker];
 #endif
                 }
 #if DXX_BUILD_DESCENT == 2
-                if (Game_mode & GM_MULTI_ROBOTS) // Add (possible) thief inventory
+                if (+(Game_mode & GM_MULTI_ROBOTS)) // Add (possible) thief inventory
                 {
                         range_for (auto &i, LevelUniqueObjectState.ThiefState.Stolen_items)
                         {
@@ -5502,7 +5499,7 @@ namespace dsx {
 bool MultiLevelInv_AllowSpawn(powerup_type_t powerup_type)
 {
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
-	if ((Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed || Network_status != network_state::playing)
+	if (+(Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed || Network_status != network_state::playing)
                 return 0;
 
         int req_amount{1}; // required amount of item to drop a powerup.
@@ -5529,7 +5526,7 @@ namespace {
 void MultiLevelInv_Repopulate(fix frequency)
 {
 	auto &LevelUniqueControlCenterState = LevelUniqueObjectState.ControlCenterState;
-	if (!multi_i_am_master() || (Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed)
+	if (!multi_i_am_master() || +(Game_mode & GM_MULTI_COOP) || LevelUniqueControlCenterState.Control_center_destroyed)
                 return;
 
 	MultiLevelInv_Recount(); // recount current items
@@ -5581,15 +5578,17 @@ static hoard_resources_type hoard_resources;
 
 }
 
-int HoardEquipped()
+hoard_availability_state HoardEquipped()
 {
-	static int checked=-1;
-
-	if (unlikely(checked == -1))
+	static auto checked{hoard_availability_state::None};
+	if (checked == hoard_availability_state::None) [[unlikely]]
 	{
-		checked = PHYSFSX_exists_ignorecase(hoard_ham_basename);
+		if (PHYSFSX_exists_ignorecase(hoard_ham_basename) && static_cast<bool>(RAIIPHYSFS_File{PHYSFS_openRead(hoard_ham_basename)}))
+			checked = hoard_availability_state::Found;
+		else
+			checked = hoard_availability_state::Missing;
 	}
-	return (checked);
+	return checked;
 }
 
 std::array<grs_main_bitmap, 2> Orb_icons;
@@ -6538,8 +6537,8 @@ void show_netgame_info(const netgame_info &netgame)
 			array_snprintf(lines[game_name], "Game Name\t  %s", netgame.game_name.data());
 			array_snprintf(lines[mission_name], "Mission Name\t  %s", netgame.mission_title.data());
 			array_snprintf(lines[level_number], "Level\t  %s%i", (netgame.levelnum < 0) ? "S" : " ", abs(netgame.levelnum));
-			const auto gamemode = underlying_value(netgame.gamemode);
-			array_snprintf(lines[game_mode], "Game Mode\t  %s", gamemode < GMNames.size() ? GMNames[gamemode] : "INVALID");
+			const auto gamemode{netgame.gamemode};
+			array_snprintf(lines[game_mode], "Game Mode\t  %s", GMNames.valid_index(gamemode) ? GMNames[gamemode] : "INVALID");
 			array_snprintf(lines[player_counts], "Players\t  %i/%i", netgame.numplayers, netgame.max_numplayers);
 			array_snprintf(lines[difficulty], "Difficulty\t  %s", MENU_DIFFICULTY_TEXT(netgame.difficulty));
 			array_snprintf(lines[reactor_life], "Reactor Life\t  %i %s", netgame.control_invul_time / F1_0 / 60, TXT_MINUTES_ABBREV);

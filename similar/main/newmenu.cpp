@@ -2194,7 +2194,7 @@ window_event_result listbox::event_handler(const d_event &event)
 		case event_type::key_command:
 			return listbox_key_command(event, this);
 		case event_type::idle:
-			if (!(Game_mode & GM_MULTI && Game_wind))
+			if (!(+(Game_mode & GM_MULTI) && Game_wind))
 				timer_delay2(CGameArg.SysMaxFPS);
 			return window_event_result::ignored;
 		case event_type::window_draw:

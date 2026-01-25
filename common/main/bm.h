@@ -56,20 +56,17 @@ enum class tmapinfo_flags : uint8_t
 {
 };
 
-static constexpr uint8_t operator&(tmapinfo_flags flags, tmapinfo_flag mask)
-{
-	return static_cast<uint8_t>(flags) & static_cast<uint8_t>(mask);
-}
+template <>
+inline constexpr bool enable_bit_enum_and<tmapinfo_flags, tmapinfo_flag>{true};
 
-static constexpr tmapinfo_flags &operator|=(tmapinfo_flags &flags, tmapinfo_flag mask)
-{
-	return flags = static_cast<tmapinfo_flags>(static_cast<uint8_t>(flags) | static_cast<uint8_t>(mask));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<tmapinfo_flags, tmapinfo_flag>{true};
 
-static constexpr tmapinfo_flag operator|(tmapinfo_flag a, tmapinfo_flag b)
-{
-	return static_cast<tmapinfo_flag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
+template <>
+inline constexpr bool enable_bit_enum_or<tmapinfo_flag, tmapinfo_flag>{true};
+
+template <>
+inline constexpr bool enable_bit_enum_boolnot<tmapinfo_flags>{true};
 
 }
 

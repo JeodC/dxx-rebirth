@@ -248,15 +248,15 @@ namespace {
 
 //returns which bomb will be dropped next time the bomb key is pressed
 template <typename T>
-secondary_weapon_index_t read_update_which_proximity_mine_to_use(T &player_info)
+secondary_weapon_index read_update_which_proximity_mine_to_use(T &player_info)
 {
 	//use the last one selected, unless there aren't any, in which case use
 	//the other if there are any
 	auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
-	const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index_t::PROXIMITY_INDEX);
+	const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::proximity);
 	const auto [bomb, alt_bomb] = (Secondary_last_was_super & mask)
-		? std::pair(secondary_weapon_index_t::SMART_MINE_INDEX, secondary_weapon_index_t::PROXIMITY_INDEX)
-		: std::pair(secondary_weapon_index_t::PROXIMITY_INDEX, secondary_weapon_index_t::SMART_MINE_INDEX);
+		? std::pair(secondary_weapon_index::smart_mine, secondary_weapon_index::proximity)
+		: std::pair(secondary_weapon_index::proximity, secondary_weapon_index::smart_mine);
 	auto &secondary_ammo = player_info.secondary_ammo;
 	if (secondary_ammo[bomb])
 		/* Player has the requested bomb type available.  Use it. */
@@ -276,12 +276,12 @@ secondary_weapon_index_t read_update_which_proximity_mine_to_use(T &player_info)
 
 }
 
-secondary_weapon_index_t which_bomb(const player_info &player_info)
+secondary_weapon_index which_bomb(const player_info &player_info)
 {
 	return read_update_which_proximity_mine_to_use(player_info);
 }
 
-secondary_weapon_index_t which_bomb(player_info &player_info)
+secondary_weapon_index which_bomb(player_info &player_info)
 {
 	return read_update_which_proximity_mine_to_use(player_info);
 }
@@ -327,9 +327,9 @@ static void do_weapon_n_item_stuff(object_array &Objects, control_info &Controls
 		const auto select_weapon = std::exchange(Controls.state.select_weapon, 0) - 1;
 		const auto weapon_num = select_weapon > 4 ? select_weapon - 5 : select_weapon;
 		if (select_weapon > 4)
-			do_secondary_weapon_select(player_info, static_cast<secondary_weapon_index_t>(select_weapon - 5));
+			do_secondary_weapon_select(player_info, static_cast<secondary_weapon_index>(select_weapon - 5));
 		else
-			do_primary_weapon_select(player_info, static_cast<primary_weapon_index_t>(weapon_num));
+			do_primary_weapon_select(player_info, static_cast<primary_weapon_index>(weapon_num));
 	}
 #if DXX_BUILD_DESCENT == 2
 	if (auto &headlight = Controls.state.headlight)
@@ -355,15 +355,15 @@ static void do_weapon_n_item_stuff(object_array &Objects, control_info &Controls
 		auto &Secondary_last_was_super = player_info.Secondary_last_was_super;
 		auto &secondary_ammo = player_info.secondary_ammo;
 		sound_effect sound;
-		if (!secondary_ammo[secondary_weapon_index_t::PROXIMITY_INDEX] && !secondary_ammo[secondary_weapon_index_t::SMART_MINE_INDEX])
+		if (!secondary_ammo[secondary_weapon_index::proximity] && !secondary_ammo[secondary_weapon_index::smart_mine])
 		{
 			HUD_init_message_literal(HM_DEFAULT, "No bombs available!");
 			sound = sound_effect::SOUND_BAD_SELECTION;
 		}
 		else
 		{	
-			const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index_t::PROXIMITY_INDEX);
-			const auto &&[desc, bomb] = (Secondary_last_was_super & mask) ? std::pair("Proximity bombs", secondary_weapon_index_t::PROXIMITY_INDEX) : std::pair("Smart mines", secondary_weapon_index_t::SMART_MINE_INDEX);
+			const auto mask = HAS_SECONDARY_FLAG(secondary_weapon_index::proximity);
+			const auto &&[desc, bomb] = (Secondary_last_was_super & mask) ? std::pair("Proximity bombs", secondary_weapon_index::proximity) : std::pair("Smart mines", secondary_weapon_index::smart_mine);
 			if (secondary_ammo[bomb] == 0)
 			{
 				HUD_init_message(HM_DEFAULT, "No %s available!", desc);
@@ -498,7 +498,7 @@ static void do_game_pause()
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptr = Objects.vcptr;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 		netplayerinfo_on= !netplayerinfo_on;
 		return;
@@ -640,7 +640,7 @@ static window_event_result HandleDemoKey(int key)
 		case KEY_F4:	Newdemo_show_percentage = !Newdemo_show_percentage; break;
 		KEY_MAC(case KEY_COMMAND+KEY_7:)
 		case KEY_F7:
-			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % ((Newdemo_game_mode & GM_TEAM) ? 4 : 3));
+			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % (+(Newdemo_game_mode & GM_TEAM) ? 4 : 3));
 			break;
 		case KEY_ESC:
 			if (CGameArg.SysAutoDemo)
@@ -741,7 +741,7 @@ static int select_next_window_function(const gauge_inset_window_view w)
 			[[fallthrough]];
 		case cockpit_3d_view::Coop:
 			Marker_viewer_num[w] = game_marker_index::None;
-			if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_TEAM)) {
+			if (+(Game_mode & GM_MULTI_COOP) || +(Game_mode & GM_TEAM)) {
 				PlayerCfg.Cockpit3DView[w] = cockpit_3d_view::Coop;
 				for (;;)
 				{
@@ -756,7 +756,7 @@ static int select_next_window_function(const gauge_inset_window_view w)
 					if (vcplayerptr(cvp)->connected != player_connection_status::playing)
 						continue;
 
-					if (Game_mode & GM_MULTI_COOP)
+					if (+(Game_mode & GM_MULTI_COOP))
 						break;
 					else if (multi_get_team_from_player(Netgame, cvp) == multi_get_team_from_player(Netgame, Player_num))
 						break;
@@ -767,7 +767,7 @@ static int select_next_window_function(const gauge_inset_window_view w)
 			[[fallthrough]];
 		case cockpit_3d_view::Marker:
 		case_marker:;
-			if ((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view) {	//anarchy only
+			if (+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view) {	//anarchy only
 				PlayerCfg.Cockpit3DView[w] = cockpit_3d_view::Marker;
 				auto &mvn = Marker_viewer_num[w];
 				const auto gmi0 = convert_player_marker_index_to_game_marker_index(Game_mode, Netgame.max_numplayers, Player_num, player_marker_index::_0);
@@ -799,7 +799,7 @@ static window_event_result HandleSystemKey(int key)
 		{
 			case KEY_ESC:
 			{
-				const bool allow_saveload = !(Game_mode & GM_MULTI) || ((Game_mode & GM_MULTI_COOP) && Player_num == 0);
+				const bool allow_saveload{!(Game_mode & GM_MULTI) || (+(Game_mode & GM_MULTI_COOP) && Player_num == 0)};
 				const auto choice = nm_messagebox_str(menu_title{nullptr}, allow_saveload ? nm_messagebox_tie("Abort Game", TXT_OPTIONS_, "Save Game...", TXT_LOAD_GAME) : nm_messagebox_tie("Abort Game", TXT_OPTIONS_), menu_subtitle{"Game Menu"});
 				switch(choice)
 				{
@@ -832,7 +832,7 @@ static window_event_result HandleSystemKey(int key)
 	{
                 KEY_MAC( case KEY_COMMAND+KEY_PAUSE+KEY_SHIFTED: )
                 case KEY_PAUSE+KEY_SHIFTED:
-                        if (Game_mode & GM_MULTI)
+                        if (+(Game_mode & GM_MULTI))
                                 show_netgame_info(Netgame);
                         break;
 		KEY_MAC( case KEY_COMMAND+KEY_P: )
@@ -860,7 +860,7 @@ static window_event_result HandleSystemKey(int key)
 #endif
 
 		KEY_MAC(case KEY_COMMAND+KEY_1:)
-		case KEY_F1:				if (Game_mode & GM_MULTI) show_netgame_help(); else show_help();	break;
+		case KEY_F1: if (+(Game_mode & GM_MULTI)) show_netgame_help(); else show_help(); break;
 
 		KEY_MAC(case KEY_COMMAND+KEY_2:)
 		case KEY_F2:
@@ -893,8 +893,8 @@ static window_event_result HandleSystemKey(int key)
 
 		KEY_MAC(case KEY_COMMAND+KEY_7:)
 		case KEY_F7:
-			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % ((Game_mode & GM_TEAM) ? 4 : 3));
-			if (Game_mode & GM_MULTI)
+			Show_kill_list = static_cast<show_kill_list_mode>((underlying_value(Show_kill_list) + 1) % (+(Game_mode & GM_TEAM) ? 4 : 3));
+			if (+(Game_mode & GM_MULTI))
 				multi_sort_kill_list();
 			break;
 
@@ -963,12 +963,12 @@ static window_event_result HandleSystemKey(int key)
 		KEY_MAC(case KEY_COMMAND+KEY_SHIFTED+KEY_O:)
 		KEY_MAC(case KEY_COMMAND+KEY_ALTED+KEY_3:)
 		case KEY_ALTED+KEY_F3:
-			if (!((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
+			if (!(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
 				state_restore_all(1, secret_restore::none, nullptr, blind_save::no);
 			break;
 		KEY_MAC(case KEY_COMMAND+KEY_O:)
 		case KEY_ALTED+KEY_SHIFTED+KEY_F3:
-			if (!((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
+			if (!(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP)))
 				state_restore_all(1, secret_restore::none, nullptr, blind_save::yes);
 			break;
 
@@ -1073,7 +1073,7 @@ static window_event_result HandleGameKey(int key, control_info &Controls)
 			{
 				auto &BuddyState = LevelUniqueObjectState.BuddyState;
 #if DXX_USE_MULTIPLAYER
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					if (!check_warn_local_player_can_control_guidebot(Objects.vcptr, BuddyState, Netgame))
 						return window_event_result::handled;
@@ -1117,7 +1117,7 @@ static window_event_result HandleGameKey(int key, control_info &Controls)
 			}
 			return window_event_result::handled;
 		case KEY_ALTED + KEY_1:
-			if (Netgame.RefusePlayers && WaitForRefuseAnswer && (Game_mode & GM_TEAM))
+			if (Netgame.RefusePlayers && WaitForRefuseAnswer && +(Game_mode & GM_TEAM))
 				{
 					RefuseThisPlayer=1;
 					HUD_init_message_literal(HM_MULTI, "Player accepted!");
@@ -1126,7 +1126,7 @@ static window_event_result HandleGameKey(int key, control_info &Controls)
 				}
 			return window_event_result::handled;
 		case KEY_ALTED + KEY_2:
-			if (Netgame.RefusePlayers && WaitForRefuseAnswer && (Game_mode & GM_TEAM))
+			if (Netgame.RefusePlayers && WaitForRefuseAnswer && +(Game_mode & GM_TEAM))
 				{
 					RefuseThisPlayer=1;
 					HUD_init_message_literal(HM_MULTI, "Player accepted!");
@@ -1411,7 +1411,7 @@ static window_event_result HandleTestKey(const d_level_shared_robot_info_state &
 			auto &pl_flags = player_info.powerup_flags;
 			pl_flags ^= PLAYER_FLAGS_CLOAKED;
 			if (pl_flags & PLAYER_FLAGS_CLOAKED) {
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_cloak();
 				ai_do_cloak_stuff();
 				player_info.cloak_time = {GameTime64};
@@ -1698,7 +1698,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 	auto &vmobjptr = Objects.vmptr;
 	auto &vmobjptridx = Objects.vmptridx;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 		return window_event_result::ignored;
 
 	static std::array<char, CHEAT_MAX_LEN> cheat_buffer;
@@ -1745,7 +1745,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 		player_info.vulcan_ammo = VULCAN_AMMO_MAX;
 		auto &secondary_ammo = player_info.secondary_ammo;
-		for (const auto i : {secondary_weapon_index_t::CONCUSSION_INDEX, secondary_weapon_index_t::HOMING_INDEX, secondary_weapon_index_t::PROXIMITY_INDEX})
+		for (const auto i : {secondary_weapon_index::concussion, secondary_weapon_index::homing, secondary_weapon_index::proximity})
 			secondary_ammo[i] = Secondary_ammo_max[i];
 
 		if (Newdemo_state == ND_STATE_RECORDING)
@@ -1804,9 +1804,9 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 
 		if (Piggy_hamfile_version < pig_hamfile_version::_3) // SHAREWARE
 		{
-			secondary_ammo[secondary_weapon_index_t::SMISSILE4_INDEX] = 0;
-			secondary_ammo[secondary_weapon_index_t::SMISSILE5_INDEX] = 0;
-			secondary_ammo[secondary_weapon_index_t::MEGA_INDEX] = 0;
+			secondary_ammo[secondary_weapon_index::mercury] = 0;
+			secondary_ammo[secondary_weapon_index::earthshaker] = 0;
+			secondary_ammo[secondary_weapon_index::mega] = 0;
 		}
 
 		if (Newdemo_state == ND_STATE_RECORDING)
@@ -2039,7 +2039,7 @@ public:
 		this->menu_bit_wrapper_t::operator=(n);
 		if (n)
 		{
-			if (Game_mode & GM_MULTI)
+			if (+(Game_mode & GM_MULTI))
 				multi_send_cloak();
 			ai_do_cloak_stuff();
 			get().cloak_time = {GameTime64};
@@ -2071,7 +2071,7 @@ public:
 	DXX_MENUITEM(VERB, TEXT, TXT_SCORE, opt_txt_score)	\
 	DXX_MENUITEM(VERB, INPUT, score_text, opt_score)	\
 	DXX_MENUITEM(VERB, NUMBER, "Laser Level", opt_laser_level, menu_number_bias_wrapper<1>(plr_laser_level), static_cast<uint8_t>(laser_level::_1) + 1, static_cast<uint8_t>(DXX_MAXIMUM_LASER_LEVEL) + 1)	\
-	DXX_MENUITEM(VERB, NUMBER, "Concussion", opt_concussion, pl_info.secondary_ammo[secondary_weapon_index_t::CONCUSSION_INDEX], 0, 200)	\
+	DXX_MENUITEM(VERB, NUMBER, "Concussion", opt_concussion, pl_info.secondary_ammo[secondary_weapon_index::concussion], 0, 200)	\
 
 struct wimp_menu_items
 {
@@ -2167,7 +2167,7 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 		exploding_flag=0;
 	}
 	if (Player_dead_state != player_dead_state::no &&
-		!((Game_mode & GM_MULTI) &&
+		!(+(Game_mode & GM_MULTI) &&
 			(multi_sending_message[Player_num] != msgsend_state::none || multi_defining_message != multi_macro_message_index::None)
 		)
 	)
@@ -2185,13 +2185,13 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 			return MarkerInputMessage(key, Controls);
 		}
 #endif
-		if ( (Game_mode & GM_MULTI) && (multi_sending_message[Player_num] != msgsend_state::none || multi_defining_message != multi_macro_message_index::None) )
+		if (+(Game_mode & GM_MULTI) && (multi_sending_message[Player_num] != msgsend_state::none || multi_defining_message != multi_macro_message_index::None) )
 		{
 			return multi_message_input_sub(LevelSharedRobotInfoState.Robot_info, key, Controls);
 		}
 
 #ifndef RELEASE
-		if ((key&KEY_DEBUGGED)&&(Game_mode&GM_MULTI))   {
+		if ((key & KEY_DEBUGGED) && +(Game_mode & GM_MULTI)) {
 			Network_message_reciever = 100;		// Send to everyone...
 			snprintf(Network_message.data(), Network_message.size(), "%s %s", TXT_I_AM_A, TXT_CHEATER);
 		}
@@ -2246,7 +2246,7 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 		if ( Controls.state.automap )
 		{
 			Controls.state.automap = 0;
-			if (Player_is_dead != player_dead_state::no || !((Game_mode & GM_MULTI) && LevelUniqueControlCenterState.Control_center_destroyed && LevelUniqueControlCenterState.Countdown_seconds_left < 10))
+			if (Player_is_dead != player_dead_state::no || !(+(Game_mode & GM_MULTI) && LevelUniqueControlCenterState.Control_center_destroyed && LevelUniqueControlCenterState.Countdown_seconds_left < 10))
 			{
 				do_automap();
 				return window_event_result::handled;

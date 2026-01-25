@@ -166,14 +166,18 @@ namespace dcx {
 
 namespace {
 
-static powerup_type_t build_contained_object_powerup_id_from_untrusted(const uint8_t untrusted)
+constexpr powerup_type_t build_contained_object_powerup_id_from_untrusted(const uint8_t untrusted)
 {
-	return untrusted < MAX_POWERUP_TYPES ? powerup_type_t{untrusted} : powerup_type_t{};
+	if (untrusted < MAX_POWERUP_TYPES) [[likely]]
+		return powerup_type_t{untrusted};
+	return powerup_type_t{};
 }
 
-static robot_id build_contained_object_robot_id_from_untrusted(const uint8_t untrusted)
+constexpr robot_id build_contained_object_robot_id_from_untrusted(const uint8_t untrusted)
 {
-	return untrusted < MAX_ROBOT_TYPES ? robot_id{untrusted} : robot_id{};
+	if (untrusted < MAX_ROBOT_TYPES) [[likely]]
+		return robot_id{untrusted};
+	return robot_id{};
 }
 
 }
@@ -202,6 +206,7 @@ contained_object_type build_contained_object_type_from_untrusted(const uint8_t u
 		case object_type_t::OBJ_ROBOT:
 			return contained_object_type{untrusted};
 		default:
+			[[unlikely]];
 			return contained_object_type::None;
 	}
 }
@@ -209,12 +214,15 @@ contained_object_type build_contained_object_type_from_untrusted(const uint8_t u
 contained_object_parameters build_contained_object_parameters_from_untrusted(const uint8_t untrusted_type, const uint8_t untrusted_id, const uint8_t untrusted_contains_count)
 {
 	if (untrusted_contains_count > 4)
+	{
 		/* This is an arbitrary cap, chosen to match GOODY_COUNT_MAX.  Any
 		 * value higher than this is likely an error, so force the object to
 		 * contain nothing instead.
 		 */
+		[[unlikely]];
 		return {};
-	switch (const auto type = build_contained_object_type_from_untrusted(untrusted_type))
+	}
+	switch (const auto type{build_contained_object_type_from_untrusted(untrusted_type)})
 	{
 		case contained_object_type::powerup:
 			return {
@@ -229,6 +237,7 @@ contained_object_parameters build_contained_object_parameters_from_untrusted(con
 				.count = untrusted_contains_count,
 			};
 		default:
+			[[unlikely]];
 			return {};
 	}
 }
@@ -411,7 +420,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 #endif
 
 	//	If option set for bright players in netgame, brighten them!
-	light = unlikely(Netgame.BrightPlayers && (Game_mode & GM_MULTI) && obj->type == OBJ_PLAYER)
+	light = unlikely(Netgame.BrightPlayers && +(Game_mode & GM_MULTI) && obj->type == OBJ_PLAYER)
 		? g3s_lrgb{F1_0 * 2, F1_0 * 2, F1_0 * 2}
 		: compute_object_light(LevelUniqueLightState, obj);
 
@@ -524,9 +533,25 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					: alternate_textures{};
 				})
 			};
-			const auto is_weapon_with_inner_model = (obj->type == OBJ_WEAPON && Weapon_info[get_weapon_id(obj)].model_num_inner != polygon_model_index::None);
+			/* If this object is a weapon, and its ID is a valid index in
+			 * `Weapon_info`, then initialize `is_weapon_with_inner_model` to
+			 * the value of `Weapon_info[id].model_num_inner`, which may or may
+			 * not be `polygon_model_index::None`.  If any of those conditions
+			 * are not satisfied, then initialize to
+			 * `polygon_model_index::None`.
+			 */
+			const auto is_weapon_with_inner_model{
+				obj->type == OBJ_WEAPON
+					? ({
+						const auto opt_weapon_id{Weapon_info.valid_index(get_weapon_id(obj))};
+						opt_weapon_id
+						? Weapon_info[*opt_weapon_id].model_num_inner
+						: polygon_model_index::None;
+						})
+				: polygon_model_index::None
+			};
 			bool draw_simple_model;
-			if (is_weapon_with_inner_model)
+			if (is_weapon_with_inner_model != polygon_model_index::None)
 			{
 				gr_settransblend(canvas, GR_FADE_OFF, gr_blend::additive_a);
 				draw_simple_model = static_cast<fix>(vm_vec_dist_quick(Viewer->pos, obj->pos)) < Simple_model_threshhold_scale * F1_0*2;
@@ -534,7 +559,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 							   obj->orient,
 							   obj->rtype.pobj_info.anim_angles,
-							   Weapon_info[get_weapon_id(obj)].model_num_inner,
+							   is_weapon_with_inner_model,
 							   obj->rtype.pobj_info.subobj_flags,
 							   light,
 							   &engine_glow_value,
@@ -548,7 +573,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					   &engine_glow_value,
 					   alt_textures);
 
-			if (is_weapon_with_inner_model)
+			if (is_weapon_with_inner_model != polygon_model_index::None)
 			{
 				if constexpr (!DXX_USE_OGL) // in software rendering must draw inner model last
 				{
@@ -557,7 +582,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 					draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 							   obj->orient,
 							   obj->rtype.pobj_info.anim_angles,
-							   Weapon_info[obj->id].model_num_inner,
+							   is_weapon_with_inner_model,
 							   obj->rtype.pobj_info.subobj_flags,
 							   light,
 							   &engine_glow_value,
@@ -1279,7 +1304,7 @@ imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, co
 	return obj;
 }
 
-imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const weapon_info_array &Weapon_info, const unsigned id, const vmsegptridx_t segnum, const vms_vector &pos, const fix size, const render_type rtype)
+imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const weapon_info_array &Weapon_info, const weapon_id_type id, const vmsegptridx_t segnum, const vms_vector &pos, const fix size, const render_type rtype)
 {
 	constexpr auto ctype = object::control_type::weapon;
 	constexpr auto mtype = object::movement_type::physics;
@@ -1290,8 +1315,11 @@ imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectSt
 	auto &obj = *objp;
 	//	Set (or not) persistent bit in phys_info.
 	assert(obj.control_source == object::control_type::weapon);
-	if (Weapon_info[id].persistent != weapon_info::persistence_flag::terminate_on_impact)
-		obj.mtype.phys_info.flags |= PF_PERSISTENT;
+	if (const auto opt_id{Weapon_info.valid_index(id)})
+	{
+		if (Weapon_info[*opt_id].persistent != weapon_info::persistence_flag::terminate_on_impact)
+			obj.mtype.phys_info.flags |= PF_PERSISTENT;
+	}
 	obj.ctype.laser_info.creation_time = {GameTime64};
 	obj.ctype.laser_info.clear_hitobj();
 	obj.ctype.laser_info.multiplier = F1_0;
@@ -1555,7 +1583,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 				const auto cobjp = vmobjptridx(ConsoleObject);
 				drop_player_eggs(cobjp);
 				player_info.Player_eggs_dropped = true;
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					multi_send_player_deres(deres_explode);
 				}
@@ -1573,7 +1601,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 			}
 		} else {
 			if (d_rand() < FrameTime*4) {
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 					multi_send_create_explosion(Player_num);
 				create_small_fireball_on_object(vmobjptridx(ConsoleObject), F1_0, 1);
 			}
@@ -1586,7 +1614,7 @@ window_event_result dead_player_frame(const d_robot_info_array &Robot_info)
 			if (!player_info.Player_eggs_dropped) {
 				player_info.Player_eggs_dropped = true;
 				drop_player_eggs(vmobjptridx(ConsoleObject));
-				if (Game_mode & GM_MULTI)
+				if (+(Game_mode & GM_MULTI))
 				{
 					multi_send_player_deres(deres_explode);
 				}
@@ -1614,7 +1642,7 @@ static void start_player_death_sequence(object &player)
 	assert(&player == ConsoleObject);
 	if (Player_dead_state != player_dead_state::no ||
 		Dead_player_camera != NULL ||
-		((Game_mode & GM_MULTI) && get_local_player().connected != player_connection_status::playing))
+		(+(Game_mode & GM_MULTI) && get_local_player().connected != player_connection_status::playing))
 		return;
 
 	//Assert(Dead_player_camera == NULL);
@@ -1626,7 +1654,7 @@ static void start_player_death_sequence(object &player)
 
 	GameViewUniqueState.Death_sequence_aborted = 0;
 
-	if (Game_mode & GM_MULTI)
+	if (+(Game_mode & GM_MULTI))
 	{
 #if DXX_BUILD_DESCENT == 2
 		// If Hoard, increase number of orbs by 1. Only if you haven't killed yourself. This prevents cheating
@@ -2092,7 +2120,7 @@ static window_event_result object_move_one(const d_level_shared_robot_info_state
 	if (Drop_afterburner_blob_flag) {
 		Assert(obj==ConsoleObject);
 		drop_afterburner_blobs(obj, 2, i2f(5)/2, -1);	//	-1 means use default lifetime
-		if (Game_mode & GM_MULTI)
+		if (+(Game_mode & GM_MULTI))
 			multi_send_drop_blobs(Player_num);
 		Drop_afterburner_blob_flag = 0;
 	}
@@ -2390,14 +2418,17 @@ namespace {
 #if DXX_BUILD_DESCENT == 1
 #define object_is_clearable_weapon(W,a,b)	object_is_clearable_weapon(a,b)
 #endif
-static unsigned object_is_clearable_weapon(const weapon_info_array &Weapon_info, const object_base obj, const unsigned clear_all)
+static unsigned object_is_clearable_weapon(const weapon_info_array &Weapon_info, const object_base &obj, const unsigned clear_all)
 {
 	if (!(obj.type == OBJ_WEAPON))
 		return 0;
 	const auto weapon_id = get_weapon_id(obj);
 #if DXX_BUILD_DESCENT == 2
-	if (Weapon_info[weapon_id].flags & WIF_PLACABLE)
-		return 0;
+	if (const auto opt_weapon_id{Weapon_info.valid_index(weapon_id)})
+	{
+		if (Weapon_info[*opt_weapon_id].flags & WIF_PLACABLE)
+			return 0;
+	}
 #endif
 	if (clear_all)
 		return clear_all;
@@ -2541,7 +2572,7 @@ imobjptridx_t drop_marker_object(const vms_vector &pos, const vmsegptridx_t segn
 		return object_none;
 	}
 	const auto movement_type =
-		((Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view)
+		(+(Game_mode & GM_MULTI) && !(Game_mode & GM_MULTI_COOP) && Netgame.Allow_marker_view)
 		? object::movement_type::None
 		: object::movement_type::spinning;
 	const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_MARKER, underlying_value(marker_num), segnum, pos, &orient, Polygon_models[Marker_model_num].rad, object::control_type::None, movement_type, render_type::RT_POLYOBJ);
