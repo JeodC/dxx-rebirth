@@ -77,25 +77,14 @@ static int PlaceHostage()
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Vertices = LevelSharedVertexState.get_vertices();
-	int ctype,i;
 	//update_due_to_new_segment();
 	auto &vcvertptr = Vertices.vcptr;
 	const auto cur_object_loc{compute_segment_center(vcvertptr, Cursegp)};
 
-	ctype = -1;
-	for (i=0; i<Num_total_object_types; i++ )	{
-		if (ObjType[i] == OL_HOSTAGE )	{
-			ctype = i;	
-			break;
-		}
-	}
-
-	Assert( ctype != -1 );
-
-	if (place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, ctype, 0) == 0)
+	if (place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, OBJ_HOSTAGE, 0) == 0)
 	{
 		Int3();		// Debug below
-		i = place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, ctype, 0);
+		place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, OBJ_HOSTAGE, 0);
 		return 1;
 	}
 	return 0;
