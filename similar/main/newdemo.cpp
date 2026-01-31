@@ -596,9 +596,9 @@ static void nd_read_object(const vmobjptridx_t obj)
 		}
 	}
 	{
-		uint8_t object_type;
-		nd_read_byte(&object_type);
-		set_object_type(*obj, object_type);
+		uint8_t t;
+		nd_read_byte(&t);
+		set_object_type(*obj, t);
 	}
 	if (obj->render_type == render_type::RT_NONE && obj->type != OBJ_CAMERA)
 		return;
