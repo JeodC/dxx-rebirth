@@ -413,11 +413,6 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 	auto &BossUniqueState = LevelUniqueObjectState.BossState;
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	g3s_lrgb light;
-	glow_values_t engine_glow_value;
-	engine_glow_value[0] = 0;
-#if DXX_BUILD_DESCENT == 2
-	engine_glow_value[1] = -1;		//element 0 is for engine glow, 1 for headlight
-#endif
 
 	//	If option set for bright players in netgame, brighten them!
 	light = unlikely(Netgame.BrightPlayers && +(Game_mode & GM_MULTI) && obj->type == OBJ_PLAYER)
@@ -447,38 +442,54 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 
 	push_interpolation_method imsave(1, true);
 
-	//set engine glow value
-	engine_glow_value[0] = f1_0/5;
-	if (obj->movement_source == object::movement_type::physics) {
-
-		if (obj->mtype.phys_info.flags & PF_USES_THRUST && obj->type==OBJ_PLAYER && get_player_id(obj)==Player_num) {
-			const auto thrust_mag = vm_vec_mag_quick(obj->mtype.phys_info.thrust);
-			engine_glow_value[0] += (fixdiv(thrust_mag,Player_ship->max_thrust)*4)/5;
+	const glow_values_t engine_glow_value{{{[](const object_base &o) -> fix {
+		static constexpr fix base_engine_glow_value{F1_0 / 5};
+		if (o.movement_source != object::movement_type::physics) [[unlikely]]
+			/* Most polygon-based objects use physics movement. */
+			return base_engine_glow_value;
+		if (o.type == OBJ_PLAYER) [[unlikely]]
+		{
+			/* Most polygons are not players.  Robots are more numerous. */
+			if (o.mtype.phys_info.flags & PF_USES_THRUST) [[likely]]
+			{
+				/* Players normally use thrust. */
+				if (get_player_id(o) == Player_num) [[unlikely]]
+				{
+					/* It is more common to see remote players than to see oneself. */
+					return base_engine_glow_value + ((fixdiv(vm_vec_mag_quick(o.mtype.phys_info.thrust), Player_ship->max_thrust) * 4) / 5);
+				}
+			}
 		}
-		else {
-			const auto speed = vm_vec_mag_quick(obj->mtype.phys_info.velocity);
+		return base_engine_glow_value + ((fixdiv(vm_vec_mag_quick(o.mtype.phys_info.velocity), MAX_VELOCITY) *
 #if DXX_BUILD_DESCENT == 1
-			engine_glow_value[0] += (fixdiv(speed,MAX_VELOCITY)*4)/5;
+				4
 #elif DXX_BUILD_DESCENT == 2
-			engine_glow_value[0] += (fixdiv(speed,MAX_VELOCITY)*3)/5;
+				3
 #endif
-		}
-	}
-
+			) / 5);
+	}(obj)
 #if DXX_BUILD_DESCENT == 2
-	//set value for player headlight
-	if (obj->type == OBJ_PLAYER) {
-		auto &player_flags = obj->ctype.player_info.powerup_flags;
-		if (player_flags & PLAYER_FLAGS_HEADLIGHT && !Endlevel_sequence)
-			if (player_flags & PLAYER_FLAGS_HEADLIGHT_ON)
-				engine_glow_value[1] = -2;		//draw white!
-			else
-				engine_glow_value[1] = -1;		//draw normal color (grey)
-		else
-			engine_glow_value[1] = -3;			//don't draw
-	}
+	,
+		/* In Descent 2, prepare a value for the player's headlight color.
+		 */
+		[](const object &o) -> fix {
+		static constexpr fix base_headlight_value{-1};
+		if (o.type != OBJ_PLAYER) [[likely]]
+			/* Most objects are not players. */
+			return base_headlight_value;
+		if (Endlevel_sequence) [[unlikely]]
+			/* The player will spend far more time in the mine than in an
+			 * end-level sequence.
+			 */
+			return -3;	// Hide headlight during end-level sequence
+		if (!(o.ctype.player_info.powerup_flags & PLAYER_FLAGS_HEADLIGHT))
+			return -3;	// Hide headlight if powerup not present
+		if (o.ctype.player_info.powerup_flags & PLAYER_FLAGS_HEADLIGHT_ON) [[unlikely]]
+			return -2;	// Draw headlight in white when headlight is on
+		return base_headlight_value;	// Draw headlight in grey if present but not on
+	}(obj)
 #endif
-
+	}}};
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	if (const auto tmap_override{obj->rtype.pobj_info.tmap_override}; tmap_override < Textures.size()) {
 		std::array<bitmap_index, 12> bm_ptrs;
