@@ -2654,13 +2654,13 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 namespace {
 
 /* If not otherwise specified, collision results are ignored. */
-template <object_type_t A, object_type_t B>
+template <object_type A, object_type B>
 inline constexpr collision_result collision_result_t{collision_result::ignore};
 
 /* Create symmetric collisions.  For any <A,B> where (B < A), use the result of
  * <B,A>.
  */
-template <object_type_t A, object_type_t B>
+template <object_type A, object_type B>
 requires(B < A)
 inline constexpr collision_result collision_result_t<A, B>{collision_result_t<B, A>};
 
@@ -2684,7 +2684,7 @@ requires(
 	(COLLISION_OF(R, sizeof...(C) - 1) < COLLISION_OF(R + 1, 0))
 )
 inline constexpr collision_inner_array_t collision_inner_array<R, std::index_sequence<C...>>{{
-	collision_result_t<static_cast<object_type_t>(R), static_cast<object_type_t>(C)>...
+	collision_result_t<static_cast<object_type>(R), static_cast<object_type>(C)>...
 }};
 
 template <typename R, typename C>
@@ -2697,7 +2697,7 @@ inline constexpr collision_outer_array_t collision_outer_array
 
 template <std::size_t... R, typename C>
 inline constexpr collision_outer_array_t collision_outer_array<std::index_sequence<R...>, C>{{
-	collision_inner_array<static_cast<object_type_t>(R), C>...
+	collision_inner_array<static_cast<object_type>(R), C>...
 }};
 
 }

@@ -514,7 +514,7 @@ int RotateSegmentNew(vms_angvec *pbh);
 int rotate_segment_new(const vms_angvec &pbh);
 
 // The current object type and id declared in eglobal.c
-extern object_type_t Cur_object_type;
+extern object_type Cur_object_type;
 extern short Cur_object_id;
 
 //	From med.c
@@ -553,7 +553,7 @@ void close_editor_screen(void);
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 //    From eobject.c
-int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_polygon_model_state &LevelSharedPolygonModelState, const d_robot_info_array &Robot_info, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, vmsegptridx_t segp, const vms_vector &object_pos, object_type_t obj_type, uint8_t object_id);
+int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_polygon_model_state &LevelSharedPolygonModelState, const d_robot_info_array &Robot_info, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, vmsegptridx_t segp, const vms_vector &object_pos, object_type obj_type, uint8_t object_id);
 
 }
 #endif

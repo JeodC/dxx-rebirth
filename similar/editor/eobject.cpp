@@ -107,7 +107,7 @@ static objnum_t get_next_object(const unique_segment &seg, objnum_t id)
 namespace dsx {
 
 //	------------------------------------------------------------------------------------
-int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_polygon_model_state &LevelSharedPolygonModelState, const d_robot_info_array &Robot_info, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const vmsegptridx_t segp, const vms_vector &object_pos, object_type_t obj_type, const uint8_t object_id)
+int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_polygon_model_state &LevelSharedPolygonModelState, const d_robot_info_array &Robot_info, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const vmsegptridx_t segp, const vms_vector &object_pos, object_type obj_type, const uint8_t object_id)
 {
 	auto seg_matrix{med_extract_matrix_from_segment(segp)};
 

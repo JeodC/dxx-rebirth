@@ -643,7 +643,7 @@ static robot_id get_boss_id(void)
 //	-----------------------------------------------------------------------------
 //	Return object index if object of objtype, objid exists in mine, else return -1
 //	"special" is used to find objects spewed by player which is hacked into flags field of powerup.
-static icobjidx_t exists_in_mine_2(const unique_segment &segp, const std::optional<object_type_t> objtype, const std::optional<uint8_t> objid, const int special)
+static icobjidx_t exists_in_mine_2(const unique_segment &segp, const std::optional<object_type> objtype, const std::optional<uint8_t> objid, const int special)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptridx = Objects.vcptridx;
@@ -719,7 +719,7 @@ static std::pair<icsegidx_t, d_unique_buddy_state::Escort_goal_reachability> exi
 //	If special == ESCORT_GOAL_PLAYER_SPEW, then looking for any object spewed by player.
 //	-1 means object does not exist in mine.
 //	-2 means object does exist in mine, but buddy-bot can't reach it (eg, behind triggered wall)
-static std::pair<icobjidx_t, d_unique_buddy_state::Escort_goal_reachability> exists_in_mine(const object &Buddy_objp, const vcsegidx_t start_seg, const std::optional<object_type_t> objtype, const std::optional<uint8_t> objid, const int special, const player_flags powerup_flags)
+static std::pair<icobjidx_t, d_unique_buddy_state::Escort_goal_reachability> exists_in_mine(const object &Buddy_objp, const vcsegidx_t start_seg, const std::optional<object_type> objtype, const std::optional<uint8_t> objid, const int special, const player_flags powerup_flags)
 {
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	std::array<segnum_t, MAX_SEGMENTS> bfs_list;
@@ -879,7 +879,7 @@ static void escort_go_to_goal(const vmobjptridx_t objp, const robot_info &robptr
 }
 
 //	-----------------------------------------------------------------------------
-static imsegidx_t escort_get_goal_segment(const object &buddy_obj, const object_type_t objtype, const std::optional<uint8_t> objid, const player_flags powerup_flags)
+static imsegidx_t escort_get_goal_segment(const object &buddy_obj, const object_type objtype, const std::optional<uint8_t> objid, const player_flags powerup_flags)
 {
 	auto &BuddyState = LevelUniqueObjectState.BuddyState;
 	auto &Objects = LevelUniqueObjectState.Objects;

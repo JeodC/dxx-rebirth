@@ -73,7 +73,7 @@ int Num_tilings{1};					// Number of tilings per wall
 objnum_t Cur_object_index = object_none;
 
 // The current object type and id
-object_type_t Cur_object_type{OBJ_PLAYER};
+object_type Cur_object_type{OBJ_PLAYER};
 short Cur_object_id{0};
 
 //	!0 if a degenerate segment has been found.

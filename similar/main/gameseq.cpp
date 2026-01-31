@@ -205,7 +205,7 @@ int Do_appearance_effect{0};
 
 namespace {
 
-template <object_type_t type>
+template <object_type type>
 static bool is_object_of_type(const object_base &o)
 {
 	return o.type == type;
@@ -246,7 +246,7 @@ static void verify_console_object()
 	Assert(get_player_id(console) == Player_num);
 }
 
-template <object_type_t type>
+template <object_type type>
 static unsigned count_number_of_objects_of_type(fvcobjptr &vcobjptr)
 {
 	return std::count_if(vcobjptr.begin(), vcobjptr.end(), is_object_of_type<type>);

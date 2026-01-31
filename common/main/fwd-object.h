@@ -85,7 +85,7 @@ constexpr std::integral_constant<physics_flag_t, 0x200> PF_BOUNCES_TWICE{};   //
 #endif
 
 namespace dcx {
-enum object_type_t : uint8_t;
+enum object_type : uint8_t;
 struct object_base;
 
 typedef unsigned powerup_flag_t;
@@ -291,7 +291,7 @@ void wake_up_rendered_objects(const object &gmissp, window_rendered_data &window
 
 void fuelcen_check_for_goal(object &plrobj, const shared_segment &segp);
 #endif
-imobjptridx_t obj_find_first_of_type(fvmobjptridx &, object_type_t type);
+imobjptridx_t obj_find_first_of_type(fvmobjptridx &, object_type type);
 
 void object_rw_swap(struct object_rw *obj_rw, physfsx_endian swap);
 void reset_player_object(object_base &);

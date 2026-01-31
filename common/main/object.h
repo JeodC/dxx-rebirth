@@ -59,7 +59,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 namespace dcx {
 
 // Object types
-enum object_type_t : uint8_t
+enum object_type : uint8_t
 {
 	OBJ_NONE	= 255, // unused object
 	OBJ_WALL	= 0,   // A wall... not really an object, but used for collisions
@@ -96,8 +96,8 @@ enum class render_type : uint8_t
 enum class contained_object_type : uint8_t
 {
 	None,
-	robot = object_type_t::OBJ_ROBOT,
-	powerup = object_type_t::OBJ_POWERUP,
+	robot = object_type::OBJ_ROBOT,
+	powerup = object_type::OBJ_POWERUP,
 };
 
 static inline bool valid_render_type(const uint8_t r)
@@ -397,7 +397,7 @@ struct object_base
 	enum class control_type : uint8_t;
 	enum class movement_type : uint8_t;
 	object_signature_t signature;
-	object_type_t   type;           // what type of object this is... robot, weapon, hostage, powerup, fireball
+	object_type   type;           // what type of object this is... robot, weapon, hostage, powerup, fireball
 	ubyte   id;             // which form of object...which powerup, robot, etc.
 	objnum_t   next,prev;      // id of next and previous connected object in Objects, -1 = no connection
 	enum control_type control_source;   // how this object is controlled
@@ -569,7 +569,7 @@ struct obj_position
 			dxx_object_type_value == OBJ_COOP ||	\
 			dxx_object_type_value == OBJ_MARKER	\
 		);	\
-		dxx_object_type_ref.type = static_cast<object_type_t>(dxx_object_type_value);	\
+		dxx_object_type_ref.type = static_cast<object_type>(dxx_object_type_value);	\
 	} DXX_END_COMPOUND_STATEMENT )
 
 namespace dsx {
@@ -627,7 +627,7 @@ namespace dsx {
 // initialize a new object.  adds to the list for the given segment
 // returns the object number
 [[nodiscard]]
-imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, object_type_t type, unsigned id, vmsegptridx_t segnum, const vms_vector &pos, const vms_matrix *orient, fix size, enum object::control_type ctype, enum object::movement_type mtype, render_type rtype);
+imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, object_type type, unsigned id, vmsegptridx_t segnum, const vms_vector &pos, const vms_matrix *orient, fix size, enum object::control_type ctype, enum object::movement_type mtype, render_type rtype);
 
 [[nodiscard]]
 imobjptridx_t obj_weapon_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const weapon_info_array &Weapon_info, weapon_id_type id, vmsegptridx_t segnum, const vms_vector &pos, fix size, render_type rtype);
@@ -818,7 +818,7 @@ static inline void set_robot_id(object_base &o, const robot_id id)
 	o.id = {static_cast<std::underlying_type<robot_id>::type>(id)};
 }
 
-void check_warn_object_type(const object_base &, object_type_t, const char *file, unsigned line);
+void check_warn_object_type(const object_base &, object_type, const char *file, unsigned line);
 #define get_player_id(O)	(check_warn_object_type(O, OBJ_PLAYER, __FILE__, __LINE__), get_player_id(O))
 #define get_powerup_id(O)	(check_warn_object_type(O, OBJ_POWERUP, __FILE__, __LINE__), get_powerup_id(O))
 #define get_reactor_id(O)	(check_warn_object_type(O, OBJ_CNTRLCEN, __FILE__, __LINE__), get_reactor_id(O))

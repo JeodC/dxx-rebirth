@@ -150,7 +150,7 @@ void object_goto_next_viewer(const object_array &Objects, const object *&viewer)
 }
 #endif
 
-imobjptridx_t obj_find_first_of_type(fvmobjptridx &vmobjptridx, const object_type_t type)
+imobjptridx_t obj_find_first_of_type(fvmobjptridx &vmobjptridx, const object_type type)
 {
 	range_for (const auto &&i, vmobjptridx)
 	{
@@ -202,8 +202,8 @@ contained_object_type build_contained_object_type_from_untrusted(const uint8_t u
 {
 	switch (untrusted)
 	{
-		case object_type_t::OBJ_POWERUP:
-		case object_type_t::OBJ_ROBOT:
+		case object_type::OBJ_POWERUP:
+		case object_type::OBJ_ROBOT:
 			return contained_object_type{untrusted};
 		default:
 			[[unlikely]];
@@ -1219,7 +1219,7 @@ static void free_object_slots(uint_fast32_t num_used)
 //note that segnum is really just a suggestion, since this routine actually
 //searches for the correct segment
 //returns the object number
-imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const object_type_t type, const unsigned id, vmsegptridx_t segnum, const vms_vector &pos, const vms_matrix *const orient, const fix size, const typename object::control_type ctype, const typename object::movement_type mtype, const render_type rtype)
+imobjptridx_t obj_create(d_level_unique_object_state &LevelUniqueObjectState, const d_level_shared_segment_state &LevelSharedSegmentState, d_level_unique_segment_state &LevelUniqueSegmentState, const object_type type, const unsigned id, vmsegptridx_t segnum, const vms_vector &pos, const vms_matrix *const orient, const fix size, const typename object::control_type ctype, const typename object::movement_type mtype, const render_type rtype)
 {
 	auto &LevelSharedVertexState = LevelSharedSegmentState.get_vertex_state();
 	auto &Objects = LevelUniqueObjectState.Objects;
@@ -2801,7 +2801,7 @@ void object_rw_swap(object_rw *obj, const physfsx_endian swap)
 
 namespace dcx {
 
-void (check_warn_object_type)(const object_base &o, object_type_t t, const char *file, unsigned line)
+void (check_warn_object_type)(const object_base &o, object_type t, const char *file, unsigned line)
 {
 	if (o.type != t)
 		con_printf(CON_URGENT, "%s:%u: BUG: object %p has type %u, expected %u", file, line, &o, o.type, t);
