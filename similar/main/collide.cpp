@@ -2755,6 +2755,24 @@ window_event_result collide_object_with_wall(
 	auto &Objects = LevelUniqueObjectState.Objects;
 
 	switch( A->type )	{
+		case object_type::OBJ_WALL:	// impossible: no object is of type OBJ_WALL
+			[[unlikely]];
+			break;
+		case object_type::OBJ_CNTRLCEN:	// impossible: control centers never move
+			[[unlikely]];
+			break;
+		case object_type::OBJ_CLUTTER:	// impossible: no one ever reported a crash when this type was routed to a `default:` that called `Error`
+			[[unlikely]];
+			break;
+		case object_type::OBJ_LIGHT:	// impossible: no one ever reported a crash when this type was routed to a `default:` that called `Error`; light sources never move
+			[[unlikely]];
+			break;
+		case object_type::OBJ_COOP:	// impossible: OBJ_COOP never moves.  Players spawned in cooperative mode have type OBJ_PLAYER.
+			[[unlikely]];
+			break;
+		case object_type::OBJ_MARKER:	// impossible: markers never move
+			[[unlikely]];
+			break;
 	case OBJ_NONE:
 		Error( "A object of type NONE hit a wall!\n");
 		break;
@@ -2781,9 +2799,6 @@ window_event_result collide_object_with_wall(
 	case OBJ_CAMERA:		break;		//collide_camera_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
 	case OBJ_POWERUP:		break;		//collide_powerup_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
 	case OBJ_GHOST:		break;	//do nothing
-
-	default:
-		Error( "Unhandled object type hit wall in collide.c\n" );
 	}
 
 	return window_event_result::handled;	// assume handled
