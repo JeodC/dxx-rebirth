@@ -2518,63 +2518,63 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 }
 
 #define DXX_MARKER_COLLISION_TABLE_FRAGMENT(NO,DO)	\
-	NO##_SAME_COLLISION(OBJ_MARKER)	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_MARKER, collide_player_and_marker)	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_MARKER)	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_MARKER)	\
-	NO##_COLLISION(OBJ_WEAPON, OBJ_MARKER)	\
-	NO##_COLLISION(OBJ_CAMERA, OBJ_MARKER)	\
-	NO##_COLLISION(OBJ_POWERUP, OBJ_MARKER)	\
+	NO##_SAME_COLLISION(OBJ_MARKER);	\
+	DO##_COLLISION(OBJ_PLAYER, OBJ_MARKER, collide_player_and_marker);	\
+	NO##_COLLISION(OBJ_ROBOT, OBJ_MARKER);	\
+	NO##_COLLISION(OBJ_HOSTAGE, OBJ_MARKER);	\
+	NO##_COLLISION(OBJ_WEAPON, OBJ_MARKER);	\
+	NO##_COLLISION(OBJ_CAMERA, OBJ_MARKER);	\
+	NO##_COLLISION(OBJ_POWERUP, OBJ_MARKER);	\
 	NO##_COLLISION(OBJ_DEBRIS, OBJ_MARKER)	\
 
 #define COLLIDE_IGNORE_COLLISION(Robot_info,O1,O2,C)
 
 #define COLLISION_TABLE(NO,DO)	\
-	NO##_SAME_COLLISION(OBJ_FIREBALL)	\
-	DO##_SAME_COLLISION(OBJ_ROBOT, collide_robot_and_robot)	\
-	NO##_SAME_COLLISION(OBJ_HOSTAGE)	\
-	DO##_SAME_COLLISION(OBJ_PLAYER, collide_player_and_player)	\
-	DO##_SAME_COLLISION(OBJ_WEAPON, collide_weapon_and_weapon)	\
-	NO##_SAME_COLLISION(OBJ_CAMERA)	\
-	NO##_SAME_COLLISION(OBJ_POWERUP)	\
-	NO##_SAME_COLLISION(OBJ_DEBRIS)	\
-	DO##_COLLISION(OBJ_WALL, OBJ_ROBOT, COLLIDE_IGNORE_COLLISION)	\
-	DO##_COLLISION(OBJ_WALL, OBJ_WEAPON, COLLIDE_IGNORE_COLLISION)	\
-	DO##_COLLISION(OBJ_WALL, OBJ_PLAYER, COLLIDE_IGNORE_COLLISION)	\
-	DO##_COLLISION(OBJ_WALL, OBJ_POWERUP, COLLIDE_IGNORE_COLLISION)	\
-	DO##_COLLISION(OBJ_WALL, OBJ_DEBRIS, COLLIDE_IGNORE_COLLISION)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_ROBOT)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_HOSTAGE)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_PLAYER)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_WEAPON)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_CAMERA)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_POWERUP)	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_DEBRIS)	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_HOSTAGE)	\
-	DO##_COLLISION(OBJ_ROBOT, OBJ_PLAYER,  collide_robot_and_player)	\
-	DO##_COLLISION(OBJ_ROBOT, OBJ_WEAPON,  collide_robot_and_weapon)	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_CAMERA)	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_POWERUP)	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_DEBRIS)	\
-	DO##_COLLISION(OBJ_HOSTAGE, OBJ_PLAYER,  collide_hostage_and_player)	\
-	DO##_COLLISION(OBJ_HOSTAGE, OBJ_WEAPON, COLLIDE_IGNORE_COLLISION)	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_CAMERA)	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_POWERUP)	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_DEBRIS)	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_WEAPON,  collide_player_and_weapon)	\
-	NO##_COLLISION(OBJ_PLAYER, OBJ_CAMERA)	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_POWERUP, collide_player_and_powerup)	\
-	NO##_COLLISION(OBJ_PLAYER, OBJ_DEBRIS)	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_CNTRLCEN, collide_player_and_controlcen)	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_CLUTTER, collide_player_and_clutter)	\
-	NO##_COLLISION(OBJ_WEAPON, OBJ_CAMERA)	\
-	NO##_COLLISION(OBJ_WEAPON, OBJ_POWERUP)	\
-	DO##_COLLISION(OBJ_WEAPON, OBJ_DEBRIS,  collide_weapon_and_debris)	\
-	NO##_COLLISION(OBJ_CAMERA, OBJ_POWERUP)	\
-	NO##_COLLISION(OBJ_CAMERA, OBJ_DEBRIS)	\
-	NO##_COLLISION(OBJ_POWERUP, OBJ_DEBRIS)	\
-	DO##_COLLISION(OBJ_WEAPON, OBJ_CNTRLCEN, collide_weapon_and_controlcen)	\
-	DO##_COLLISION(OBJ_ROBOT, OBJ_CNTRLCEN, collide_robot_and_controlcen)	\
+	NO##_SAME_COLLISION(OBJ_FIREBALL);	\
+	DO##_SAME_COLLISION(OBJ_ROBOT, collide_robot_and_robot);	\
+	NO##_SAME_COLLISION(OBJ_HOSTAGE);	\
+	DO##_SAME_COLLISION(OBJ_PLAYER, collide_player_and_player);	\
+	DO##_SAME_COLLISION(OBJ_WEAPON, collide_weapon_and_weapon);	\
+	NO##_SAME_COLLISION(OBJ_CAMERA);	\
+	NO##_SAME_COLLISION(OBJ_POWERUP);	\
+	NO##_SAME_COLLISION(OBJ_DEBRIS);	\
+	DO##_COLLISION(OBJ_WALL, OBJ_ROBOT, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(OBJ_WALL, OBJ_WEAPON, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(OBJ_WALL, OBJ_PLAYER, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(OBJ_WALL, OBJ_POWERUP, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(OBJ_WALL, OBJ_DEBRIS, COLLIDE_IGNORE_COLLISION);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_ROBOT);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_HOSTAGE);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_PLAYER);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_WEAPON);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_CAMERA);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_POWERUP);	\
+	NO##_COLLISION(OBJ_FIREBALL, OBJ_DEBRIS);	\
+	NO##_COLLISION(OBJ_ROBOT, OBJ_HOSTAGE);	\
+	DO##_COLLISION(OBJ_ROBOT, OBJ_PLAYER,  collide_robot_and_player);	\
+	DO##_COLLISION(OBJ_ROBOT, OBJ_WEAPON,  collide_robot_and_weapon);	\
+	NO##_COLLISION(OBJ_ROBOT, OBJ_CAMERA);	\
+	NO##_COLLISION(OBJ_ROBOT, OBJ_POWERUP);	\
+	NO##_COLLISION(OBJ_ROBOT, OBJ_DEBRIS);	\
+	DO##_COLLISION(OBJ_HOSTAGE, OBJ_PLAYER,  collide_hostage_and_player);	\
+	DO##_COLLISION(OBJ_HOSTAGE, OBJ_WEAPON, COLLIDE_IGNORE_COLLISION);	\
+	NO##_COLLISION(OBJ_HOSTAGE, OBJ_CAMERA);	\
+	NO##_COLLISION(OBJ_HOSTAGE, OBJ_POWERUP);	\
+	NO##_COLLISION(OBJ_HOSTAGE, OBJ_DEBRIS);	\
+	DO##_COLLISION(OBJ_PLAYER, OBJ_WEAPON,  collide_player_and_weapon);	\
+	NO##_COLLISION(OBJ_PLAYER, OBJ_CAMERA);	\
+	DO##_COLLISION(OBJ_PLAYER, OBJ_POWERUP, collide_player_and_powerup);	\
+	NO##_COLLISION(OBJ_PLAYER, OBJ_DEBRIS);	\
+	DO##_COLLISION(OBJ_PLAYER, OBJ_CNTRLCEN, collide_player_and_controlcen);	\
+	DO##_COLLISION(OBJ_PLAYER, OBJ_CLUTTER, collide_player_and_clutter);	\
+	NO##_COLLISION(OBJ_WEAPON, OBJ_CAMERA);	\
+	NO##_COLLISION(OBJ_WEAPON, OBJ_POWERUP);	\
+	DO##_COLLISION(OBJ_WEAPON, OBJ_DEBRIS,  collide_weapon_and_debris);	\
+	NO##_COLLISION(OBJ_CAMERA, OBJ_POWERUP);	\
+	NO##_COLLISION(OBJ_CAMERA, OBJ_DEBRIS);	\
+	NO##_COLLISION(OBJ_POWERUP, OBJ_DEBRIS);	\
+	DO##_COLLISION(OBJ_WEAPON, OBJ_CNTRLCEN, collide_weapon_and_controlcen);	\
+	DO##_COLLISION(OBJ_ROBOT, OBJ_CNTRLCEN, collide_robot_and_controlcen);	\
 	DO##_COLLISION(OBJ_WEAPON, OBJ_CLUTTER, collide_weapon_and_clutter)	\
 
 
@@ -2585,21 +2585,21 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 	case COLLISION_OF( (type1), (type2) ):	\
 		static_assert(type1 < type2, "do " #type1 " < " #type2);	\
 		collision_function(Robot_info, (A), (B), collision_point);	\
-		break;
+		break
 #define DO_SAME_COLLISION(type1,collision_function)	\
 	case COLLISION_OF( (type1), (type1) ):	\
 		collision_function(Robot_info, (A), (B), collision_point);	\
-		break;
+		break
 
 //these next two macros define a case that does nothing
 #define NO_COLLISION(type1,type2)	\
 	case COLLISION_OF( (type1), (type2) ):	\
 		static_assert(type1 < type2, "no " #type1 " < " #type2);	\
-		break;
+		break
 
 #define NO_SAME_COLLISION(type1)	\
 	case COLLISION_OF( (type1), (type1) ):	\
-		break;
+		break
 
 template <typename T, std::size_t V>
 struct assert_no_truncation
@@ -2625,7 +2625,7 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 	struct assert_object_type_not_truncated : std::pair<assert_no_truncation<decltype(at), MAX_OBJECT_TYPES>, assert_no_truncation<decltype(bt), MAX_OBJECT_TYPES>> {};
 	struct assert_collision_of_not_truncated : assert_no_truncation<decltype(collision_type), COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1)> {};
 	switch( collision_type )	{
-		COLLISION_TABLE(NO,DO)
+		COLLISION_TABLE(NO,DO);
 #if DXX_BUILD_DESCENT == 2
 		/* Only Descent 2 defines the function that is called in case of a
 		 * collision.
@@ -2644,14 +2644,14 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 
 #define ENABLE_COLLISION(type1,type2,f)	\
 	COLLISION_RESULT(type1, type2, collision_result::check);	\
-	COLLISION_RESULT(type2, type1, collision_result::check);	\
+	COLLISION_RESULT(type2, type1, collision_result::check)	\
 
 #define DISABLE_COLLISION(type1,type2)	\
 	COLLISION_RESULT(type1, type2, collision_result::ignore);	\
-	COLLISION_RESULT(type2, type1, collision_result::ignore);	\
+	COLLISION_RESULT(type2, type1, collision_result::ignore)	\
 
-#define ENABLE_SAME_COLLISION(type,f)	COLLISION_RESULT(type, type, collision_result::check);
-#define DISABLE_SAME_COLLISION(type)	COLLISION_RESULT(type, type, collision_result::ignore);
+#define ENABLE_SAME_COLLISION(type,f)	COLLISION_RESULT(type, type, collision_result::check)
+#define DISABLE_SAME_COLLISION(type)	COLLISION_RESULT(type, type, collision_result::ignore)
 
 #define COLLISION_RESULT(type1,type2,value)	\
 	result[COLLISION_OF((type1), (type2))] = (value == collision_result::check)
