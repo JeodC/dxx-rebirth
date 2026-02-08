@@ -2517,11 +2517,7 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 	return;
 }
 
-#if DXX_BUILD_DESCENT == 1
-#define DXX_COLLISION_TABLE(NO,DO)	\
-
-#elif DXX_BUILD_DESCENT == 2
-#define DXX_COLLISION_TABLE(NO,DO)	\
+#define DXX_MARKER_COLLISION_TABLE_FRAGMENT(NO,DO)	\
 	NO##_SAME_COLLISION(OBJ_MARKER)	\
 	DO##_COLLISION(OBJ_PLAYER, OBJ_MARKER, collide_player_and_marker)	\
 	NO##_COLLISION(OBJ_ROBOT, OBJ_MARKER)	\
@@ -2530,8 +2526,6 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 	NO##_COLLISION(OBJ_CAMERA, OBJ_MARKER)	\
 	NO##_COLLISION(OBJ_POWERUP, OBJ_MARKER)	\
 	NO##_COLLISION(OBJ_DEBRIS, OBJ_MARKER)	\
-
-#endif
 
 #define COLLIDE_IGNORE_COLLISION(Robot_info,O1,O2,C)
 
@@ -2582,7 +2576,6 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 	DO##_COLLISION(OBJ_WEAPON, OBJ_CNTRLCEN, collide_weapon_and_controlcen)	\
 	DO##_COLLISION(OBJ_ROBOT, OBJ_CNTRLCEN, collide_robot_and_controlcen)	\
 	DO##_COLLISION(OBJ_WEAPON, OBJ_CLUTTER, collide_weapon_and_clutter)	\
-	DXX_COLLISION_TABLE(NO,DO)	\
 
 
 /* DPH: Put these macros on one long line to avoid CR/LF problems on linux */
@@ -2633,6 +2626,15 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 	struct assert_collision_of_not_truncated : assert_no_truncation<decltype(collision_type), COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1)> {};
 	switch( collision_type )	{
 		COLLISION_TABLE(NO,DO)
+#if DXX_BUILD_DESCENT == 2
+		/* Only Descent 2 defines the function that is called in case of a
+		 * collision.
+		 *
+		 * Descent 1 never creates markers, so there is no need to handle that
+		 * collision case in D1.
+		 */
+		DXX_MARKER_COLLISION_TABLE_FRAGMENT(NO, DO);
+#endif
 	default:
 		Int3();	//Error( "Unhandled collision_type in collide.c!\n" );
 	}
@@ -2654,7 +2656,7 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 #define COLLISION_RESULT(type1,type2,value)	\
 	result[COLLISION_OF((type1), (type2))] = (value == collision_result::check)
 
-namespace dsx {
+namespace dcx {
 
 #if DXX_HAVE_STDCXX_CONSTEXPR_BITSET_MODIFIER_METHODS
 constexpr
@@ -2664,6 +2666,11 @@ const
 std::bitset<256> CollisionResult{[]{
 	std::bitset<256> result{};
 	COLLISION_TABLE(DISABLE, ENABLE);
+	/* Always define the marker collision rules.  They will never match in D1,
+	 * but they do not consume extra space, and defining them in D1 allows
+	 * `CollisionResult` to be in `dcx`.
+	 */
+	DXX_MARKER_COLLISION_TABLE_FRAGMENT(DISABLE, ENABLE);
 	return result;
 }()};
 

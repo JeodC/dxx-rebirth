@@ -30,11 +30,6 @@ struct d_level_unique_control_center_state;
 // Render types
 enum class render_type : uint8_t;
 
-}
-
-#ifdef DXX_BUILD_DESCENT
-namespace dsx {
-
 /* To reliably disambiguate results, the left object's type must be multiplied
  * by at least `MAX_OBJECT_TYPES`, since any lesser multiplier would allow two
  * different `object_type` pairs to yield the same index in the lookup table.
@@ -60,6 +55,10 @@ namespace dsx {
  */
 extern const std::bitset<256> CollisionResult;
 
+}
+
+#ifdef DXX_BUILD_DESCENT
+namespace dsx {
 struct object;
 struct d_level_unique_object_state;
 }
