@@ -2733,6 +2733,31 @@ unsigned g(unsigned i)
 			return
 		raise SCons.Errors.StopError("C++ compiler rejects braced scalar initialization, even with `-Wno-braced-scalar-init`.")
 
+	@_custom_test
+	def check_libstdcxx_constexpr_bitset_modifier_methods(self,context,_text='''
+#include <bitset>
+
+constexpr std::bitset<4> f()
+{
+	std::bitset<4> r;
+	r.set(1);
+	r.reset(2);
+	return r;
+}
+''',_main='''
+	return f().test(1);
+'''):
+		result = self.Compile(context, text=_text, main=_main, msg='whether std::bitset::set modifier methods are constexpr')
+		# `std::bitset::set()` and `std::bitset::reset()` are `constexpr` as of
+		# C++23.  gcc-12 has some C++23 support, but did not define these as
+		# `constexpr`.  Invoking a non-`constexpr` method from a `constexpr`
+		# context is an error.  Define this symbol so that call sites can be
+		# `constexpr` if the underlying methods can be called from a
+		# `constexpr` context, and can be non-`constexpr` (and therefore
+		# require runtime evaluation) if the bitset methods are not
+		# `constexpr`.
+		context.sconf.Define('DXX_HAVE_STDCXX_CONSTEXPR_BITSET_MODIFIER_METHODS', '1' if result else '0', 'True if (`std::bitset::set` and `std::bitset::reset` are `constexpr`) else False')
+
 	__preferred_compiler_options = (
 		# Support for option '-fstrict-flex-arrays':
 		# <=gcc-12: no

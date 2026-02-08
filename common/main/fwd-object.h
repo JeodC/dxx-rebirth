@@ -18,6 +18,7 @@
 #include "fwd-valptridx.h"
 #include "polyobj.h"
 #include <array>
+#include <bitset>
 
 namespace dcx {
 
@@ -33,6 +34,32 @@ enum class render_type : uint8_t;
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
+
+/* To reliably disambiguate results, the left object's type must be multiplied
+ * by at least `MAX_OBJECT_TYPES`, since any lesser multiplier would allow two
+ * different `object_type` pairs to yield the same index in the lookup table.
+ * However, a larger multiplier is legal, at the price of leaving unused
+ * elements in the table.  Therefore, for efficient math, both games will
+ * multiply by 16 (`d2x::MAX_OBJECT_TYPES`).  This is the minimum required
+ * multiplier in D2X, and only leaves minor holes in D1X.
+ *
+ * The highest valid index is
+ * `((MAX_OBJECT_TYPES - 1) * multiplier) + (MAX_OBJECT_TYPES - 1)`,
+ * which would be required when testing a collision between two objects of the
+ * highest legal type.  d1x::MAX_OBJECT_TYPES = 15, which would
+ * produce a `(14 * 16) + 14` = 238, so D1X needs at least `std::bitset<239>`,
+ * so that `CollisionResult[238]` is valid.  d2x::MAX_OBJECT_TYPES = 16, which
+ * would produce `(15 * 16) + 15` = 255, so D2X needs at least
+ * `std::bitset<256>`.
+ *
+ * gcc libstdc++ `bitset` uses `long` internally, so on 64-bit systems,
+ * `bitset<N>` needs `long[ceil(N / 64)]` of storage.  `bitset<239>` needs
+ * `long[ceil(3.734375)]` = `long[4]`.  `bitset<256>` needs `long[ceil(4)]` =
+ * `long[4]`, so `bitset<239>` would not save any space over using
+ * `bitset<256>`.  Therefore, use `std::bitset<256>` in both games.
+ */
+extern const std::bitset<256> CollisionResult;
+
 struct object;
 struct d_level_unique_object_state;
 }
@@ -144,10 +171,6 @@ struct object_rw;
 struct powerup_info_rw;
 struct window_rendered_data;
 struct reactor_static;
-
-using collision_inner_array_t = std::array<collision_result, MAX_OBJECT_TYPES>;
-using collision_outer_array_t = std::array<collision_inner_array_t, MAX_OBJECT_TYPES>;
-extern const collision_outer_array_t CollisionResult;
 
 }
 #endif

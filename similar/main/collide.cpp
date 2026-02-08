@@ -2651,76 +2651,38 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 #define ENABLE_SAME_COLLISION(type,f)	COLLISION_RESULT(type, type, collision_result::check);
 #define DISABLE_SAME_COLLISION(type)	COLLISION_RESULT(type, type, collision_result::ignore);
 
-namespace {
-
-/* If not otherwise specified, collision results are ignored. */
-template <object_type A, object_type B>
-inline constexpr collision_result collision_result_t{collision_result::ignore};
-
-/* Create symmetric collisions.  For any <A,B> where (B < A), use the result of
- * <B,A>.
- */
-template <object_type A, object_type B>
-requires(B < A)
-inline constexpr collision_result collision_result_t<A, B>{collision_result_t<B, A>};
-
-#define COLLISION_RESULT(type1,type2,result)	\
-	template <>	\
-	inline constexpr collision_result collision_result_t<type1, type2>{result}
-
-COLLISION_TABLE(DISABLE, ENABLE);
-
-template <std::size_t R, typename C>
-[[deprecated("only specializations can be used")]]
-inline constexpr collision_inner_array_t collision_inner_array
-#ifdef __clang__
-{}
-#endif
-;
-
-template <std::size_t R, std::size_t... C>
-requires(
-	(COLLISION_OF(R, 0) < COLLISION_OF(R, sizeof...(C) - 1)) &&
-	(COLLISION_OF(R, sizeof...(C) - 1) < COLLISION_OF(R + 1, 0))
-)
-inline constexpr collision_inner_array_t collision_inner_array<R, std::index_sequence<C...>>{{
-	collision_result_t<static_cast<object_type>(R), static_cast<object_type>(C)>...
-}};
-
-template <typename R, typename C>
-[[deprecated("only specializations can be used")]]
-inline constexpr collision_outer_array_t collision_outer_array
-#ifdef __clang__
-{}
-#endif
-;
-
-template <std::size_t... R, typename C>
-inline constexpr collision_outer_array_t collision_outer_array<std::index_sequence<R...>, C>{{
-	collision_inner_array<static_cast<object_type>(R), C>...
-}};
-
-}
+#define COLLISION_RESULT(type1,type2,value)	\
+	result[COLLISION_OF((type1), (type2))] = (value == collision_result::check)
 
 namespace dsx {
 
-constexpr collision_outer_array_t CollisionResult{collision_outer_array<std::make_index_sequence<MAX_OBJECT_TYPES>, std::make_index_sequence<MAX_OBJECT_TYPES>>};
+#if DXX_HAVE_STDCXX_CONSTEXPR_BITSET_MODIFIER_METHODS
+constexpr
+#else
+const
+#endif
+std::bitset<256> CollisionResult{[]{
+	std::bitset<256> result{};
+	COLLISION_TABLE(DISABLE, ENABLE);
+	return result;
+}()};
 
 }
 
 #undef DISABLE_COLLISION
 #undef ENABLE_COLLISION
 
+#if DXX_HAVE_STDCXX_CONSTEXPR_BITSET_MODIFIER_METHODS
 #define ENABLE_COLLISION(T1,T2)	static_assert(	\
-	collision_result_t<T1, T2> == collision_result::check &&	\
-	collision_result_t<T2, T1> == collision_result::check,	\
-	#T1 " " #T2	\
-	)
+	(	\
+	CollisionResult[COLLISION_OF((T1), (T2))] &&	\
+	CollisionResult[COLLISION_OF((T2), (T1))]	\
+	),	#T1 " " #T2)
 #define DISABLE_COLLISION(T1,T2)	static_assert(	\
-	collision_result_t<T1, T2> == collision_result::ignore &&	\
-	collision_result_t<T2, T1> == collision_result::ignore,	\
-	#T1 " " #T2	\
-	)
+	(	\
+	!CollisionResult[COLLISION_OF((T1), (T2))] &&	\
+	!CollisionResult[COLLISION_OF((T2), (T1))]	\
+	),	#T1 " " #T2)
 
 	ENABLE_COLLISION( OBJ_WALL, OBJ_ROBOT );
 	ENABLE_COLLISION( OBJ_WALL, OBJ_WEAPON );
@@ -2773,6 +2735,7 @@ constexpr collision_outer_array_t CollisionResult{collision_outer_array<std::mak
 	ENABLE_COLLISION( OBJ_PLAYER, OBJ_MARKER );
 #endif
 	ENABLE_COLLISION( OBJ_DEBRIS, OBJ_WALL );
+#endif
 
 namespace dsx {
 

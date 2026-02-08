@@ -802,7 +802,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 		 */
 		const vcobjptridx_t thisobjnum = fq.thisobjnum;
 		const auto this_is_robot{thisobjnum->type == OBJ_ROBOT};
-		const auto &collision = CollisionResult[thisobjnum->type];
+		const auto this_collision_upper_bits{static_cast<unsigned>(thisobjnum->type) << 4};
 		const auto Robot_info{fq.Robot_info};
 		const robot_info *const robptrthis{this_is_robot
 			? &(assert(Robot_info != nullptr), (*Robot_info)[get_robot_id(thisobjnum)])
@@ -814,7 +814,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 				continue;
 			if (objnum->flags & OF_SHOULD_BE_DEAD)
 				continue;
-			if (collision[objnum->type] == collision_result::ignore)
+			if (collision_result{CollisionResult[this_collision_upper_bits | static_cast<unsigned>(objnum->type)]} == collision_result::ignore)
 				continue;
 			if (laser_are_related(objnum, thisobjnum))
 				continue;
@@ -871,7 +871,11 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 		}
 	}
 
-	if (fq.thisobjnum != object_none && CollisionResult[fq.thisobjnum->type][OBJ_WALL] == collision_result::ignore)
+	/* `OBJ_WALL == 0`, so the left hand term of `|` is unnecessary.  However,
+	 * it is kept for consistency with other uses where both terms need to be
+	 * used.  The compiler should optimize out the resulting `0 |` in this case.
+	 */
+	if (fq.thisobjnum != object_none && collision_result{CollisionResult[(OBJ_WALL << 4) | static_cast<unsigned>(fq.thisobjnum->type)]} == collision_result::ignore)
 		rad = 0;		//HACK - ignore when edges hit walls
 
 	//now, check segment walls
