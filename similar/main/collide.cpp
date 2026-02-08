@@ -2602,10 +2602,7 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 		break
 
 template <typename T, std::size_t V>
-struct assert_no_truncation
-{
-	static_assert(static_cast<T>(V) == V, "truncation error");
-};
+concept require_no_truncation = requires { T{V}; };
 
 }
 
@@ -2616,14 +2613,15 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 		using std::swap;
 		swap(A, B);
 	}
-	uint_fast8_t at, bt;
-	const char *emsg;
-	if (((at = A->type) >= MAX_OBJECT_TYPES && (emsg = "illegal object type A", true)) ||
-		((bt = B->type) >= MAX_OBJECT_TYPES && (emsg = "illegal object type B", true)))
-		throw std::runtime_error(emsg);
-	uint_fast8_t collision_type = COLLISION_OF(at, bt);
-	struct assert_object_type_not_truncated : std::pair<assert_no_truncation<decltype(at), MAX_OBJECT_TYPES>, assert_no_truncation<decltype(bt), MAX_OBJECT_TYPES>> {};
-	struct assert_collision_of_not_truncated : assert_no_truncation<decltype(collision_type), COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1)> {};
+	const auto u_a_type{underlying_value(A->type)}, u_b_type{underlying_value(B->type)};
+	static_assert(require_no_truncation<decltype(u_a_type), MAX_OBJECT_TYPES>);
+	if (u_a_type >= MAX_OBJECT_TYPES ||
+		u_b_type >= MAX_OBJECT_TYPES) [[unlikely]]
+		/* No object should have a type that triggers this return. */
+		return;
+	const auto collision_type{COLLISION_OF(u_a_type, u_b_type)};
+	static_assert(require_no_truncation<decltype(collision_type), COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1)>);
+	static_assert(requires { requires (COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1) < CollisionResult.size()); });
 	switch( collision_type )	{
 		COLLISION_TABLE(NO,DO);
 #if DXX_BUILD_DESCENT == 2
