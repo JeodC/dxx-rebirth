@@ -31,20 +31,26 @@ public:
 };
 
 template <typename exception_type>
+void PHYSFSX_serialize_read_bytes(const NamedPHYSFS_File fp, uint8_t *const buf, const std::size_t size)
+{
+	if (PHYSFSX_readBytes(fp, buf, size) != size) [[unlikely]]
+		throw exception_type{fp};
+}
+
+template <typename exception_type>
 void PHYSFSX_serialize_write_bytes(PHYSFS_File *fp, const uint8_t *const buf, const std::size_t size)
 {
 	if (PHYSFS_writeBytes(fp, buf, size) != size) [[unlikely]]
 		throw exception_type{fp};
 }
 
-template <typename T, typename E = PHYSFSX_short_read>
+template <typename T, std::endian endian_value = std::endian::little, typename exception_type = PHYSFSX_short_read>
 void PHYSFSX_serialize_read(const NamedPHYSFS_File fp, T &t)
 {
-	const std::size_t maximum_size{serial::message_type<T>::maximum_size};
+	constexpr std::size_t maximum_size{serial::message_type<T>::maximum_size};
 	uint8_t buf[maximum_size];
-	if (PHYSFSX_readBytes(fp, buf, maximum_size) != maximum_size)
-		throw E(fp);
-	serial::reader::le_bytebuffer b{buf};
+	PHYSFSX_serialize_read_bytes<exception_type>(fp, buf, maximum_size);
+	serial::reader::bytebuffer<endian_value> b{buf};
 	serial::process_buffer(b, t);
 }
 
