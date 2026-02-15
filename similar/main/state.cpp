@@ -521,7 +521,7 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 {
 	obj = {};
 	DXX_POISON_VAR(obj, 0xfd);
-	set_object_type(obj, obj_rw->type);
+	obj.type = build_valid_object_type_from_untrusted({obj_rw->type});
 	if (obj.type == OBJ_NONE)
 	{
 		obj.signature = object_signature_t{0};

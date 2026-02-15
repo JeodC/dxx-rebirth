@@ -164,6 +164,33 @@ imobjptridx_t obj_find_first_of_type(fvmobjptridx &vmobjptridx, const object_typ
 
 namespace dcx {
 
+object_type build_valid_object_type_from_untrusted(uint8_t t)
+{
+	switch (const object_type o{t})
+	{
+		case object_type::OBJ_NONE:
+		case object_type::OBJ_WALL:
+		case object_type::OBJ_FIREBALL:
+		case object_type::OBJ_ROBOT:
+		case object_type::OBJ_HOSTAGE:
+		case object_type::OBJ_PLAYER:
+		case object_type::OBJ_WEAPON:
+		case object_type::OBJ_CAMERA:
+		case object_type::OBJ_POWERUP:
+		case object_type::OBJ_DEBRIS:
+		case object_type::OBJ_CNTRLCEN:
+		case object_type::OBJ_CLUTTER:
+		case object_type::OBJ_GHOST:
+		case object_type::OBJ_LIGHT:
+		case object_type::OBJ_COOP:
+		case object_type::OBJ_MARKER:
+			return o;
+		default:
+			[[unlikely]];
+			return object_type::OBJ_NONE;
+	}
+}
+
 namespace {
 
 constexpr powerup_type_t build_contained_object_powerup_id_from_untrusted(const uint8_t untrusted)

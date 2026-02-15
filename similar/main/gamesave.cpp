@@ -336,7 +336,7 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 {
 	DXX_POISON_MEMORY(std::span<object>(&*obj, 1), 0xfd);
 	obj->signature = object_signature_t{0};
-	set_object_type(*obj, PHYSFSX_readByte(f));
+	obj->type = build_valid_object_type_from_untrusted(PHYSFSX_readByte(f));
 	obj->id             = PHYSFSX_readByte(f);
 
 	if (obj->type == OBJ_ROBOT)

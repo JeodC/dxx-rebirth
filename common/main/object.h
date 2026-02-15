@@ -133,6 +133,12 @@ struct contained_object_parameters
 };
 #endif
 
+/* If `t` is any of the named enumerators in `enum object_type`, then return
+ * `object_type{t}`.  Otherwise, return `object_type::OBJ_NONE`.
+ */
+[[nodiscard]]
+object_type build_valid_object_type_from_untrusted(uint8_t t);
+
 }
 
 namespace dsx {
@@ -547,30 +553,6 @@ struct obj_position
 };
 
 }
-
-#define set_object_type(O,T)	\
-	( DXX_BEGIN_COMPOUND_STATEMENT {	\
-		object_base &dxx_object_type_ref = (O);	\
-		const uint8_t &dxx_object_type_value = (T);	\
-		assert(	\
-			dxx_object_type_value == OBJ_NONE ||	\
-			dxx_object_type_value == OBJ_FIREBALL ||	\
-			dxx_object_type_value == OBJ_ROBOT ||	\
-			dxx_object_type_value == OBJ_HOSTAGE ||	\
-			dxx_object_type_value == OBJ_PLAYER ||	\
-			dxx_object_type_value == OBJ_WEAPON ||	\
-			dxx_object_type_value == OBJ_CAMERA ||	\
-			dxx_object_type_value == OBJ_POWERUP ||	\
-			dxx_object_type_value == OBJ_DEBRIS ||	\
-			dxx_object_type_value == OBJ_CNTRLCEN ||	\
-			dxx_object_type_value == OBJ_CLUTTER ||	\
-			dxx_object_type_value == OBJ_GHOST ||	\
-			dxx_object_type_value == OBJ_LIGHT ||	\
-			dxx_object_type_value == OBJ_COOP ||	\
-			dxx_object_type_value == OBJ_MARKER	\
-		);	\
-		dxx_object_type_ref.type = static_cast<object_type>(dxx_object_type_value);	\
-	} DXX_END_COMPOUND_STATEMENT )
 
 namespace dsx {
 
