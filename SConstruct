@@ -546,7 +546,11 @@ void f_%(N)s(T)
 #include <algorithm>
 #include <ranges>
 
-struct test_borrowed_range {};
+struct test_borrowed_range
+{
+	int *begin() { return nullptr; }
+	int *end() { return nullptr; }
+};
 
 template <>
 constexpr bool std::ranges::enable_borrowed_range<test_borrowed_range> = true;
@@ -579,6 +583,7 @@ static void requires_borrowed_range(R &&) {}
 	requires_range(a);
 	requires_input_range(a);
 	requires_borrowed_range(a);
+	requires_borrowed_range(test_borrowed_range{});
 	return 0;
 '''),
 		Cxx20RequiredFeature('std::span', '''
