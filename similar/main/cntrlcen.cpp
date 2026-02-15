@@ -79,12 +79,19 @@ namespace {
 
 static window_event_result do_countdown_frame();
 
-static inline const reactor &get_reactor_definition(const std::size_t id)
+constexpr const reactor &get_reactor_definition(const object_base &obj
+#if DXX_HAVE_CXX_BUILTIN_FILE_LINE
+	, const char *const file = __builtin_FILE(), const unsigned line = __builtin_LINE()
+#endif
+)
 {
+#if DXX_HAVE_CXX_BUILTIN_FILE_LINE
+	check_warn_object_type(obj, OBJ_CNTRLCEN, file, line);
+#endif
 #if DXX_BUILD_DESCENT == 1
-	(void)id;
+	static_cast<void>(obj);
 #elif DXX_BUILD_DESCENT == 2
-	if (id < Reactors.size()) [[likely]]
+	if (const std::size_t id{obj.id}; id < Reactors.size()) [[likely]]
 		return Reactors[id];
 #endif
 	return Reactors[0];
@@ -96,7 +103,7 @@ void calc_controlcen_gun_point(object &obj)
 {
 	assert(obj.type == OBJ_CNTRLCEN);
 	assert(obj.render_type == render_type::RT_POLYOBJ);
-	auto &reactor = get_reactor_definition(get_reactor_id(obj));
+	auto &reactor{get_reactor_definition(obj)};
 	for (uint_fast32_t i = reactor.n_guns; i--;)
 	{
 		/* Set the position and direction of reactor gun number `gun_num` based
@@ -423,7 +430,7 @@ void do_controlcen_frame(const d_robot_info_array &Robot_info, const vmobjptridx
 	{
 		auto &player_info = plrobj.ctype.player_info;
 		const auto &player_pos = (player_info.powerup_flags & PLAYER_FLAGS_CLOAKED) ? Believed_player_pos : ConsoleObject->pos;
-		if (const auto opt_best_gun{calc_best_gun(get_reactor_definition(get_reactor_id(obj)).n_guns, obj, player_pos)})
+		if (const auto opt_best_gun{calc_best_gun(get_reactor_definition(obj).n_guns, obj, player_pos)})
 		{
 			const auto best_gun_num{*opt_best_gun};
 			fix			delta_fire_time;

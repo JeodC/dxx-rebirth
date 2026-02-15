@@ -770,11 +770,6 @@ static inline unsigned get_player_id(const object_base &o)
 	return o.id;
 }
 
-static inline uint8_t get_reactor_id(const object_base &o)
-{
-	return o.id;
-}
-
 static constexpr vclip_index get_fireball_id(const object_base &o)
 {
 	return vclip_index{o.id};
@@ -803,7 +798,6 @@ static inline void set_robot_id(object_base &o, const robot_id id)
 void check_warn_object_type(const object_base &, object_type, const char *file, unsigned line);
 #define get_player_id(O)	(check_warn_object_type(O, OBJ_PLAYER, __FILE__, __LINE__), get_player_id(O))
 #define get_powerup_id(O)	(check_warn_object_type(O, OBJ_POWERUP, __FILE__, __LINE__), get_powerup_id(O))
-#define get_reactor_id(O)	(check_warn_object_type(O, OBJ_CNTRLCEN, __FILE__, __LINE__), get_reactor_id(O))
 #define get_ghost_id(O)	(check_warn_object_type(O, OBJ_GHOST, __FILE__, __LINE__), (get_player_id)(O))
 #define get_fireball_id(O)	(check_warn_object_type(O, OBJ_FIREBALL, __FILE__, __LINE__), get_fireball_id(O))
 #define get_robot_id(O)	(check_warn_object_type(O, OBJ_ROBOT, __FILE__, __LINE__), get_robot_id(O))
