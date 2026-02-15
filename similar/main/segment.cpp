@@ -60,7 +60,7 @@ std::optional<sidenum_t> build_sidenum_from_untrusted(const uint8_t untrusted)
 
 void segment_side_wall_tmap_write(PHYSFS_File *fp, const shared_side &sside, const unique_side &uside)
 {
-	PHYSFSX_serialize_write(fp, composite_side{sside, uside});
+	PHYSFSX_serialize_write<composite_side, std::endian::native>(fp, composite_side{sside, uside});
 }
 
 imsegidx_t read_untrusted_segnum_le16(NamedPHYSFS_File fp)
