@@ -83,10 +83,11 @@ static inline const reactor &get_reactor_definition(const std::size_t id)
 {
 #if DXX_BUILD_DESCENT == 1
 	(void)id;
-	return Reactors[0];
 #elif DXX_BUILD_DESCENT == 2
-	return Reactors[id];
+	if (id < Reactors.size()) [[likely]]
+		return Reactors[id];
 #endif
+	return Reactors[0];
 }
 
 }
