@@ -86,7 +86,7 @@ constexpr const reactor &get_reactor_definition(const object_base &obj
 )
 {
 #if DXX_HAVE_CXX_BUILTIN_FILE_LINE
-	check_warn_object_type(obj, OBJ_CNTRLCEN, file, line);
+	check_warn_object_type(obj, object_type::OBJ_CNTRLCEN, file, line);
 #endif
 #if DXX_BUILD_DESCENT == 1
 	static_cast<void>(obj);
@@ -101,14 +101,14 @@ constexpr const reactor &get_reactor_definition(const object_base &obj
 
 void calc_controlcen_gun_point(object &obj)
 {
-	assert(obj.type == OBJ_CNTRLCEN);
+	assert(obj.type == object_type::OBJ_CNTRLCEN);
 	assert(obj.render_type == render_type::RT_POLYOBJ);
 	auto &reactor{get_reactor_definition(obj)};
 	for (uint_fast32_t i = reactor.n_guns; i--;)
 	{
 		/* Set the position and direction of reactor gun number `gun_num` based
 		 * on the definition of a reactor, the current position of an object
-		 * that is of type OBJ_CNTRLCEN, and the orientation of that object.
+		 * that is of type object_type::OBJ_CNTRLCEN, and the orientation of that object.
 		 */
 		const auto &&m{vm_transposed_matrix(obj.orient)};
 		reconstruct_at(obj.ctype.reactor_info.gun_pos[i], vm_vec_build_add, obj.pos, vm_vec_build_rotated(reactor.gun_points[i], m));
@@ -502,12 +502,12 @@ void init_controlcen_for_level(const d_robot_info_array &Robot_info)
 	auto &Objects = LevelUniqueObjectState.Objects;
 	for (auto &obj : Objects.vmptr)
 	{
-		if (obj.type == OBJ_CNTRLCEN)
+		if (obj.type == object_type::OBJ_CNTRLCEN)
 		{
 			if (cntrlcen_objp == nullptr)
 				cntrlcen_objp = &obj;
 		}
-		else if (obj.type == OBJ_ROBOT && Robot_info[get_robot_id(obj)].boss_flag != boss_robot_id::None)
+		else if (obj.type == object_type::OBJ_ROBOT && Robot_info[get_robot_id(obj)].boss_flag != boss_robot_id::None)
 		{
 			if (boss_objp == nullptr)
 				boss_objp = &obj;
@@ -529,7 +529,7 @@ void init_controlcen_for_level(const d_robot_info_array &Robot_info)
 			 * the boss is kept, and this block removes the control center, so
 			 * that players must destroy the boss to advance to the next level.
 			 */
-			cntrlcen_objp->type = OBJ_GHOST;
+			cntrlcen_objp->type = object_type::OBJ_GHOST;
 			cntrlcen_objp->control_source = object::control_type::None;
 			cntrlcen_objp->render_type = render_type::RT_NONE;
 			LevelUniqueControlCenterState.Control_center_present = 0;

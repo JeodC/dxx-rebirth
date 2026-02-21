@@ -29,7 +29,7 @@ struct d_level_unique_object_state
 	/* `accumulated_robots` counts robots present at level entry and
 	 * robots added later via materialization centers / boss gating.  It
 	 * never decreases, so it is not a shortcut for counting the number
-	 * of currently live objects with type OBJ_ROBOT.
+	 * of currently live objects with type object_type::OBJ_ROBOT.
 	 */
 	unsigned accumulated_robots;
 	unsigned total_hostages;

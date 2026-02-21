@@ -373,7 +373,7 @@ static bool can_collide(const object *const weapon_object, const object_base &it
 #elif DXX_BUILD_DESCENT == 2
 	if (weapon_object == &iter_object)
 		return false;
-	if (iter_object.type == OBJ_NONE)
+	if (iter_object.type == object_type::OBJ_NONE)
 		return false;
 	if (iter_object.flags & OF_SHOULD_BE_DEAD)
 		return false;
@@ -381,16 +381,16 @@ static bool can_collide(const object *const weapon_object, const object_base &it
 	switch (iter_object.type)
 	{
 #if DXX_BUILD_DESCENT == 2
-		case OBJ_WEAPON:
+		case object_type::OBJ_WEAPON:
 			return is_proximity_bomb_or_player_smart_mine_or_placed_mine(get_weapon_id(iter_object));
 #endif
-		case OBJ_CNTRLCEN:
-		case OBJ_PLAYER:
+		case object_type::OBJ_CNTRLCEN:
+		case object_type::OBJ_PLAYER:
 			return true;
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 			if (parent_object == nullptr)
 				return false;
-			if (parent_object->type != OBJ_ROBOT)
+			if (parent_object->type != object_type::OBJ_ROBOT)
 				return true;
 			return get_robot_id(*parent_object) != get_robot_id(iter_object);
 		default:
@@ -402,7 +402,7 @@ static bool can_collide(const object *const weapon_object, const object_base &it
 
 imobjptridx_t object_create_explosion_without_damage(const d_vclip_array &Vclip, const vmsegptridx_t segnum, const vms_vector &position, const fix size, const vclip_index vclip_type)
 {
-	const auto &&obj_fireball{obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_FIREBALL, underlying_value(vclip_type), segnum, position, &vmd_identity_matrix, size, object::control_type::explosion, object::movement_type::None, render_type::RT_FIREBALL)};
+	const auto &&obj_fireball{obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_FIREBALL, underlying_value(vclip_type), segnum, position, &vmd_identity_matrix, size, object::control_type::explosion, object::movement_type::None, render_type::RT_FIREBALL)};
 	if (obj_fireball)
 	{
 		object &o = *obj_fireball;
@@ -458,7 +458,7 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 						switch (obj_iter->type)
 						{
 #if DXX_BUILD_DESCENT == 2
-							case OBJ_WEAPON:
+							case object_type::OBJ_WEAPON:
 								phys_apply_force(obj_iter, vforce);
 
 								if (is_proximity_bomb_or_player_smart_mine(get_weapon_id(obj_iter)))
@@ -470,13 +470,13 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 								}
 								break;
 #endif
-							case OBJ_ROBOT:
+							case object_type::OBJ_ROBOT:
 								{
 								phys_apply_force(obj_iter, vforce);
 #if DXX_BUILD_DESCENT == 2
 								//	If not a boss, stun for 2 seconds at 32 force, 1 second at 16 force
 								fix flash;
-								if (obj_explosion_origin != object_none && obj_explosion_origin->type == OBJ_WEAPON && Robot_info[get_robot_id(obj_iter)].boss_flag == boss_robot_id::None && (flash = Weapon_info[get_weapon_id(obj_explosion_origin)].flash))
+								if (obj_explosion_origin != object_none && obj_explosion_origin->type == object_type::OBJ_WEAPON && Robot_info[get_robot_id(obj_iter)].boss_flag == boss_robot_id::None && (flash = Weapon_info[get_weapon_id(obj_explosion_origin)].flash))
 								{
 									ai_static *const aip{&obj_iter->ctype.ai_info};
 
@@ -518,7 +518,7 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 											add_points_to_score(ConsoleObject->ctype.player_info, Robot_info[get_robot_id(obj_iter)].score_value, Game_mode);
 								}
 #if DXX_BUILD_DESCENT == 2
-								if (obj_explosion_origin != object_none && Robot_info[get_robot_id(obj_iter)].companion && !(obj_explosion_origin->type == OBJ_WEAPON && Weapon_info[get_weapon_id(obj_explosion_origin)].flash))
+								if (obj_explosion_origin != object_none && Robot_info[get_robot_id(obj_iter)].companion && !(obj_explosion_origin->type == object_type::OBJ_WEAPON && Weapon_info[get_weapon_id(obj_explosion_origin)].flash))
 								{
 									static const char ouch_str[]{"ouch! " "ouch! " "ouch! " "ouch! "};
 									int	count = f2i(damage / 8);
@@ -531,16 +531,16 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 #endif
 								break;
 								}
-							case OBJ_CNTRLCEN:
+							case object_type::OBJ_CNTRLCEN:
 								if (parent != object_none && obj_iter->shields >= 0)
 									apply_damage_to_controlcen(Robot_info, obj_iter, damage, parent);
 								break;
-							case OBJ_PLAYER:	{
+							case object_type::OBJ_PLAYER:	{
 								icobjptridx_t killer{object_none};
 #if DXX_BUILD_DESCENT == 2
 								//	Hack! Warning! Test code!
 								fix flash;
-								if (obj_explosion_origin != object_none && obj_explosion_origin->type == OBJ_WEAPON && (flash = Weapon_info[get_weapon_id(obj_explosion_origin)].flash) && get_player_id(obj_iter) == Player_num)
+								if (obj_explosion_origin != object_none && obj_explosion_origin->type == object_type::OBJ_WEAPON && (flash = Weapon_info[get_weapon_id(obj_explosion_origin)].flash) && get_player_id(obj_iter) == Player_num)
 								{
 									int fe = min(F1_0 * 4, force * flash / 32);	//	For four seconds or less
 
@@ -555,7 +555,7 @@ static imobjptridx_t object_create_explosion_with_damage(const d_robot_info_arra
 									}
 								}
 #endif
-								if (obj_explosion_origin != object_none && +(Game_mode & GM_MULTI) && obj_explosion_origin->type == OBJ_PLAYER)
+								if (obj_explosion_origin != object_none && +(Game_mode & GM_MULTI) && obj_explosion_origin->type == object_type::OBJ_PLAYER)
 								{
 									killer = obj_explosion_origin;
 								}
@@ -603,7 +603,7 @@ imobjptridx_t object_create_badass_explosion(const d_robot_info_array &Robot_inf
 	auto &vmobjptridx{Objects.vmptridx};
 	const imobjptridx_t rval{object_create_explosion_with_damage(Robot_info, Vclip, vmobjptridx, objp, segnum, position, size, vclip_type, maxdamage, maxdistance, maxforce, parent)};
 
-	if ((objp != object_none) && (objp->type == OBJ_WEAPON))
+	if ((objp != object_none) && (objp->type == object_type::OBJ_WEAPON))
 		create_weapon_smart_children(objp);
 	return rval;
 }
@@ -659,9 +659,9 @@ namespace {
 
 static void object_create_debris(fvmsegptridx &vmsegptridx, const object_base &parent, const submodel_index subobj_num, const fix subobject_radius)
 {
-	Assert(parent.type == OBJ_ROBOT || parent.type == OBJ_PLAYER);
+	Assert(parent.type == object_type::OBJ_ROBOT || parent.type == object_type::OBJ_PLAYER);
 
-	if (const auto objpi{obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_DEBRIS, 0, vmsegptridx(parent.segnum), parent.pos, &parent.orient, subobject_radius, object::control_type::debris, object::movement_type::physics, render_type::RT_POLYOBJ)})
+	if (const auto objpi{obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_DEBRIS, 0, vmsegptridx(parent.segnum), parent.pos, &parent.orient, subobject_radius, object::control_type::debris, object::movement_type::physics, render_type::RT_POLYOBJ)})
 		init_debris_object(*objpi, parent, subobj_num);
 	/* Ignore failure to create debris.  Debris is cosmetic. */
 }
@@ -893,7 +893,7 @@ static const object_base *segment_contains_powerup(fvcobjptridx &vcobjptridx, fv
 {
 	for (auto &o : objects_in<const object_base>(segnum, vcobjptridx, vcsegptr))
 	{
-		if (o.type == OBJ_POWERUP && get_powerup_id(o) == obj_id)
+		if (o.type == object_type::OBJ_POWERUP && get_powerup_id(o) == obj_id)
 			return &o;
 	}
 	return nullptr;
@@ -1102,7 +1102,7 @@ imobjptridx_t drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 					 return object_none;
 #endif
 				}
-				const auto &&objp{obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(id), segnum, pos, &vmd_identity_matrix, Powerup_info[id].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP)};
+				const auto &&objp{obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_POWERUP, underlying_value(id), segnum, pos, &vmd_identity_matrix, Powerup_info[id].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP)};
 
 				if (objp == object_none)
 					return objp;
@@ -1335,7 +1335,7 @@ void call_object_create_egg(const object_base &objp, const unsigned count, const
 //what vclip does this explode with?
 vclip_index get_explosion_vclip(const d_robot_info_array &Robot_info, const object_base &obj, explosion_vclip_stage stage)
 {
-	if (obj.type == OBJ_ROBOT)
+	if (obj.type == object_type::OBJ_ROBOT)
 	{
 		const auto vclip_ptr = stage == explosion_vclip_stage::s0
 			? &robot_info::exp1_vclip_num
@@ -1344,7 +1344,7 @@ vclip_index get_explosion_vclip(const d_robot_info_array &Robot_info, const obje
 		if (Vclip.valid_index(vclip_num))
 			return vclip_num;
 	}
-	else if (obj.type == OBJ_PLAYER)
+	else if (obj.type == object_type::OBJ_PLAYER)
 	{
 		if (const auto expl_vclip_num{Player_ship->expl_vclip_num}; Vclip.valid_index(expl_vclip_num))
 			return expl_vclip_num;
@@ -1378,7 +1378,7 @@ static void explode_model(object_base &obj)
 		)
 		{
 #if DXX_BUILD_DESCENT == 2
-			if (!(i == submodel_index{5} && obj.type == OBJ_ROBOT && get_robot_id(obj) == robot_id::energy_bandit))	//energy sucker energy part
+			if (!(i == submodel_index{5} && obj.type == object_type::OBJ_ROBOT && get_robot_id(obj) == robot_id::energy_bandit))	//energy sucker energy part
 #endif
 				object_create_debris(vmsegptridx, obj, i, submodel_rad);
 		}
@@ -1398,7 +1398,7 @@ static void maybe_delete_object(object_base &del_obj)
 		del_obj.flags |= OF_DESTROYED;
 	}
 	else {		//normal, multi-stage explosion
-		if (del_obj.type == OBJ_PLAYER)
+		if (del_obj.type == object_type::OBJ_PLAYER)
 			del_obj.render_type = render_type::RT_NONE;
 		else
 			del_obj.flags |= OF_SHOULD_BE_DEAD;
@@ -1415,7 +1415,7 @@ void explode_object(d_level_unique_object_state &LevelUniqueObjectState, const d
 
 	if (delay_time) {		//wait a little while before creating explosion
 		//create a placeholder object to do the delay, with id==-1
-		const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_FIREBALL, -1, vmsegptridx(hitobj->segnum), hitobj->pos, &vmd_identity_matrix, 0,
+		const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_FIREBALL, -1, vmsegptridx(hitobj->segnum), hitobj->pos, &vmd_identity_matrix, 0,
 						object::control_type::explosion, object::movement_type::None, render_type::RT_NONE);
 		if (obj == object_none ) {
 			maybe_delete_object(hitobj);		//no explosion, die instantly
@@ -1441,12 +1441,12 @@ void explode_object(d_level_unique_object_state &LevelUniqueObjectState, const d
 		//don't make debris explosions have physics, because they often
 		//happen when the debris has hit the wall, so the fireball is trying
 		//to move into the wall, which shows off FVI problems.   	
-		if (hitobj->type!=OBJ_DEBRIS && hitobj->movement_source==object::movement_type::physics) {
+		if (hitobj->type!=object_type::OBJ_DEBRIS && hitobj->movement_source==object::movement_type::physics) {
 			expl_obj->movement_source = object::movement_type::physics;
 			expl_obj->mtype.phys_info = hitobj->mtype.phys_info;
 		}
 	
-		if (hitobj->render_type == render_type::RT_POLYOBJ && hitobj->type != OBJ_DEBRIS)
+		if (hitobj->render_type == render_type::RT_POLYOBJ && hitobj->type != object_type::OBJ_DEBRIS)
 			explode_model(hitobj);
 
 		maybe_delete_object(hitobj);
@@ -1484,13 +1484,13 @@ void do_explosion_sequence(const d_robot_info_array &Robot_info, object &obj)
 	if (obj.lifeleft <= obj.ctype.expl_info.spawn_time) {
 		auto del_obj{vmobjptridx(obj.ctype.expl_info.delete_objnum)};
 		auto &spawn_pos{del_obj->pos};
-		Assert(del_obj->type==OBJ_ROBOT || del_obj->type==OBJ_CLUTTER || del_obj->type==OBJ_CNTRLCEN || del_obj->type == OBJ_PLAYER);
+		Assert(del_obj->type==object_type::OBJ_ROBOT || del_obj->type==object_type::OBJ_CLUTTER || del_obj->type==object_type::OBJ_CNTRLCEN || del_obj->type == object_type::OBJ_PLAYER);
 		Assert(del_obj->segnum != segment_none);
 
 		const auto &&expl_obj{[&]{
 			const auto vclip_num{get_explosion_vclip(Robot_info, del_obj, explosion_vclip_stage::s1)};
 #if DXX_BUILD_DESCENT == 2
-			if (del_obj->type == OBJ_ROBOT)
+			if (del_obj->type == object_type::OBJ_ROBOT)
 			{
 				const auto &ri{Robot_info[get_robot_id(del_obj)]};
 				if (ri.badass)
@@ -1505,7 +1505,7 @@ void do_explosion_sequence(const d_robot_info_array &Robot_info, object &obj)
 			if (del_obj->contains.type == contained_object_type::powerup)
 				maybe_replace_powerup_with_energy(del_obj);
 			object_create_robot_egg(Robot_info, del_obj);
-		} else if ((del_obj->type == OBJ_ROBOT) && !(Game_mode & GM_MULTI)) { // Multiplayer handled outside this code!!
+		} else if ((del_obj->type == object_type::OBJ_ROBOT) && !(Game_mode & GM_MULTI)) { // Multiplayer handled outside this code!!
 			auto &robptr{Robot_info[get_robot_id(del_obj)]};
 			if (const auto contains_count{robptr.contains.count})
 			{

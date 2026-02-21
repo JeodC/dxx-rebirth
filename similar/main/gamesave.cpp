@@ -186,7 +186,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 	obj.lifeleft = IMMORTAL_TIME;		//all loaded object are immortal, for now
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-	if (obj.type == OBJ_ROBOT)
+	if (obj.type == object_type::OBJ_ROBOT)
 	{
 		Gamesave_num_org_robots++;
 
@@ -246,7 +246,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 		}
 	}
 
-	if (obj.type == OBJ_POWERUP)
+	if (obj.type == object_type::OBJ_POWERUP)
 	{
 		if (underlying_value(get_powerup_id(obj)) >= N_powerup_types)
 		{
@@ -258,7 +258,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 		obj.ctype.powerup_info.creation_time = 0;
 	}
 
-	if (obj.type == OBJ_WEAPON)
+	if (obj.type == object_type::OBJ_WEAPON)
 	{
 		if ( get_weapon_id(obj) >= N_weapon_types )	{
 			set_weapon_id(obj, weapon_id_type::LASER_ID_L1);
@@ -282,7 +282,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 #endif
 	}
 
-	if (obj.type == OBJ_CNTRLCEN)
+	if (obj.type == object_type::OBJ_CNTRLCEN)
 	{
 		obj.render_type = render_type::RT_POLYOBJ;
 		obj.control_source = object::control_type::cntrlcen;
@@ -306,7 +306,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 #endif
 	}
 
-	if (obj.type == OBJ_PLAYER)
+	if (obj.type == object_type::OBJ_PLAYER)
 	{
 		//int i;
 
@@ -324,7 +324,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 		set_player_id(obj, Gamesave_num_players++);
 	}
 
-	if (obj.type == OBJ_HOSTAGE)
+	if (obj.type == object_type::OBJ_HOSTAGE)
 	{
 		obj.render_type = render_type::RT_HOSTAGE;
 		obj.control_source = object::control_type::powerup;
@@ -339,7 +339,7 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 	obj->type = build_valid_object_type_from_untrusted(PHYSFSX_readByte(f));
 	obj->id             = PHYSFSX_readByte(f);
 
-	if (obj->type == OBJ_ROBOT)
+	if (obj->type == object_type::OBJ_ROBOT)
 	{
 #if DXX_BUILD_DESCENT == 1
 		if (const auto id = underlying_value(get_robot_id(obj)); id >= 24)
@@ -520,14 +520,14 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 			else
 				obj->ctype.powerup_info.count = 1;
 
-			if (obj->type == OBJ_POWERUP)
+			if (obj->type == object_type::OBJ_POWERUP)
 			{
 				/* Objects loaded from a level file were not ejected by
 				 * the player.
 				 */
 				obj->ctype.powerup_info.flags = 0;
 				/* Hostages have control type object::control_type::powerup, but object
-				 * type OBJ_HOSTAGE.  Hostages are never weapons, so
+				 * type object_type::OBJ_HOSTAGE.  Hostages are never weapons, so
 				 * prevent checking their IDs.
 				 */
 			if (get_powerup_id(obj) == powerup_type_t::POW_VULCAN_WEAPON)
@@ -1163,12 +1163,12 @@ static int load_game_data(
 
 	range_for (auto &i, Objects)
 	{
-		if (i.type != OBJ_NONE) {
+		if (i.type != object_type::OBJ_NONE) {
 			auto objsegnum = i.segnum;
 			if (objsegnum > Highest_segment_index)		//bogus object
 			{
 				Warning("Object %p is in non-existent segment %hu, highest=%hu", &i, objsegnum, Highest_segment_index);
-				i.type = OBJ_NONE;
+				i.type = object_type::OBJ_NONE;
 			}
 			else {
 				obj_link_unchecked(Objects.vmptr, vmobjptridx(&i), vmsegptridx(objsegnum));

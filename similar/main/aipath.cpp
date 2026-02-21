@@ -292,7 +292,7 @@ std::pair<create_path_result, unsigned> create_path_points(const vmobjptridx_t o
 #endif
 
 	auto &obj = *objp;
-	if (obj.type == OBJ_ROBOT && obj.ctype.ai_info.behavior == ai_behavior::AIB_RUN_FROM)
+	if (obj.type == object_type::OBJ_ROBOT && obj.ctype.ai_info.behavior == ai_behavior::AIB_RUN_FROM)
 	{
 	random_flag = create_path_random_flag::random;
 	avoid_seg = ConsoleObject->segnum;
@@ -512,7 +512,7 @@ cpp_done1: ;
 //	into a new segment.  It is not necessarily bad, but it makes it hard to track down actual
 //	discontinuity problems.
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
-	if (obj.type == OBJ_ROBOT)
+	if (obj.type == object_type::OBJ_ROBOT)
 		if (Robot_info[get_robot_id(obj)].companion)
 			move_towards_outside(LevelSharedSegmentState, original_psegs, l_num_points, objp, create_path_random_flag::nonrandom);
 #endif
@@ -627,7 +627,7 @@ void validate_all_paths(void)
 	auto &vmobjptr = Objects.vmptr;
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT) {
+		if (obj.type == object_type::OBJ_ROBOT) {
 			auto &aip = obj.ctype.ai_info;
 			if (obj.control_source == object::control_type::ai)
 			{
@@ -1360,7 +1360,7 @@ void ai_path_garbage_collect()
 	//	Create a list of objects which have paths of length 1 or more.
 	range_for (const auto &&objp, vcobjptridx)
 	{
-		if (objp->type == OBJ_ROBOT && (objp->control_source == object::control_type::ai
+		if (objp->type == object_type::OBJ_ROBOT && (objp->control_source == object::control_type::ai
 #if DXX_BUILD_DESCENT == 2
 			|| objp->control_source == object::control_type::morph
 #endif
@@ -1400,7 +1400,7 @@ void ai_path_garbage_collect()
 	{
 		const auto &aip = obj.ctype.ai_info;
 
-		if (obj.type == OBJ_ROBOT && obj.control_source == object::control_type::ai)
+		if (obj.type == object_type::OBJ_ROBOT && obj.control_source == object::control_type::ai)
 			if ((aip.hide_index + aip.path_length > Point_segs_free_ptr - Point_segs) && (aip.path_length>0))
 				Int3();		//	Contact Mike: Debug trap for nasty, elusive bug.
 	}
@@ -1444,7 +1444,7 @@ void ai_reset_all_paths(void)
 	auto &vmobjptr = Objects.vmptr;
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT && obj.control_source == object::control_type::ai)
+		if (obj.type == object_type::OBJ_ROBOT && obj.control_source == object::control_type::ai)
 		{
 			obj.ctype.ai_info.hide_index = -1;
 			obj.ctype.ai_info.path_length = 0;

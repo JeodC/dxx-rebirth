@@ -242,7 +242,7 @@ static void verify_console_object()
 	Assert(Player_num < Players.size());
 	const auto &&console = vmobjptr(get_local_player().objnum);
 	ConsoleObject = console;
-	Assert(console->type == OBJ_PLAYER);
+	Assert(console->type == object_type::OBJ_PLAYER);
 	Assert(get_player_id(console) == Player_num);
 }
 
@@ -252,8 +252,8 @@ static unsigned count_number_of_objects_of_type(fvcobjptr &vcobjptr)
 	return std::count_if(vcobjptr.begin(), vcobjptr.end(), is_object_of_type<type>);
 }
 
-#define count_number_of_robots	count_number_of_objects_of_type<OBJ_ROBOT>
-#define count_number_of_hostages	count_number_of_objects_of_type<OBJ_HOSTAGE>
+#define count_number_of_robots	count_number_of_objects_of_type<object_type::OBJ_ROBOT>
+#define count_number_of_hostages	count_number_of_objects_of_type<object_type::OBJ_HOSTAGE>
 
 constexpr constant_xrange<sidenum_t, sidenum_t::WRIGHT, sidenum_t::WFRONT> displacement_sides{};
 static_assert(static_cast<uint8_t>(sidenum_t::WBACK) + 1 == static_cast<uint8_t>(sidenum_t::WFRONT), "side ordering error");
@@ -440,15 +440,15 @@ static void gameseq_init_network_players(const d_robot_info_array &Robot_info, o
 	range_for (const auto &&o, vmobjptridx)
 	{
 		const auto type = o->type;
-		if (type == OBJ_PLAYER || type == OBJ_GHOST || type == OBJ_COOP)
+		if (type == object_type::OBJ_PLAYER || type == object_type::OBJ_GHOST || type == object_type::OBJ_COOP)
 		{
 			if (likely(k < Player_init.size()) &&
 				multiplayer_coop
-				? (j == 0 || type == OBJ_COOP)
-				: (type == OBJ_PLAYER || type == OBJ_GHOST)
+				? (j == 0 || type == object_type::OBJ_COOP)
+				: (type == object_type::OBJ_PLAYER || type == object_type::OBJ_GHOST)
 			)
 			{
-				o->type=OBJ_PLAYER;
+				o->type=object_type::OBJ_PLAYER;
 				auto &pi = Player_init[k];
 				pi.pos = o->pos;
 				pi.orient = o->orient;
@@ -462,7 +462,7 @@ static void gameseq_init_network_players(const d_robot_info_array &Robot_info, o
 			j++;
 		}
 #if DXX_BUILD_DESCENT == 2
-		else if (type == OBJ_ROBOT && multiplayer)
+		else if (type == object_type::OBJ_ROBOT && multiplayer)
 		{
 			auto &ri = Robot_info[get_robot_id(o)];
 			if ((!retain_guidebot && robot_is_companion(ri)) ||
@@ -523,7 +523,7 @@ void gameseq_remove_unused_players(const d_robot_info_array &Robot_info)
 			range_for (const auto &&o, vmobjptridx)
 			{
 				const auto type = o->type;
-				if (type == OBJ_ROBOT)
+				if (type == object_type::OBJ_ROBOT)
 				{
 					auto &ri = Robot_info[get_robot_id(o)];
 					if (robot_is_thief(ri))
@@ -1138,7 +1138,7 @@ void InitPlayerObject()
 	plr.objnum = object_first;
 	const auto &&console = vmobjptr(plr.objnum);
 	ConsoleObject = console;
-	console->type				= OBJ_PLAYER;
+	console->type				= object_type::OBJ_PLAYER;
 	set_player_id(console, Player_num);
 	console->control_source	= object::control_type::flying;
 	console->movement_source	= object::movement_type::physics;
@@ -1522,7 +1522,7 @@ static void filter_objects_from_level(const d_powerup_info_array &Powerup_info, 
 {
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_POWERUP)
+		if (obj.type == object_type::OBJ_POWERUP)
 		{
 			const auto powerup_id = get_powerup_id(obj);
 			if (powerup_id == powerup_type_t::POW_FLAG_RED || powerup_id == powerup_type_t::POW_FLAG_BLUE)
@@ -2246,7 +2246,7 @@ public:
 				if (i == player_num)
 					continue;
 				const auto &&objp = vmobjptr(vcplayerptr(i)->objnum);
-				if (objp->type != OBJ_PLAYER)
+				if (objp->type != object_type::OBJ_PLAYER)
 					continue;
 				const auto dist = find_connected_distance(objp->pos, candidate_segp.absolute_sibling(objp->segnum), candidate.pos, candidate_segp, -1, wall_is_doorway_mask::None);
 				if (dist >= 0 && closest_dist > dist)
@@ -2332,7 +2332,7 @@ static void InitPlayerPosition(fvmobjptridx &vmobjptridx, fvmsegptridx &vmsegptr
 //	What about setting size!?  Where does that come from?
 void copy_defaults_to_robot(const d_robot_info_array &Robot_info, object_base &objp)
 {
-	assert(objp.type == OBJ_ROBOT);
+	assert(objp.type == object_type::OBJ_ROBOT);
 	const auto objid = get_robot_id(objp);
 
 	auto &robptr = Robot_info[objid];
@@ -2381,7 +2381,7 @@ static void copy_defaults_to_robot_all(const d_robot_info_array &Robot_info)
 	auto &vmobjptr = Objects.vmptr;
 	range_for (object_base &objp, vmobjptr)
 	{
-		if (objp.type == OBJ_ROBOT)
+		if (objp.type == object_type::OBJ_ROBOT)
 			copy_defaults_to_robot(Robot_info, objp);
 	}
 }

@@ -118,7 +118,7 @@ int multi_can_move_robot(const vmobjptridx_t objnum, int agitation)
 		return 0;
 
 	auto &objrobot = *objnum;
-	if (objrobot.type != OBJ_ROBOT)
+	if (objrobot.type != object_type::OBJ_ROBOT)
 	{
 #ifndef NDEBUG
 		Int3();
@@ -231,7 +231,7 @@ void multi_strip_robots(const int playernum)
 		for (auto &obj : partial_range(vmobjptr, DXX_partial_range_vobjptr_skip_distance(1u), vmobjptr.count()))
 #undef DXX_partial_range_vobjptr_skip_distance
 		{
-			if (obj.type == OBJ_ROBOT && obj.ctype.ai_info.REMOTE_OWNER == playernum)
+			if (obj.type == object_type::OBJ_ROBOT && obj.ctype.ai_info.REMOTE_OWNER == playernum)
 			{
 				assert(obj.control_source == object::control_type::ai || obj.control_source == object::control_type::None || obj.control_source == object::control_type::morph);
 				obj.ctype.ai_info.REMOTE_OWNER = -1;
@@ -276,7 +276,7 @@ int multi_add_controlled_robot(const vmobjptridx_t objnum, int agitation)
 
 	for (i = 0; i < MAX_ROBOTS_CONTROLLED; i++)
 	{
-		if (robot_controlled[i] == object_none || vcobjptr(robot_controlled[i])->type != OBJ_ROBOT) {
+		if (robot_controlled[i] == object_none || vcobjptr(robot_controlled[i])->type != object_type::OBJ_ROBOT) {
 			first_free_robot = i;
 			break;
 		}
@@ -368,7 +368,7 @@ DEFINE_MULTIPLAYER_SERIAL_MESSAGE(multiplayer_command_t::MULTI_ROBOT_CLAIM, mult
 
 void multi_send_claim_robot(const vmobjptridx_t objnum)
 {
-	if (objnum->type != OBJ_ROBOT)
+	if (objnum->type != object_type::OBJ_ROBOT)
 		throw std::runtime_error("claiming non-robot"); // See rob
 	// The AI tells us we should take control of this robot. 
 	auto r = objnum_local_to_remote(objnum);
@@ -381,7 +381,7 @@ namespace {
 void multi_send_release_robot(const vmobjptridx_t objnum)
 {
 	multi_command<multiplayer_command_t::MULTI_ROBOT_RELEASE> multibuf;
-	if (objnum->type != OBJ_ROBOT)
+	if (objnum->type != object_type::OBJ_ROBOT)
 	{
 		Int3(); // See rob
 		return;
@@ -448,7 +448,7 @@ void multi_send_thief_frame()
 
         range_for (const auto &&objp, vmobjptridx)
         {
-		if (objp->type == OBJ_ROBOT)
+		if (objp->type == object_type::OBJ_ROBOT)
                 {
 			if (robot_is_thief(Robot_info[get_robot_id(objp)]))
                         {
@@ -501,7 +501,7 @@ void multi_send_robot_position(object &obj, const multi_send_robot_position_prio
 	if (!(Game_mode & GM_MULTI))
 		return;
 
-	if (obj.type != OBJ_ROBOT)
+	if (obj.type != object_type::OBJ_ROBOT)
 	{
 		Int3(); // See rob
 		return;
@@ -750,7 +750,7 @@ void multi_do_claim_robot(const playernum_t pnum, const multiplayer_rspan<multip
 	}
 
 	const auto &&botp = vmobjptridx(botnum);
-	if (botp->type != OBJ_ROBOT)
+	if (botp->type != object_type::OBJ_ROBOT)
 	{
 		return;
 	}
@@ -786,7 +786,7 @@ void multi_do_release_robot(const playernum_t pnum, const multiplayer_rspan<mult
 	}
 
 	const auto &&botp = vmobjptr(botnum);
-	if (botp->type != OBJ_ROBOT)
+	if (botp->type != object_type::OBJ_ROBOT)
 	{
 		return;
 	}
@@ -822,7 +822,7 @@ void multi_do_robot_position(const playernum_t pnum, const multiplayer_rspan<mul
 
 	const auto robot = vmobjptridx(botnum);
 
-	if ((robot->type != OBJ_ROBOT) || (robot->flags & OF_EXPLODING)) {
+	if ((robot->type != object_type::OBJ_ROBOT) || (robot->flags & OF_EXPLODING)) {
 		return;
 	}
 
@@ -884,7 +884,7 @@ void multi_do_robot_fire(const multiplayer_rspan<multiplayer_command_t::MULTI_RO
 		return;
 
 	auto botp = vmobjptridx(botnum);
-	if (botp->type != OBJ_ROBOT || botp->flags & OF_EXPLODING)
+	if (botp->type != object_type::OBJ_ROBOT || botp->flags & OF_EXPLODING)
 		return;
 
 	using pt_weapon = std::pair<vms_vector, weapon_id_type>;
@@ -921,7 +921,7 @@ int multi_explode_robot_sub(const d_robot_info_array &Robot_info, const vmobjptr
 {
 	auto &BossUniqueState = LevelUniqueObjectState.BossState;
 	auto &objrobot = *robot;
-	if (objrobot.type != OBJ_ROBOT) { // Object is robot?
+	if (objrobot.type != object_type::OBJ_ROBOT) { // Object is robot?
 		return 0;
 	}
 
@@ -1116,7 +1116,7 @@ void multi_do_boss_teleport(const d_robot_info_array &Robot_info, const d_vclip_
 	if (!guarded_boss_obj)
 		return;
 	const auto &&boss_obj = *guarded_boss_obj;
-	if (boss_obj->type != OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
+	if (boss_obj->type != object_type::OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
 	{
 		Int3(); // Got boss actions for a robot who's not a boss?
 		return;
@@ -1160,7 +1160,7 @@ void multi_do_boss_cloak(const multiplayer_rspan<multiplayer_command_t::MULTI_BO
 	if (!guarded_boss_obj)
 		return;
 	const auto &&boss_obj = *guarded_boss_obj;
-	if (boss_obj->type != OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
+	if (boss_obj->type != object_type::OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
 	{
 		Int3(); // Got boss actions for a robot who's not a boss?
 		return;
@@ -1184,7 +1184,7 @@ void multi_do_boss_start_gate(const multiplayer_rspan<multiplayer_command_t::MUL
 	if (!guarded_boss_obj)
 		return;
 	const object_base &boss_obj = *guarded_boss_obj;
-	if (boss_obj.type != OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
+	if (boss_obj.type != object_type::OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
 	{
 		Int3(); // Got boss actions for a robot who's not a boss?
 		return;
@@ -1203,7 +1203,7 @@ void multi_do_boss_stop_gate(const multiplayer_rspan<multiplayer_command_t::MULT
 	if (!guarded_boss_obj)
 		return;
 	const object_base &boss_obj = *guarded_boss_obj;
-	if (boss_obj.type != OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
+	if (boss_obj.type != object_type::OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
 	{
 		Int3(); // Got boss actions for a robot who's not a boss?
 		return;
@@ -1222,7 +1222,7 @@ void multi_do_boss_create_robot(const playernum_t pnum, const multiplayer_rspan<
 	if (!guarded_boss_obj)
 		return;
 	const object_base &boss_obj = *guarded_boss_obj;
-	if (boss_obj.type != OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
+	if (boss_obj.type != object_type::OBJ_ROBOT || Robot_info[get_robot_id(boss_obj)].boss_flag == boss_robot_id::None)
 	{
 		Int3(); // Got boss actions for a robot who's not a boss?
 		return;
@@ -1287,7 +1287,7 @@ namespace {
 void multi_drop_robot_powerups(object &del_obj)
 {
 	// Code to handle dropped robot powerups in network mode ONLY!
-	if (del_obj.type != OBJ_ROBOT)
+	if (del_obj.type != object_type::OBJ_ROBOT)
 	{
 		Int3(); // dropping powerups for non-robot, Rob's fault
 		return;

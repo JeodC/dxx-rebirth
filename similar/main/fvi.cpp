@@ -572,15 +572,15 @@ static vm_distance_squared check_vector_to_object(const d_robot_info_array *cons
 {
 	fix size{obj.size};
 
-	if (obj.type == OBJ_ROBOT)
+	if (obj.type == object_type::OBJ_ROBOT)
 	{
 		if ((*Robot_info)[get_robot_id(obj)].attack_type)
 			size = (size*3)/4;
 	}
 	//if obj is player, and bumping into other player or a weapon of another coop player, reduce radius
-	else if (obj.type == OBJ_PLAYER &&
-		 	(otherobj.type == OBJ_PLAYER ||
-	 		(+(Game_mode & GM_MULTI_COOP) && otherobj.type == OBJ_WEAPON && otherobj.ctype.laser_info.parent_type == OBJ_PLAYER)))
+	else if (obj.type == object_type::OBJ_PLAYER &&
+		 	(otherobj.type == object_type::OBJ_PLAYER ||
+	 		(+(Game_mode & GM_MULTI_COOP) && otherobj.type == object_type::OBJ_WEAPON && otherobj.ctype.laser_info.parent_type == object_type::OBJ_PLAYER)))
 		size = size/2;
 
 	return check_vector_to_sphere_1(intp, p0, p1, obj.pos, size+rad);
@@ -801,7 +801,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 		 * Obtain a require_valid instance once, before the loop begins.
 		 */
 		const vcobjptridx_t thisobjnum = fq.thisobjnum;
-		const auto this_is_robot{thisobjnum->type == OBJ_ROBOT};
+		const auto this_is_robot{thisobjnum->type == object_type::OBJ_ROBOT};
 		const auto this_collision_upper_bits{static_cast<unsigned>(thisobjnum->type) << 4};
 		const auto Robot_info{fq.Robot_info};
 		const robot_info *const robptrthis{this_is_robot
@@ -824,7 +824,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 
 #if DXX_BUILD_DESCENT == 2
 			//	If this is a powerup, don't do collision if flag FQ_IGNORE_POWERUPS is set
-			if (objnum->type == OBJ_POWERUP)
+			if (objnum->type == object_type::OBJ_POWERUP)
 				if (fq.flags & FQ_IGNORE_POWERUPS)
 					continue;
 #endif
@@ -841,7 +841,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 			 */
 			if (robptrthis)
 			{
-				if (objnum->type == OBJ_ROBOT)
+				if (objnum->type == object_type::OBJ_ROBOT)
 				{
 #if DXX_BUILD_DESCENT == 1
 					if (!((*Robot_info)[get_robot_id(objnum)].attack_type && robptrthis->attack_type))
@@ -853,9 +853,9 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 					fudged_rad = (rad * 3) / 4;
 			}
 			//if obj is player, and bumping into other player or a weapon of another coop player, reduce radius
-			else if (fq.thisobjnum->type == OBJ_PLAYER &&
-					((objnum->type == OBJ_PLAYER) ||
-					(+(Game_mode & GM_MULTI_COOP) && objnum->type == OBJ_WEAPON && objnum->ctype.laser_info.parent_type == OBJ_PLAYER)))
+			else if (fq.thisobjnum->type == object_type::OBJ_PLAYER &&
+					((objnum->type == object_type::OBJ_PLAYER) ||
+					(+(Game_mode & GM_MULTI_COOP) && objnum->type == object_type::OBJ_WEAPON && objnum->ctype.laser_info.parent_type == object_type::OBJ_PLAYER)))
 				fudged_rad = rad/2;	//(rad*3)/4;
 
 			vms_vector hit_point;
@@ -871,11 +871,11 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 		}
 	}
 
-	/* `OBJ_WALL == 0`, so the left hand term of `|` is unnecessary.  However,
+	/* `object_type::OBJ_WALL == 0`, so the left hand term of `|` is unnecessary.  However,
 	 * it is kept for consistency with other uses where both terms need to be
 	 * used.  The compiler should optimize out the resulting `0 |` in this case.
 	 */
-	if (fq.thisobjnum != object_none && collision_result{CollisionResult[(OBJ_WALL << 4) | static_cast<unsigned>(fq.thisobjnum->type)]} == collision_result::ignore)
+	if (fq.thisobjnum != object_none && collision_result{CollisionResult[(object_type::OBJ_WALL << 4) | static_cast<unsigned>(fq.thisobjnum->type)]} == collision_result::ignore)
 		rad = 0;		//HACK - ignore when edges hit walls
 
 	//now, check segment walls

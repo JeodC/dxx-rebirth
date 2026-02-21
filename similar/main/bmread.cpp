@@ -1738,7 +1738,7 @@ void bm_read_robot(d_level_shared_robot_info_state &LevelSharedRobotInfoState, i
 	current_robot_info.boss_flag = boss_flag;
 
 	/* The input file uses zero/non-zero to pick powerup/robot.  Other input
-	 * sources store robot as OBJ_ROBOT and powerup as OBJ_POWERUP, so
+	 * sources store robot as object_type::OBJ_ROBOT and powerup as object_type::OBJ_POWERUP, so
 	 * build_contained_object_parameters_from_untrusted expects those values.
 	 * Convert the type here.
 	 */

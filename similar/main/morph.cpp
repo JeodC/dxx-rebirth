@@ -471,7 +471,7 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 		if (!pmo)
 			return true;
 		auto &mo{*pmo.get()};
-		return mo.obj->type == OBJ_NONE || mo.obj->signature != mo.Morph_sig;
+		return mo.obj->type == object_type::OBJ_NONE || mo.obj->signature != mo.Morph_sig;
 	}};
 	const auto moi{std::ranges::find_if(mob, moe, mop)};
 

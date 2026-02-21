@@ -983,7 +983,7 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am, fix eye = 0)
 			{
 				auto &plr{*vcplayerptr(i)};
 				auto &objp{*vcobjptr(plr.objnum)};
-				if (objp.type == OBJ_PLAYER)
+				if (objp.type == object_type::OBJ_PLAYER)
 				{
 					const auto &other_ship_rgb{player_rgb[get_player_or_team_color(Netgame, Game_mode, i)]};
 					draw_player(viewer_context, g3_draw_line_context{canvas, BM_XRGB(other_ship_rgb.r, other_ship_rgb.g, other_ship_rgb.b)}, objp);
@@ -997,10 +997,10 @@ static void draw_automap(fvcobjptr &vcobjptr, automap &am, fix eye = 0)
 	{
 		switch(obj.type)
 		{
-		case OBJ_HOSTAGE:
+		case object_type::OBJ_HOSTAGE:
 			g3_draw_sphere(canvas, /* sphere_point = */ g3_rotate_point(obj.pos), obj.size, am.hostage_color);
 			break;
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 			if (LevelUniqueAutomapState.Automap_visited[obj.segnum]
 #ifndef NDEBUG
 				|| Automap_debug_show_all_segments

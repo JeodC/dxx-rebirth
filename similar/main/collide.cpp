@@ -223,7 +223,7 @@ static void apply_force_damage(const d_robot_info_array &Robot_info, const vmobj
 	damage = fixdiv(force,obj->mtype.phys_info.mass) / 8;
 
 #if DXX_BUILD_DESCENT == 2
-	if ((other_obj->type == OBJ_PLAYER) && cheats.monsterdamage)
+	if ((other_obj->type == object_type::OBJ_PLAYER) && cheats.monsterdamage)
 		damage = INT32_MAX;
 #endif
 
@@ -232,31 +232,31 @@ static void apply_force_damage(const d_robot_info_array &Robot_info, const vmobj
 
 	switch (obj->type) {
 
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 		{
 			auto &robptr = Robot_info[get_robot_id(obj)];
 			const auto other_type = other_obj->type;
 			const auto result = apply_damage_to_robot(Robot_info, obj, (robptr.attack_type == 1)
 				? damage / 4
 				: damage / 2,
-				(other_type == OBJ_WEAPON)
+				(other_type == object_type::OBJ_WEAPON)
 				? other_obj->ctype.laser_info.parent_num
 				: static_cast<objnum_t>(other_obj));
 			if (!result)
 				break;
 
 			const auto console{ConsoleObject};
-			if ((other_type == OBJ_PLAYER && other_obj == console) ||
-				(other_type == OBJ_WEAPON && laser_parent_is_player(vcobjptr, other_obj->ctype.laser_info, *console)))
+			if ((other_type == object_type::OBJ_PLAYER && other_obj == console) ||
+				(other_type == object_type::OBJ_WEAPON && laser_parent_is_player(vcobjptr, other_obj->ctype.laser_info, *console)))
 				add_points_to_score(console->ctype.player_info, robptr.score_value, Game_mode);
 			break;
 		}
 
-		case OBJ_PLAYER:
+		case object_type::OBJ_PLAYER:
 
 			//	If colliding with a claw type robot, do damage proportional to FrameTime because you can collide with those
 			//	bots every frame since they don't move.
-			if ( (other_obj->type == OBJ_ROBOT) && (Robot_info[get_robot_id(other_obj)].attack_type) )
+			if ( (other_obj->type == object_type::OBJ_ROBOT) && (Robot_info[get_robot_id(other_obj)].attack_type) )
 				damage = fixmul(damage, FrameTime*2);
 
 #if DXX_BUILD_DESCENT == 2
@@ -268,16 +268,16 @@ static void apply_force_damage(const d_robot_info_array &Robot_info, const vmobj
 			apply_damage_to_player(obj,other_obj,damage, apply_damage_player::always);
 			break;
 
-		case OBJ_CLUTTER:
+		case object_type::OBJ_CLUTTER:
 
 			apply_damage_to_clutter(Robot_info, obj,damage);
 			break;
 
-		case OBJ_CNTRLCEN: // Never hits! Reactor does not have object::movement_type::physics - it's stationary! So no force damage here.
+		case object_type::OBJ_CNTRLCEN: // Never hits! Reactor does not have object::movement_type::physics - it's stationary! So no force damage here.
 			apply_damage_to_controlcen(Robot_info, obj, damage, other_obj);
 			break;
 
-		case OBJ_WEAPON:
+		case object_type::OBJ_WEAPON:
 
 			break; //weapons don't take damage
 
@@ -293,18 +293,18 @@ static void bump_this_object(const d_robot_info_array &Robot_info, const vmobjpt
 {
 	if (! (objp->mtype.phys_info.flags & PF_PERSISTENT))
 	{
-		if (objp->type == OBJ_PLAYER) {
+		if (objp->type == object_type::OBJ_PLAYER) {
 			vms_vector force2;
 			force2.x = force.x/4;
 			force2.y = force.y/4;
 			force2.z = force.z/4;
 			phys_apply_force(objp,force2);
-			if (damage_flag && (other_objp->type != OBJ_ROBOT || !robot_is_companion(Robot_info[get_robot_id(other_objp)])))
+			if (damage_flag && (other_objp->type != object_type::OBJ_ROBOT || !robot_is_companion(Robot_info[get_robot_id(other_objp)])))
 			{
 				auto force_mag = vm_vec_mag_quick(force2);
 				apply_force_damage(Robot_info, objp, force_mag, other_objp);
 			}
-		} else if ((objp->type == OBJ_ROBOT) || (objp->type == OBJ_CLUTTER) || (objp->type == OBJ_CNTRLCEN)) {
+		} else if ((objp->type == object_type::OBJ_ROBOT) || (objp->type == object_type::OBJ_CLUTTER) || (objp->type == object_type::OBJ_CNTRLCEN)) {
 			if (Robot_info[get_robot_id(objp)].boss_flag == boss_robot_id::None)
 			{
 				vms_vector force2;
@@ -463,7 +463,7 @@ static
 //returns 1=lava, 2=water
 volatile_wall_result check_volatile_wall(const vmobjptridx_t obj, const unique_side &side)
 {
-	Assert(obj->type==OBJ_PLAYER);
+	Assert(obj->type==object_type::OBJ_PLAYER);
 
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
 	const auto texture1_index{get_texture_index(side.tmap_num)};
@@ -521,7 +521,7 @@ volatile_wall_result check_volatile_wall(const vmobjptridx_t obj, const unique_s
 //this gets called when an object is scraping along the wall
 bool scrape_player_on_wall(const vmobjptridx_t obj, const vmsegptridx_t hitseg, const sidenum_t hitside, const vms_vector &hitpt)
 {
-	if (obj->type != OBJ_PLAYER || get_player_id(obj) != Player_num)
+	if (obj->type != object_type::OBJ_PLAYER || get_player_id(obj) != Player_num)
 		return false;
 
 	const auto type = check_volatile_wall(obj, hitseg->unique_segment::sides[hitside]);
@@ -554,10 +554,10 @@ bool scrape_player_on_wall(const vmobjptridx_t obj, const vmsegptridx_t hitseg, 
 namespace {
 static int effect_parent_is_guidebot(fvcobjptr &vcobjptr, const laser_parent &laser)
 {
-	if (laser.parent_type != OBJ_ROBOT)
+	if (laser.parent_type != object_type::OBJ_ROBOT)
 		return 0;
 	const auto &&robot = vcobjptr(laser.parent_num);
-	if (robot->type != OBJ_ROBOT)
+	if (robot->type != object_type::OBJ_ROBOT)
 		return 0;
 	if (robot->signature != laser.parent_signature)
 		/* parent replaced, no idea what it once was */
@@ -592,8 +592,8 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 				+(Game_mode & GM_MULTI)
 	// If this wall has a trigger and the blower-upper is not the player or the buddy, abort!
 	// For Multiplayer perform an additional check to see if it's a local-player hit. If a remote player hits, a packet is expected (remote 1) which would be followed by MULTI_TRIGGER to ensure sync with the switch and the actual trigger.
-				? (!(blower.parent_type == OBJ_PLAYER && (blower.parent_num == get_local_player().objnum || remote)))
-				: !(blower.parent_type == OBJ_PLAYER || effect_parent_is_guidebot(vcobjptr, blower)))
+				? (!(blower.parent_type == object_type::OBJ_PLAYER && (blower.parent_num == get_local_player().objnum || remote)))
+				: !(blower.parent_type == object_type::OBJ_PLAYER || effect_parent_is_guidebot(vcobjptr, blower)))
 			)
 			return(0);
 	}
@@ -797,7 +797,7 @@ static window_event_result collide_weapon_and_wall(
 	auto &tmi1{TmapInfo[texture1_index]};
 	//if an energy weapon hits a forcefield, let it bounce
 	if (+(tmi1.flags & tmapinfo_flag::force_field) &&
-		 !(weapon->type == OBJ_WEAPON && Weapon_info[get_weapon_id(weapon)].energy_usage==0)) {
+		 !(weapon->type == object_type::OBJ_WEAPON && Weapon_info[get_weapon_id(weapon)].energy_usage==0)) {
 
 		//make sound
 		multi_digi_link_sound_to_pos(sound_effect::SOUND_FORCEFIELD_BOUNCE_WEAPON, hitseg, sidenum_t::WLEFT, hitpt, 0, f1_0);
@@ -839,7 +839,7 @@ static window_event_result collide_weapon_and_wall(
 #endif
 	{
 		auto &objp = *vcobjptr(weapon->ctype.laser_info.parent_num);
-		if (objp.type == OBJ_PLAYER)
+		if (objp.type == object_type::OBJ_PLAYER)
 			playernum = get_player_id(objp);
 		else
 			playernum = -1;		//not a player (thus a robot)
@@ -942,7 +942,7 @@ static window_event_result collide_weapon_and_wall(
 
 			//if it's not the player's weapon, or it is the player's and there
 			//is no wall, and no blowing up monitor, then play sound
-			if ((weapon->ctype.laser_info.parent_type != OBJ_PLAYER) ||	((hitseg->shared_segment::sides[hitwall].wall_num == wall_none || wall_type == wall_hit_process_t::WHP_NOT_SPECIAL) && !blew_up))
+			if ((weapon->ctype.laser_info.parent_type != object_type::OBJ_PLAYER) ||	((hitseg->shared_segment::sides[hitwall].wall_num == wall_none || wall_type == wall_hit_process_t::WHP_NOT_SPECIAL) && !blew_up))
 				if (const auto wall_hit_sound{Weapon_info[get_weapon_id(weapon)].wall_hit_sound}; wall_hit_sound != sound_effect::None && !(weapon->flags & OF_SILENT))
 					digi_link_sound_to_pos(wall_hit_sound, vmsegptridx(weapon->segnum), sidenum_t::WLEFT, weapon->pos, 0, F1_0);
 
@@ -961,7 +961,7 @@ static window_event_result collide_weapon_and_wall(
 	}
 
 	//	If weapon fired by player or companion...
-	if (( weapon->ctype.laser_info.parent_type== OBJ_PLAYER ) || robot_escort) {
+	if (( weapon->ctype.laser_info.parent_type== object_type::OBJ_PLAYER ) || robot_escort) {
 
 		if (!(weapon->flags & OF_SILENT) && (weapon->ctype.laser_info.parent_num == get_local_player().objnum))
 			create_awareness_event(weapon, player_awareness_type_t::PA_WEAPON_WALL_COLLISION, LevelUniqueRobotAwarenessState);			// object "weapon" can attract attention to player
@@ -972,7 +972,7 @@ static window_event_result collide_weapon_and_wall(
 			if (get_weapon_id(weapon) != weapon_id_type::FLARE_ID)
 				weapon->flags |= OF_SHOULD_BE_DEAD;
 #elif DXX_BUILD_DESCENT == 2
-			if (((get_weapon_id(weapon) != weapon_id_type::FLARE_ID) || (weapon->ctype.laser_info.parent_type != OBJ_PLAYER)) && !(weapon->mtype.phys_info.flags & PF_BOUNCE))
+			if (((get_weapon_id(weapon) != weapon_id_type::FLARE_ID) || (weapon->ctype.laser_info.parent_type != object_type::OBJ_PLAYER)) && !(weapon->mtype.phys_info.flags & PF_BOUNCE))
 				weapon->flags |= OF_SHOULD_BE_DEAD;
 
 			//don't let flares stick in force fields
@@ -1042,8 +1042,8 @@ static void collide_robot_and_robot(const d_robot_info_array &Robot_info, const 
 
 static void collide_robot_and_controlcen(const d_robot_info_array &, object_base &obj_robot, const object_base &obj_cc, const vms_vector &)
 {
-	assert(obj_cc.type == OBJ_CNTRLCEN);
-	assert(obj_robot.type == OBJ_ROBOT);
+	assert(obj_cc.type == object_type::OBJ_CNTRLCEN);
+	assert(obj_robot.type == object_type::OBJ_ROBOT);
 	const auto &&hitvec = vm_vec_normalized(vm_vec_build_sub(obj_cc.pos, obj_robot.pos));
 	bump_one_object(obj_robot, hitvec, 0);
 }
@@ -1152,7 +1152,7 @@ void apply_damage_to_controlcen(const d_robot_info_array &Robot_info, const vmob
 
 	//	Only allow a player to damage the control center.
 	whotype = who.type;
-	if (whotype != OBJ_PLAYER) {
+	if (whotype != object_type::OBJ_PLAYER) {
 		return;
 	}
 
@@ -1253,7 +1253,7 @@ static void maybe_kill_weapon(object_base &weapon, const object_base &other_obj)
 	}
 
 #if DXX_BUILD_DESCENT == 1
-	if (weapon.mtype.phys_info.flags & PF_PERSISTENT || other_obj.type == OBJ_WEAPON)
+	if (weapon.mtype.phys_info.flags & PF_PERSISTENT || other_obj.type == object_type::OBJ_WEAPON)
 #elif DXX_BUILD_DESCENT == 2
 	//	Changed, 10/12/95, MK: Make weapon-weapon collisions always kill both weapons if not persistent.
 	//	Reason: Otherwise you can't use proxbombs to detonate incoming homing missiles (or mega missiles).
@@ -1262,7 +1262,7 @@ static void maybe_kill_weapon(object_base &weapon, const object_base &other_obj)
 	{
 		//	Weapons do a lot of damage to weapons, other objects do much less.
 		if (!(weapon.mtype.phys_info.flags & PF_PERSISTENT)) {
-			if (other_obj.type == OBJ_WEAPON)
+			if (other_obj.type == object_type::OBJ_WEAPON)
 				weapon.shields -= other_obj.shields/2;
 			else
 				weapon.shields -= other_obj.shields/4;
@@ -1275,10 +1275,10 @@ static void maybe_kill_weapon(object_base &weapon, const object_base &other_obj)
 	} else
 		weapon.flags |= OF_SHOULD_BE_DEAD;
 
-// -- 	if ((weapon->mtype.phys_info.flags & PF_PERSISTENT) || (other_obj->type == OBJ_WEAPON)) {
+// -- 	if ((weapon->mtype.phys_info.flags & PF_PERSISTENT) || (other_obj->type == object_type::OBJ_WEAPON)) {
 // -- 		//	Weapons do a lot of damage to weapons, other objects do much less.
 // -- 		if (!(weapon->mtype.phys_info.flags & PF_PERSISTENT)) {
-// -- 			if (other_obj->type == OBJ_WEAPON)
+// -- 			if (other_obj->type == object_type::OBJ_WEAPON)
 // -- 				weapon->shields -= other_obj->shields/2;
 // -- 			else
 // -- 				weapon->shields -= other_obj->shields/4;
@@ -1307,7 +1307,7 @@ static void collide_weapon_and_controlcen(const d_robot_info_array &Robot_info, 
 
 	fix explosion_size = controlcen->size*3/20;
 #endif
-	if (weapon->ctype.laser_info.parent_type == OBJ_PLAYER) {
+	if (weapon->ctype.laser_info.parent_type == object_type::OBJ_PLAYER) {
 		fix	damage = weapon->shields;
 
 		/*
@@ -1564,7 +1564,7 @@ static boss_weapon_collision_result do_boss_weapon_collision(const d_robot_info_
 	assert(Boss_spew_more.valid_index(d2_boss_index));
 
 	//	See if should spew a bot.
-	if (weapon.ctype.laser_info.parent_type == OBJ_PLAYER && weapon.ctype.laser_info.parent_num == get_local_player().objnum)
+	if (weapon.ctype.laser_info.parent_type == object_type::OBJ_PLAYER && weapon.ctype.laser_info.parent_num == get_local_player().objnum)
 		if ((Weapon_info[get_weapon_id(weapon)].matter != weapon_info::matter_flag::energy
 			? Boss_spews_bots_matter
 			: Boss_spews_bots_energy)[d2_boss_index])
@@ -1680,7 +1680,7 @@ static void collide_robot_and_weapon(const d_robot_info_array &Robot_info, const
 #if DXX_BUILD_DESCENT == 2
 	//	Put in at request of Jasen (and Adam) because the Buddy-Bot gets in their way.
 	//	MK has so much fun whacking his butt around the mine he never cared...
-	if ((robot_is_companion(robptr)) && ((weapon->ctype.laser_info.parent_type != OBJ_ROBOT) && !cheats.robotskillrobots))
+	if ((robot_is_companion(robptr)) && ((weapon->ctype.laser_info.parent_type != object_type::OBJ_ROBOT) && !cheats.robotskillrobots))
 		return;
 
 	if (get_weapon_id(weapon) == weapon_id_type::EARTHSHAKER_ID)
@@ -1704,7 +1704,7 @@ static void collide_robot_and_weapon(const d_robot_info_array &Robot_info, const
 	const auto Difficulty_level = GameUniqueState.Difficulty_level;
 	//	Changed, 10/04/95, put out blobs based on skill level and power of weapon doing damage.
 	//	Also, only a weapon hit from a player weapon causes smart blobs.
-	if ((weapon->ctype.laser_info.parent_type == OBJ_PLAYER) && (robptr.energy_blobs))
+	if ((weapon->ctype.laser_info.parent_type == object_type::OBJ_PLAYER) && (robptr.energy_blobs))
 		if ((robot->shields > 0) && Weapon_is_energy[get_weapon_id(weapon)]) {
 			fix	probval;
 			int	num_blobs;
@@ -1754,9 +1754,9 @@ static void collide_robot_and_weapon(const d_robot_info_array &Robot_info, const
 	}
 
 #if DXX_BUILD_DESCENT == 1
-	if ( (weapon->ctype.laser_info.parent_type==OBJ_PLAYER) && !(robot->flags & OF_EXPLODING) )
+	if ( (weapon->ctype.laser_info.parent_type==object_type::OBJ_PLAYER) && !(robot->flags & OF_EXPLODING) )
 #elif DXX_BUILD_DESCENT == 2
-	if ( ((weapon->ctype.laser_info.parent_type==OBJ_PLAYER) || cheats.robotskillrobots) && !(robot->flags & OF_EXPLODING) )
+	if ( ((weapon->ctype.laser_info.parent_type==object_type::OBJ_PLAYER) || cheats.robotskillrobots) && !(robot->flags & OF_EXPLODING) )
 #endif
 	{
 		if (weapon->ctype.laser_info.parent_num == get_local_player().objnum) {
@@ -1961,7 +1961,7 @@ static void drop_missile_1_or_4(const object &playerobj, const secondary_weapon_
 
 void drop_player_eggs(const vmobjptridx_t playerobj)
 {
-	if ((playerobj->type == OBJ_PLAYER) || (playerobj->type == OBJ_GHOST)) {
+	if ((playerobj->type == object_type::OBJ_PLAYER) || (playerobj->type == object_type::OBJ_GHOST)) {
 		// Seed the random number generator so in net play the eggs will always
 		// drop the same way
 		if (+(Game_mode & GM_MULTI))
@@ -2196,7 +2196,7 @@ void apply_damage_to_player(object &playerobj, const icobjptridx_t killer, const
 
 #if DXX_BUILD_DESCENT == 2
 			auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
-				if (killer && killer->type == OBJ_ROBOT && robot_is_companion(Robot_info[get_robot_id(killer)]))
+				if (killer && killer->type == object_type::OBJ_ROBOT && robot_is_companion(Robot_info[get_robot_id(killer)]))
 					BuddyState.Buddy_sorry_time = {GameTime64};
 #endif
 		}
@@ -2504,7 +2504,7 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 			return;
 	}
 #endif
-	if ( (weapon->ctype.laser_info.parent_type==OBJ_PLAYER) && !(debris->flags & OF_EXPLODING) )	{
+	if ( (weapon->ctype.laser_info.parent_type==object_type::OBJ_PLAYER) && !(debris->flags & OF_EXPLODING) )	{
 		digi_link_sound_to_pos(sound_effect::SOUND_ROBOT_HIT, vcsegptridx(weapon->segnum), sidenum_t::WLEFT, collision_point, 0, F1_0);
 
 		explode_object(LevelUniqueObjectState, Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, debris, 0);
@@ -2518,64 +2518,64 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 }
 
 #define DXX_MARKER_COLLISION_TABLE_FRAGMENT(NO,DO)	\
-	NO##_SAME_COLLISION(OBJ_MARKER);	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_MARKER, collide_player_and_marker);	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_MARKER);	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_MARKER);	\
-	NO##_COLLISION(OBJ_WEAPON, OBJ_MARKER);	\
-	NO##_COLLISION(OBJ_CAMERA, OBJ_MARKER);	\
-	NO##_COLLISION(OBJ_POWERUP, OBJ_MARKER);	\
-	NO##_COLLISION(OBJ_DEBRIS, OBJ_MARKER)	\
+	NO##_SAME_COLLISION(object_type::OBJ_MARKER);	\
+	DO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_MARKER, collide_player_and_marker);	\
+	NO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_MARKER);	\
+	NO##_COLLISION(object_type::OBJ_HOSTAGE, object_type::OBJ_MARKER);	\
+	NO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_MARKER);	\
+	NO##_COLLISION(object_type::OBJ_CAMERA, object_type::OBJ_MARKER);	\
+	NO##_COLLISION(object_type::OBJ_POWERUP, object_type::OBJ_MARKER);	\
+	NO##_COLLISION(object_type::OBJ_DEBRIS, object_type::OBJ_MARKER)	\
 
 #define COLLIDE_IGNORE_COLLISION(Robot_info,O1,O2,C)
 
 #define COLLISION_TABLE(NO,DO)	\
-	NO##_SAME_COLLISION(OBJ_FIREBALL);	\
-	DO##_SAME_COLLISION(OBJ_ROBOT, collide_robot_and_robot);	\
-	NO##_SAME_COLLISION(OBJ_HOSTAGE);	\
-	DO##_SAME_COLLISION(OBJ_PLAYER, collide_player_and_player);	\
-	DO##_SAME_COLLISION(OBJ_WEAPON, collide_weapon_and_weapon);	\
-	NO##_SAME_COLLISION(OBJ_CAMERA);	\
-	NO##_SAME_COLLISION(OBJ_POWERUP);	\
-	NO##_SAME_COLLISION(OBJ_DEBRIS);	\
-	DO##_COLLISION(OBJ_WALL, OBJ_ROBOT, COLLIDE_IGNORE_COLLISION);	\
-	DO##_COLLISION(OBJ_WALL, OBJ_WEAPON, COLLIDE_IGNORE_COLLISION);	\
-	DO##_COLLISION(OBJ_WALL, OBJ_PLAYER, COLLIDE_IGNORE_COLLISION);	\
-	DO##_COLLISION(OBJ_WALL, OBJ_POWERUP, COLLIDE_IGNORE_COLLISION);	\
-	DO##_COLLISION(OBJ_WALL, OBJ_DEBRIS, COLLIDE_IGNORE_COLLISION);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_ROBOT);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_HOSTAGE);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_PLAYER);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_WEAPON);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_CAMERA);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_POWERUP);	\
-	NO##_COLLISION(OBJ_FIREBALL, OBJ_DEBRIS);	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_HOSTAGE);	\
-	DO##_COLLISION(OBJ_ROBOT, OBJ_PLAYER,  collide_robot_and_player);	\
-	DO##_COLLISION(OBJ_ROBOT, OBJ_WEAPON,  collide_robot_and_weapon);	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_CAMERA);	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_POWERUP);	\
-	NO##_COLLISION(OBJ_ROBOT, OBJ_DEBRIS);	\
-	DO##_COLLISION(OBJ_HOSTAGE, OBJ_PLAYER,  collide_hostage_and_player);	\
-	DO##_COLLISION(OBJ_HOSTAGE, OBJ_WEAPON, COLLIDE_IGNORE_COLLISION);	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_CAMERA);	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_POWERUP);	\
-	NO##_COLLISION(OBJ_HOSTAGE, OBJ_DEBRIS);	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_WEAPON,  collide_player_and_weapon);	\
-	NO##_COLLISION(OBJ_PLAYER, OBJ_CAMERA);	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_POWERUP, collide_player_and_powerup);	\
-	NO##_COLLISION(OBJ_PLAYER, OBJ_DEBRIS);	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_CNTRLCEN, collide_player_and_controlcen);	\
-	DO##_COLLISION(OBJ_PLAYER, OBJ_CLUTTER, collide_player_and_clutter);	\
-	NO##_COLLISION(OBJ_WEAPON, OBJ_CAMERA);	\
-	NO##_COLLISION(OBJ_WEAPON, OBJ_POWERUP);	\
-	DO##_COLLISION(OBJ_WEAPON, OBJ_DEBRIS,  collide_weapon_and_debris);	\
-	NO##_COLLISION(OBJ_CAMERA, OBJ_POWERUP);	\
-	NO##_COLLISION(OBJ_CAMERA, OBJ_DEBRIS);	\
-	NO##_COLLISION(OBJ_POWERUP, OBJ_DEBRIS);	\
-	DO##_COLLISION(OBJ_WEAPON, OBJ_CNTRLCEN, collide_weapon_and_controlcen);	\
-	DO##_COLLISION(OBJ_ROBOT, OBJ_CNTRLCEN, collide_robot_and_controlcen);	\
-	DO##_COLLISION(OBJ_WEAPON, OBJ_CLUTTER, collide_weapon_and_clutter)	\
+	NO##_SAME_COLLISION(object_type::OBJ_FIREBALL);	\
+	DO##_SAME_COLLISION(object_type::OBJ_ROBOT, collide_robot_and_robot);	\
+	NO##_SAME_COLLISION(object_type::OBJ_HOSTAGE);	\
+	DO##_SAME_COLLISION(object_type::OBJ_PLAYER, collide_player_and_player);	\
+	DO##_SAME_COLLISION(object_type::OBJ_WEAPON, collide_weapon_and_weapon);	\
+	NO##_SAME_COLLISION(object_type::OBJ_CAMERA);	\
+	NO##_SAME_COLLISION(object_type::OBJ_POWERUP);	\
+	NO##_SAME_COLLISION(object_type::OBJ_DEBRIS);	\
+	DO##_COLLISION(object_type::OBJ_WALL, object_type::OBJ_ROBOT, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(object_type::OBJ_WALL, object_type::OBJ_WEAPON, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(object_type::OBJ_WALL, object_type::OBJ_PLAYER, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(object_type::OBJ_WALL, object_type::OBJ_POWERUP, COLLIDE_IGNORE_COLLISION);	\
+	DO##_COLLISION(object_type::OBJ_WALL, object_type::OBJ_DEBRIS, COLLIDE_IGNORE_COLLISION);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_ROBOT);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_HOSTAGE);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_PLAYER);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_WEAPON);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_CAMERA);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_POWERUP);	\
+	NO##_COLLISION(object_type::OBJ_FIREBALL, object_type::OBJ_DEBRIS);	\
+	NO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_HOSTAGE);	\
+	DO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_PLAYER,  collide_robot_and_player);	\
+	DO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_WEAPON,  collide_robot_and_weapon);	\
+	NO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_CAMERA);	\
+	NO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_POWERUP);	\
+	NO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_DEBRIS);	\
+	DO##_COLLISION(object_type::OBJ_HOSTAGE, object_type::OBJ_PLAYER,  collide_hostage_and_player);	\
+	DO##_COLLISION(object_type::OBJ_HOSTAGE, object_type::OBJ_WEAPON, COLLIDE_IGNORE_COLLISION);	\
+	NO##_COLLISION(object_type::OBJ_HOSTAGE, object_type::OBJ_CAMERA);	\
+	NO##_COLLISION(object_type::OBJ_HOSTAGE, object_type::OBJ_POWERUP);	\
+	NO##_COLLISION(object_type::OBJ_HOSTAGE, object_type::OBJ_DEBRIS);	\
+	DO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_WEAPON,  collide_player_and_weapon);	\
+	NO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_CAMERA);	\
+	DO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_POWERUP, collide_player_and_powerup);	\
+	NO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_DEBRIS);	\
+	DO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_CNTRLCEN, collide_player_and_controlcen);	\
+	DO##_COLLISION(object_type::OBJ_PLAYER, object_type::OBJ_CLUTTER, collide_player_and_clutter);	\
+	NO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_CAMERA);	\
+	NO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_POWERUP);	\
+	DO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_DEBRIS,  collide_weapon_and_debris);	\
+	NO##_COLLISION(object_type::OBJ_CAMERA, object_type::OBJ_POWERUP);	\
+	NO##_COLLISION(object_type::OBJ_CAMERA, object_type::OBJ_DEBRIS);	\
+	NO##_COLLISION(object_type::OBJ_POWERUP, object_type::OBJ_DEBRIS);	\
+	DO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_CNTRLCEN, collide_weapon_and_controlcen);	\
+	DO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_CNTRLCEN, collide_robot_and_controlcen);	\
+	DO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_CLUTTER, collide_weapon_and_clutter)	\
 
 
 /* DPH: Put these macros on one long line to avoid CR/LF problems on linux */
@@ -2689,57 +2689,57 @@ std::bitset<256> CollisionResult{[]{
 	!CollisionResult[COLLISION_OF((T2), (T1))]	\
 	),	#T1 " " #T2)
 
-	ENABLE_COLLISION( OBJ_WALL, OBJ_ROBOT );
-	ENABLE_COLLISION( OBJ_WALL, OBJ_WEAPON );
-	ENABLE_COLLISION( OBJ_WALL, OBJ_PLAYER  );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_FIREBALL );
+	ENABLE_COLLISION( object_type::OBJ_WALL, object_type::OBJ_ROBOT );
+	ENABLE_COLLISION( object_type::OBJ_WALL, object_type::OBJ_WEAPON );
+	ENABLE_COLLISION( object_type::OBJ_WALL, object_type::OBJ_PLAYER  );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_FIREBALL );
 
-	ENABLE_COLLISION( OBJ_ROBOT, OBJ_ROBOT );
-//	DISABLE_COLLISION( OBJ_ROBOT, OBJ_ROBOT );	//	ALERT: WARNING: HACK: MK = RESPONSIBLE! TESTING!!
-	DISABLE_COLLISION( OBJ_HOSTAGE, OBJ_HOSTAGE );
-	ENABLE_COLLISION( OBJ_PLAYER, OBJ_PLAYER );
-	ENABLE_COLLISION( OBJ_WEAPON, OBJ_WEAPON );
-	DISABLE_COLLISION( OBJ_CAMERA, OBJ_CAMERA );
-	DISABLE_COLLISION( OBJ_POWERUP, OBJ_POWERUP );
-	DISABLE_COLLISION( OBJ_DEBRIS, OBJ_DEBRIS );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_ROBOT );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_HOSTAGE );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_PLAYER );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_WEAPON );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_CAMERA );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_POWERUP );
-	DISABLE_COLLISION( OBJ_FIREBALL, OBJ_DEBRIS );
-	DISABLE_COLLISION( OBJ_ROBOT, OBJ_HOSTAGE );
-	ENABLE_COLLISION( OBJ_ROBOT, OBJ_PLAYER );
-	ENABLE_COLLISION( OBJ_ROBOT, OBJ_WEAPON );
-	DISABLE_COLLISION( OBJ_ROBOT, OBJ_CAMERA );
-	DISABLE_COLLISION( OBJ_ROBOT, OBJ_POWERUP );
-	DISABLE_COLLISION( OBJ_ROBOT, OBJ_DEBRIS );
-	ENABLE_COLLISION( OBJ_HOSTAGE, OBJ_PLAYER );
-	ENABLE_COLLISION( OBJ_HOSTAGE, OBJ_WEAPON );
-	DISABLE_COLLISION( OBJ_HOSTAGE, OBJ_CAMERA );
-	DISABLE_COLLISION( OBJ_HOSTAGE, OBJ_POWERUP );
-	DISABLE_COLLISION( OBJ_HOSTAGE, OBJ_DEBRIS );
-	ENABLE_COLLISION( OBJ_PLAYER, OBJ_WEAPON );
-	DISABLE_COLLISION( OBJ_PLAYER, OBJ_CAMERA );
-	ENABLE_COLLISION( OBJ_PLAYER, OBJ_POWERUP );
-	DISABLE_COLLISION( OBJ_PLAYER, OBJ_DEBRIS );
-	DISABLE_COLLISION( OBJ_WEAPON, OBJ_CAMERA );
-	DISABLE_COLLISION( OBJ_WEAPON, OBJ_POWERUP );
-	ENABLE_COLLISION( OBJ_WEAPON, OBJ_DEBRIS );
-	DISABLE_COLLISION( OBJ_CAMERA, OBJ_POWERUP );
-	DISABLE_COLLISION( OBJ_CAMERA, OBJ_DEBRIS );
-	DISABLE_COLLISION( OBJ_POWERUP, OBJ_DEBRIS );
-	ENABLE_COLLISION( OBJ_POWERUP, OBJ_WALL );
-	ENABLE_COLLISION( OBJ_WEAPON, OBJ_CNTRLCEN );
-	ENABLE_COLLISION( OBJ_WEAPON, OBJ_CLUTTER );
-	ENABLE_COLLISION( OBJ_PLAYER, OBJ_CNTRLCEN );
-	ENABLE_COLLISION( OBJ_ROBOT, OBJ_CNTRLCEN );
-	ENABLE_COLLISION( OBJ_PLAYER, OBJ_CLUTTER );
+	ENABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_ROBOT );
+//	DISABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_ROBOT );	//	ALERT: WARNING: HACK: MK = RESPONSIBLE! TESTING!!
+	DISABLE_COLLISION( object_type::OBJ_HOSTAGE, object_type::OBJ_HOSTAGE );
+	ENABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_PLAYER );
+	ENABLE_COLLISION( object_type::OBJ_WEAPON, object_type::OBJ_WEAPON );
+	DISABLE_COLLISION( object_type::OBJ_CAMERA, object_type::OBJ_CAMERA );
+	DISABLE_COLLISION( object_type::OBJ_POWERUP, object_type::OBJ_POWERUP );
+	DISABLE_COLLISION( object_type::OBJ_DEBRIS, object_type::OBJ_DEBRIS );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_ROBOT );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_HOSTAGE );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_PLAYER );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_WEAPON );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_CAMERA );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_POWERUP );
+	DISABLE_COLLISION( object_type::OBJ_FIREBALL, object_type::OBJ_DEBRIS );
+	DISABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_HOSTAGE );
+	ENABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_PLAYER );
+	ENABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_WEAPON );
+	DISABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_CAMERA );
+	DISABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_POWERUP );
+	DISABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_DEBRIS );
+	ENABLE_COLLISION( object_type::OBJ_HOSTAGE, object_type::OBJ_PLAYER );
+	ENABLE_COLLISION( object_type::OBJ_HOSTAGE, object_type::OBJ_WEAPON );
+	DISABLE_COLLISION( object_type::OBJ_HOSTAGE, object_type::OBJ_CAMERA );
+	DISABLE_COLLISION( object_type::OBJ_HOSTAGE, object_type::OBJ_POWERUP );
+	DISABLE_COLLISION( object_type::OBJ_HOSTAGE, object_type::OBJ_DEBRIS );
+	ENABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_WEAPON );
+	DISABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_CAMERA );
+	ENABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_POWERUP );
+	DISABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_DEBRIS );
+	DISABLE_COLLISION( object_type::OBJ_WEAPON, object_type::OBJ_CAMERA );
+	DISABLE_COLLISION( object_type::OBJ_WEAPON, object_type::OBJ_POWERUP );
+	ENABLE_COLLISION( object_type::OBJ_WEAPON, object_type::OBJ_DEBRIS );
+	DISABLE_COLLISION( object_type::OBJ_CAMERA, object_type::OBJ_POWERUP );
+	DISABLE_COLLISION( object_type::OBJ_CAMERA, object_type::OBJ_DEBRIS );
+	DISABLE_COLLISION( object_type::OBJ_POWERUP, object_type::OBJ_DEBRIS );
+	ENABLE_COLLISION( object_type::OBJ_POWERUP, object_type::OBJ_WALL );
+	ENABLE_COLLISION( object_type::OBJ_WEAPON, object_type::OBJ_CNTRLCEN );
+	ENABLE_COLLISION( object_type::OBJ_WEAPON, object_type::OBJ_CLUTTER );
+	ENABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_CNTRLCEN );
+	ENABLE_COLLISION( object_type::OBJ_ROBOT, object_type::OBJ_CNTRLCEN );
+	ENABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_CLUTTER );
 #if DXX_BUILD_DESCENT == 2
-	ENABLE_COLLISION( OBJ_PLAYER, OBJ_MARKER );
+	ENABLE_COLLISION( object_type::OBJ_PLAYER, object_type::OBJ_MARKER );
 #endif
-	ENABLE_COLLISION( OBJ_DEBRIS, OBJ_WALL );
+	ENABLE_COLLISION( object_type::OBJ_DEBRIS, object_type::OBJ_WALL );
 #endif
 
 namespace dsx {
@@ -2753,7 +2753,7 @@ window_event_result collide_object_with_wall(
 	auto &Objects = LevelUniqueObjectState.Objects;
 
 	switch( A->type )	{
-		case object_type::OBJ_WALL:	// impossible: no object is of type OBJ_WALL
+		case object_type::OBJ_WALL:	// impossible: no object is of type object_type::OBJ_WALL
 			[[unlikely]];
 			break;
 		case object_type::OBJ_CNTRLCEN:	// impossible: control centers never move
@@ -2765,38 +2765,38 @@ window_event_result collide_object_with_wall(
 		case object_type::OBJ_LIGHT:	// impossible: no one ever reported a crash when this type was routed to a `default:` that called `Error`; light sources never move
 			[[unlikely]];
 			break;
-		case object_type::OBJ_COOP:	// impossible: OBJ_COOP never moves.  Players spawned in cooperative mode have type OBJ_PLAYER.
+		case object_type::OBJ_COOP:	// impossible: object_type::OBJ_COOP never moves.  Players spawned in cooperative mode have type object_type::OBJ_PLAYER.
 			[[unlikely]];
 			break;
 		case object_type::OBJ_MARKER:	// impossible: markers never move
 			[[unlikely]];
 			break;
-	case OBJ_NONE:
+	case object_type::OBJ_NONE:
 		Error( "A object of type NONE hit a wall!\n");
 		break;
-	case OBJ_PLAYER:		collide_player_and_wall(A,hitspeed,hitseg,hitwall,hitpt); break;
-		case OBJ_WEAPON:
+	case object_type::OBJ_PLAYER:		collide_player_and_wall(A,hitspeed,hitseg,hitwall,hitpt); break;
+		case object_type::OBJ_WEAPON:
 			return collide_weapon_and_wall(
 #if DXX_BUILD_DESCENT == 2
 				LevelSharedDestructibleLightState,
 #endif
 				Robot_info, Objects, vmsegptridx, A, hitseg, hitwall, hitpt);
-	case OBJ_DEBRIS:
+	case object_type::OBJ_DEBRIS:
 		collide_debris_and_wall(Robot_info, A, hitseg, hitwall, hitpt);
 		break;
 
-	case OBJ_FIREBALL:	break;		//collide_fireball_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
-		case OBJ_ROBOT:
+	case object_type::OBJ_FIREBALL:	break;		//collide_fireball_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
+		case object_type::OBJ_ROBOT:
 		{
 			auto &Walls = LevelUniqueWallSubsystemState.Walls;
 			auto &vcwallptr = Walls.vcptr;
 			collide_robot_and_wall(vcwallptr, A, hitseg, hitwall, hitpt);
 			break;
 		}
-	case OBJ_HOSTAGE:		break;		//collide_hostage_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
-	case OBJ_CAMERA:		break;		//collide_camera_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
-	case OBJ_POWERUP:		break;		//collide_powerup_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
-	case OBJ_GHOST:		break;	//do nothing
+	case object_type::OBJ_HOSTAGE:		break;		//collide_hostage_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
+	case object_type::OBJ_CAMERA:		break;		//collide_camera_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
+	case object_type::OBJ_POWERUP:		break;		//collide_powerup_and_wall(A,hitspeed,hitseg,hitwall,hitpt);
+	case object_type::OBJ_GHOST:		break;	//do nothing
 	}
 
 	return window_event_result::handled;	// assume handled

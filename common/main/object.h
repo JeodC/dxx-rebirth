@@ -796,19 +796,19 @@ static inline void set_robot_id(object_base &o, const robot_id id)
 }
 
 void check_warn_object_type(const object_base &, object_type, const char *file, unsigned line);
-#define get_player_id(O)	(check_warn_object_type(O, OBJ_PLAYER, __FILE__, __LINE__), get_player_id(O))
-#define get_powerup_id(O)	(check_warn_object_type(O, OBJ_POWERUP, __FILE__, __LINE__), get_powerup_id(O))
-#define get_ghost_id(O)	(check_warn_object_type(O, OBJ_GHOST, __FILE__, __LINE__), (get_player_id)(O))
-#define get_fireball_id(O)	(check_warn_object_type(O, OBJ_FIREBALL, __FILE__, __LINE__), get_fireball_id(O))
-#define get_robot_id(O)	(check_warn_object_type(O, OBJ_ROBOT, __FILE__, __LINE__), get_robot_id(O))
-#define get_weapon_id(O)	(check_warn_object_type(O, OBJ_WEAPON, __FILE__, __LINE__), get_weapon_id(O))
+#define get_player_id(O)	(check_warn_object_type(O, object_type::OBJ_PLAYER, __FILE__, __LINE__), get_player_id(O))
+#define get_powerup_id(O)	(check_warn_object_type(O, object_type::OBJ_POWERUP, __FILE__, __LINE__), get_powerup_id(O))
+#define get_ghost_id(O)	(check_warn_object_type(O, object_type::OBJ_GHOST, __FILE__, __LINE__), (get_player_id)(O))
+#define get_fireball_id(O)	(check_warn_object_type(O, object_type::OBJ_FIREBALL, __FILE__, __LINE__), get_fireball_id(O))
+#define get_robot_id(O)	(check_warn_object_type(O, object_type::OBJ_ROBOT, __FILE__, __LINE__), get_robot_id(O))
+#define get_weapon_id(O)	(check_warn_object_type(O, object_type::OBJ_WEAPON, __FILE__, __LINE__), get_weapon_id(O))
 #if DXX_BUILD_DESCENT == 2
-#define get_marker_id(O)	(check_warn_object_type(O, OBJ_MARKER, __FILE__, __LINE__), get_marker_id(O))
+#define get_marker_id(O)	(check_warn_object_type(O, object_type::OBJ_MARKER, __FILE__, __LINE__), get_marker_id(O))
 #endif
-#define set_player_id(O,I)	(check_warn_object_type(O, OBJ_PLAYER, __FILE__, __LINE__), set_player_id(O, I))
-#define set_reactor_id(O,I)	(check_warn_object_type(O, OBJ_CNTRLCEN, __FILE__, __LINE__), set_reactor_id(O, I))
-#define set_robot_id(O,I)	(check_warn_object_type(O, OBJ_ROBOT, __FILE__, __LINE__), set_robot_id(O, I))
-#define set_weapon_id(O,I)	(check_warn_object_type(O, OBJ_WEAPON, __FILE__, __LINE__), set_weapon_id(O, I))
+#define set_player_id(O,I)	(check_warn_object_type(O, object_type::OBJ_PLAYER, __FILE__, __LINE__), set_player_id(O, I))
+#define set_reactor_id(O,I)	(check_warn_object_type(O, object_type::OBJ_CNTRLCEN, __FILE__, __LINE__), set_reactor_id(O, I))
+#define set_robot_id(O,I)	(check_warn_object_type(O, object_type::OBJ_ROBOT, __FILE__, __LINE__), set_robot_id(O, I))
+#define set_weapon_id(O,I)	(check_warn_object_type(O, object_type::OBJ_WEAPON, __FILE__, __LINE__), set_weapon_id(O, I))
 #ifdef DXX_CONSTANT_TRUE
 #define check_warn_object_type(O,T,F,L)	\
 	( DXX_BEGIN_COMPOUND_STATEMENT {	\

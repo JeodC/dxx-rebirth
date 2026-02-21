@@ -192,7 +192,7 @@ static bool ignore_guided_missile_weapon(const object &o)
 bool laser_are_related(const vcobjptridx_t o1, const vcobjptridx_t o2)
 {
 	// See if o2 is the parent of o1
-	if (o1->type == OBJ_WEAPON)
+	if (o1->type == object_type::OBJ_WEAPON)
 		if (laser_parent_is_object(o1->ctype.laser_info, o2))
 		{
 			//	o1 is a weapon, o2 is the parent of 1, so if o1 is PROXIMITY_BOMB and o2 is player, they are related only if o1 < 2.0 seconds old
@@ -204,7 +204,7 @@ bool laser_are_related(const vcobjptridx_t o1, const vcobjptridx_t o2)
 		}
 
 	// See if o1 is the parent of o2
-	if (o2->type == OBJ_WEAPON)
+	if (o2->type == object_type::OBJ_WEAPON)
 	{
 		if (laser_parent_is_object(o2->ctype.laser_info, o1))
 		{
@@ -220,7 +220,7 @@ bool laser_are_related(const vcobjptridx_t o1, const vcobjptridx_t o2)
 	}
 
 	// They must both be weapons
-	if (o1->type != OBJ_WEAPON || o2->type != OBJ_WEAPON)
+	if (o1->type != object_type::OBJ_WEAPON || o2->type != object_type::OBJ_WEAPON)
 		return 0;
 
 	//	Here is the 09/07/94 change -- Siblings must be identical, others can hurt each other
@@ -401,7 +401,7 @@ constexpr vm_distance OMEGA_MAX_TRACKABLE_DIST{MAX_OMEGA_DIST}; //	An object mus
 // Since last omega blob has VERY high velocity it's impossible to ensure a constant travel distance on varying FPS. So delete if they exceed their maximum distance.
 static int omega_cleanup(fvcobjptr &vcobjptr, const vmobjptridx_t weapon)
 {
-	if (weapon->type != OBJ_WEAPON || get_weapon_id(weapon) != weapon_id_type::OMEGA_ID)
+	if (weapon->type != object_type::OBJ_WEAPON || get_weapon_id(weapon) != weapon_id_type::OMEGA_ID)
 		return 0;
 	auto &weapon_laser_info = weapon->ctype.laser_info;
 	auto &obj = *vcobjptr(weapon_laser_info.parent_num);
@@ -422,7 +422,7 @@ int ok_to_do_omega_damage(const object &weapon)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vcobjptr = Objects.vcptr;
-	if (weapon.type != OBJ_WEAPON || get_weapon_id(weapon) != weapon_id_type::OMEGA_ID)
+	if (weapon.type != object_type::OBJ_WEAPON || get_weapon_id(weapon) != weapon_id_type::OMEGA_ID)
 		return 1;
 	if (!(Game_mode & GM_MULTI))
 		return 1;
@@ -600,7 +600,7 @@ static void do_omega_stuff(fvmsegptridx &vmsegptridx, const vmobjptridx_t parent
 {
 	vms_vector	goal_pos;
 	player_info *pl_info{};
-	if (parent_objp->type == OBJ_PLAYER && get_player_id(parent_objp) == Player_num)
+	if (parent_objp->type == object_type::OBJ_PLAYER && get_player_id(parent_objp) == Player_num)
 	{
 		//	If charge >= min, or (some charge and zero energy), allow to fire.
 		auto &player_info = parent_objp->ctype.player_info;
@@ -708,7 +708,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	}
 
 	//	Don't let homing blobs make muzzle flash.
-	if (parent->type == OBJ_ROBOT)
+	if (parent->type == object_type::OBJ_ROBOT)
 		do_muzzle_stuff(segnum, position);
 
 	const imobjptridx_t obj = create_weapon_object(weapon_type,segnum,position);
@@ -726,7 +726,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 		// Create orientation matrix for tracking purposes.
 		reconstruct_at(obj->orient, vm_vector_to_matrix_u, direction, parent->orient.uvec);
 
-		if (parent != Viewer && parent->type != OBJ_WEAPON) {
+		if (parent != Viewer && parent->type != object_type::OBJ_WEAPON) {
 			// Muzzle flash
 			if (const auto flash_vclip = weapon_info.flash_vclip; Vclip.valid_index(flash_vclip))
 				object_create_explosion_without_damage(Vclip, vmsegptridx(obj->segnum), obj->pos, weapon_info.flash_size, flash_vclip);
@@ -738,7 +738,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	}
 #endif
 
-	if (parent->type == OBJ_PLAYER) {
+	if (parent->type == object_type::OBJ_PLAYER) {
 		if (weapon_type == weapon_id_type::FUSION_ID) {
 			int	fusion_scale;
 #if DXX_BUILD_DESCENT == 1
@@ -814,12 +814,12 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 
 	//	Assign parent type to highest level creator.  This propagates parent type down from
 	//	the original creator through weapons which create children of their own (ie, smart missile)
-	if (parent->type == OBJ_WEAPON) {
+	if (parent->type == object_type::OBJ_WEAPON) {
 		auto highest_parent = parent;
 		int	count;
 
 		count = 0;
-		while ((count++ < 10) && (highest_parent->type == OBJ_WEAPON)) {
+		while ((count++ < 10) && (highest_parent->type == object_type::OBJ_WEAPON)) {
 			const auto next_parent = highest_parent->ctype.laser_info.parent_num;
 			const auto &&parent_objp = parent.absolute_sibling(next_parent);
 			if (!laser_parent_is_object(highest_parent->ctype.laser_info, parent_objp))
@@ -843,7 +843,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	if ((weapon_info.homing_flag && (obj->ctype.laser_info.track_goal = object_none, true)) || obj->render_type == render_type::RT_POLYOBJ)
 		reconstruct_at(obj->orient, vm_vector_to_matrix_u, direction, parent->orient.uvec);
 
-	if (( parent != Viewer ) && (parent->type != OBJ_WEAPON))	{
+	if (( parent != Viewer ) && (parent->type != object_type::OBJ_WEAPON))	{
 		// Muzzle flash
 		if (const auto flash_vclip = weapon_info.flash_vclip; Vclip.valid_index(flash_vclip))
 			object_create_explosion_without_damage(Vclip, segnum.absolute_sibling(obj->segnum), obj->pos, weapon_info.flash_size, flash_vclip);
@@ -868,9 +868,9 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 	// This also jitters the laser a bit so that it doesn't alias.
 	//	Don't do for weapons created by weapons.
 #if DXX_BUILD_DESCENT == 1
-	if (parent->type != OBJ_WEAPON && weapon_info.render != weapon_info::render_type::None && weapon_type != weapon_id_type::FLARE_ID)
+	if (parent->type != object_type::OBJ_WEAPON && weapon_info.render != weapon_info::render_type::None && weapon_type != weapon_id_type::FLARE_ID)
 #elif DXX_BUILD_DESCENT == 2
-	if (parent->type == OBJ_PLAYER && weapon_info.render != weapon_info::render_type::None && weapon_type != weapon_id_type::FLARE_ID)
+	if (parent->type == object_type::OBJ_PLAYER && weapon_info.render != weapon_info::render_type::None && weapon_type != weapon_id_type::FLARE_ID)
 #endif
 	{
 	 	const auto end_pos{vm_vec_scale_add(obj->pos, direction, (laser_length / 2))};
@@ -925,7 +925,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 		vm_vec_scale(obj->mtype.phys_info.thrust, fixdiv(weapon_info.thrust, weapon_speed+parent_speed));
 	}
 
-	if (obj->type == OBJ_WEAPON && weapon_type == weapon_id_type::FLARE_ID)
+	if (obj->type == object_type::OBJ_WEAPON && weapon_type == weapon_id_type::FLARE_ID)
 		obj->lifeleft += (d_rand()-16384) << 2;		//	add in -2..2 seconds
 
 	return obj;
@@ -1066,13 +1066,13 @@ static int object_is_trackable(const imobjptridx_t objp, const vmobjptridx_t tra
 #endif
 
 	//	Can't track AI object if he's cloaked.
-	if (objp->type == OBJ_ROBOT) {
+	if (objp->type == object_type::OBJ_ROBOT) {
 		if (objp->ctype.ai_info.CLOAKED)
 			return 0;
 #if DXX_BUILD_DESCENT == 2
 		//	Your missiles don't track your escort.
 		if (Robot_info[get_robot_id(objp)].companion)
-			if (tracker->ctype.laser_info.parent_type == OBJ_PLAYER)
+			if (tracker->ctype.laser_info.parent_type == object_type::OBJ_PLAYER)
 				return 0;
 #endif
 	}
@@ -1098,26 +1098,26 @@ static int object_is_trackable(const imobjptridx_t objp, const vmobjptridx_t tra
 static imobjptridx_t call_find_homing_object_complete(const vms_vector &curpos, const vmobjptridx_t tracker)
 {
 	if (+(Game_mode & GM_MULTI)) {
-		if (tracker->ctype.laser_info.parent_type == OBJ_PLAYER) {
+		if (tracker->ctype.laser_info.parent_type == object_type::OBJ_PLAYER) {
 			//	It's fired by a player, so if robots present, track robot, else track player.
 			if (+(Game_mode & GM_MULTI_COOP))
-				return find_homing_object_complete( curpos, tracker, OBJ_ROBOT, -1);
+				return find_homing_object_complete( curpos, tracker, object_type::OBJ_ROBOT, -1);
 			else
-				return find_homing_object_complete( curpos, tracker, OBJ_PLAYER, OBJ_ROBOT);
+				return find_homing_object_complete( curpos, tracker, object_type::OBJ_PLAYER, object_type::OBJ_ROBOT);
 		} else {
 			int	goal2_type{
 #if DXX_BUILD_DESCENT == 2
 				(cheats.robotskillrobots)
-				? OBJ_ROBOT
+				? object_type::OBJ_ROBOT
 				:
 #endif
 				-1
 			};
-			assert(tracker->ctype.laser_info.parent_type == OBJ_ROBOT);
-			return find_homing_object_complete(curpos, tracker, OBJ_PLAYER, goal2_type);
+			assert(tracker->ctype.laser_info.parent_type == object_type::OBJ_ROBOT);
+			return find_homing_object_complete(curpos, tracker, object_type::OBJ_PLAYER, goal2_type);
 		}
 	} else
-		return find_homing_object_complete( curpos, tracker, OBJ_ROBOT, -1);
+		return find_homing_object_complete( curpos, tracker, object_type::OBJ_ROBOT, -1);
 }
 
 //	--------------------------------------------------------------------------------------------
@@ -1189,7 +1189,7 @@ imobjptridx_t find_homing_object_complete(const vms_vector &curpos, const vmobjp
 		if ((curobjp->type != track_obj_type1) && (curobjp->type != track_obj_type2))
 		{
 #if DXX_BUILD_DESCENT == 2
-			if ((curobjp->type == OBJ_WEAPON) && (is_proximity_bomb_or_player_smart_mine(get_weapon_id(curobjp)))) {
+			if ((curobjp->type == object_type::OBJ_WEAPON) && (is_proximity_bomb_or_player_smart_mine(get_weapon_id(curobjp)))) {
 				auto &cur_laser_info = curobjp->ctype.laser_info;
 				auto &tracker_laser_info = tracker->ctype.laser_info;
 				if (cur_laser_info.parent_num != tracker_laser_info.parent_num || cur_laser_info.parent_signature != tracker_laser_info.parent_signature)
@@ -1205,7 +1205,7 @@ imobjptridx_t find_homing_object_complete(const vms_vector &curpos, const vmobjp
 			continue;
 
 		//	Don't track cloaked players.
-		if (curobjp->type == OBJ_PLAYER)
+		if (curobjp->type == object_type::OBJ_PLAYER)
 		{
 			if (curobjp->ctype.player_info.powerup_flags & PLAYER_FLAGS_CLOAKED)
 				continue;
@@ -1213,20 +1213,20 @@ imobjptridx_t find_homing_object_complete(const vms_vector &curpos, const vmobjp
 			if (+(Game_mode & GM_TEAM))
 			{
 				const auto &&objparent = vcobjptr(tracker->ctype.laser_info.parent_num);
-				if (objparent->type == OBJ_PLAYER && multi_get_team_from_player(Netgame, get_player_id(curobjp)) == multi_get_team_from_player(Netgame, get_player_id(objparent)))
+				if (objparent->type == object_type::OBJ_PLAYER && multi_get_team_from_player(Netgame, get_player_id(curobjp)) == multi_get_team_from_player(Netgame, get_player_id(objparent)))
 					continue;
 			}
 		}
 
 		//	Can't track AI object if he's cloaked.
-		if (curobjp->type == OBJ_ROBOT) {
+		if (curobjp->type == object_type::OBJ_ROBOT) {
 			if (curobjp->ctype.ai_info.CLOAKED)
 				continue;
 
 #if DXX_BUILD_DESCENT == 2
 			//	Your missiles don't track your escort.
 			if (Robot_info[get_robot_id(curobjp)].companion)
-				if (tracker->ctype.laser_info.parent_type == OBJ_PLAYER)
+				if (tracker->ctype.laser_info.parent_type == object_type::OBJ_PLAYER)
 					continue;
 #endif
 		}
@@ -1302,29 +1302,29 @@ static imobjptridx_t track_track_goal(fvcobjptr &vcobjptr, const imobjptridx_t t
 	{
 		int	goal_type, goal2_type;
 		//	If player fired missile, then search for an object, if not, then give up.
-		if (vcobjptr(tracker->ctype.laser_info.parent_num)->type == OBJ_PLAYER)
+		if (vcobjptr(tracker->ctype.laser_info.parent_num)->type == object_type::OBJ_PLAYER)
 		{
 			if (track_goal == object_none)
 			{
 				if (+(Game_mode & GM_MULTI))
 				{
 					if (+(Game_mode & GM_MULTI_COOP))
-						goal_type = OBJ_ROBOT, goal2_type = -1;
+						goal_type = object_type::OBJ_ROBOT, goal2_type = -1;
 					else
 					{
-						goal_type = OBJ_PLAYER;
+						goal_type = object_type::OBJ_PLAYER;
 						goal2_type = +(Game_mode & GM_MULTI_ROBOTS)
-							? OBJ_ROBOT	//	Not cooperative, if robots, track either robot or player
+							? object_type::OBJ_ROBOT	//	Not cooperative, if robots, track either robot or player
 							: -1;		//	Not cooperative and no robots, track only a player
 					}
 				}
 				else
-					goal_type = OBJ_PLAYER, goal2_type = OBJ_ROBOT;
+					goal_type = object_type::OBJ_PLAYER, goal2_type = object_type::OBJ_ROBOT;
 			}
 			else
 			{
 				goal_type = vcobjptr(tracker->ctype.laser_info.track_goal)->type;
-				if ((goal_type == OBJ_PLAYER) || (goal_type == OBJ_ROBOT))
+				if ((goal_type == object_type::OBJ_PLAYER) || (goal_type == object_type::OBJ_ROBOT))
 					goal2_type = -1;
 				else
 					return object_none;
@@ -1335,14 +1335,14 @@ static imobjptridx_t track_track_goal(fvcobjptr &vcobjptr, const imobjptridx_t t
 
 #if DXX_BUILD_DESCENT == 2
 			if (cheats.robotskillrobots)
-				goal2_type = OBJ_ROBOT;
+				goal2_type = object_type::OBJ_ROBOT;
 #endif
 
 			if (track_goal == object_none)
-				goal_type = OBJ_PLAYER;
+				goal_type = object_type::OBJ_PLAYER;
 			else {
 				goal_type = vcobjptr(tracker->ctype.laser_info.track_goal)->type;
-				assert(goal_type != OBJ_GHOST);
+				assert(goal_type != object_type::OBJ_GHOST);
 			}
 		}
 		return find_homing_object_complete(tracker->pos, tracker, goal_type, goal2_type);
@@ -1395,9 +1395,9 @@ static imobjptridx_t Laser_player_fire_spread_delay(const d_robot_info_array &Ro
 
 	if (Fate == fvi_hit_type::Object)
 	{
-//		if ( Objects[hit_data.hit_object].type == OBJ_ROBOT )
+//		if ( Objects[hit_data.hit_object].type == object_type::OBJ_ROBOT )
 //			Objects[hit_data.hit_object].flags |= OF_SHOULD_BE_DEAD;
-//		if ( Objects[hit_data.hit_object].type != OBJ_POWERUP )
+//		if ( Objects[hit_data.hit_object].type != object_type::OBJ_POWERUP )
 //			return;
 	//as of 12/6/94, we don't care if the laser is stuck in an object. We
 	//just fire away normally
@@ -1435,7 +1435,7 @@ static imobjptridx_t Laser_player_fire_spread_delay(const d_robot_info_array &Ro
 		const auto need_new_missile_viewer = [obj]{
 			if (!Missile_viewer)
 				return true;
-			if (Missile_viewer->type != OBJ_WEAPON)
+			if (Missile_viewer->type != object_type::OBJ_WEAPON)
 				return true;
 			if (Missile_viewer->signature != Missile_viewer_sig)
 				return true;
@@ -1552,11 +1552,11 @@ static constexpr int HOMING_MISSILE_SCALE{16};
 
 static bool is_active_guided_missile(d_level_unique_object_state &LevelUniqueObjectState, const vcobjptridx_t obj)
 {
-	if (obj->ctype.laser_info.parent_type != OBJ_PLAYER)
+	if (obj->ctype.laser_info.parent_type != object_type::OBJ_PLAYER)
 		return false;
 	auto &vcobjptr = LevelUniqueObjectState.get_objects().vcptr;
 	auto &parent_obj = *vcobjptr(obj->ctype.laser_info.parent_num);
-	if (parent_obj.type != OBJ_PLAYER)
+	if (parent_obj.type != object_type::OBJ_PLAYER)
 		return false;
 	return LevelUniqueObjectState.Guided_missile.get_player_active_guided_missile(get_player_id(parent_obj)) == obj;
 }
@@ -2004,7 +2004,7 @@ int do_laser_firing(vmobjptridx_t objp, const primary_weapon_index weapon_num, c
 			auto &&weapon_obj = Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::FUSION_ID, player_gun_number::_0, weapon_sound_flag::audible, shot_orientation, object_none);
 			Laser_player_fire(LevelSharedRobotInfoState.Robot_info, objp, weapon_id_type::FUSION_ID, player_gun_number::_1, weapon_sound_flag::audible, shot_orientation, object_none);
 
-			assert(objp->type == OBJ_PLAYER);
+			assert(objp->type == object_type::OBJ_PLAYER);
 			auto &Fusion_charge = objp->ctype.player_info.Fusion_charge;
 			flags = static_cast<int8_t>(Fusion_charge >> 12);
 
@@ -2172,11 +2172,11 @@ static void create_smart_children(object_array &Objects, const vmobjptridx_t obj
 
 		range_for (const auto &&curobjp, vcobjptridx)
 		{
-			if (((curobjp->type == OBJ_ROBOT && !curobjp->ctype.ai_info.CLOAKED) || curobjp->type == OBJ_PLAYER) && curobjp != parent.num)
+			if (((curobjp->type == object_type::OBJ_ROBOT && !curobjp->ctype.ai_info.CLOAKED) || curobjp->type == object_type::OBJ_PLAYER) && curobjp != parent.num)
 			{
-				if (curobjp->type == OBJ_PLAYER)
+				if (curobjp->type == object_type::OBJ_PLAYER)
 				{
-					if (parent.type == OBJ_PLAYER && +(Game_mode & GM_MULTI_COOP))
+					if (parent.type == object_type::OBJ_PLAYER && +(Game_mode & GM_MULTI_COOP))
 						continue;
 					if (+(Game_mode & GM_TEAM) && multi_get_team_from_player(Netgame, get_player_id(curobjp)) == multi_get_team_from_player(Netgame, get_player_id(vcobjptr(parent.num))))
 						continue;
@@ -2185,13 +2185,13 @@ static void create_smart_children(object_array &Objects, const vmobjptridx_t obj
 				}
 
 				//	Robot blobs can't track robots.
-				if (curobjp->type == OBJ_ROBOT) {
-					if (parent.type == OBJ_ROBOT)
+				if (curobjp->type == object_type::OBJ_ROBOT) {
+					if (parent.type == object_type::OBJ_ROBOT)
 						continue;
 
 #if DXX_BUILD_DESCENT == 2
 					//	Your shots won't track the buddy.
-					if (parent.type == OBJ_PLAYER)
+					if (parent.type == object_type::OBJ_PLAYER)
 						if (Robot_info[get_robot_id(curobjp)].companion)
 							continue;
 #endif
@@ -2215,18 +2215,18 @@ static void create_smart_children(object_array &Objects, const vmobjptridx_t obj
 
 		//	Get type of weapon for child from parent.
 #if DXX_BUILD_DESCENT == 1
-		if (parent.type == OBJ_PLAYER)
+		if (parent.type == object_type::OBJ_PLAYER)
 		{
 			blob_id = weapon_id_type::PLAYER_SMART_HOMING_ID;
 		} else {
 			blob_id = ((N_weapon_types<weapon_id_type::ROBOT_SMART_HOMING_ID)?(weapon_id_type::PLAYER_SMART_HOMING_ID):(weapon_id_type::ROBOT_SMART_HOMING_ID)); // NOTE: Shareware & reg 1.0 do not have their own Smart structure for bots. It was introduced in 1.4 to make Smart blobs from lvl 7 boss easier to dodge. So if we do not have this type, revert to player's Smart behaviour..,
 		}
 #elif DXX_BUILD_DESCENT == 2
-		if (objp->type == OBJ_WEAPON) {
+		if (objp->type == object_type::OBJ_WEAPON) {
 			blob_id = Weapon_info[get_weapon_id(objp)].children;
 			Assert(blob_id != weapon_none);		//	Hmm, missing data in bitmaps.tbl.  Need "children=NN" parameter.
 		} else {
-			Assert(objp->type == OBJ_ROBOT);
+			Assert(objp->type == object_type::OBJ_ROBOT);
 			blob_id = weapon_id_type::ROBOT_SMART_HOMING_ID;
 		}
 #endif
@@ -2276,7 +2276,7 @@ void create_weapon_smart_children(const vmobjptridx_t objp)
 void create_robot_smart_children(const vmobjptridx_t objp, const uint_fast32_t num_smart_children)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
-	create_smart_children(Objects, objp, num_smart_children, {OBJ_ROBOT, objp});
+	create_smart_children(Objects, objp, num_smart_children, {object_type::OBJ_ROBOT, objp});
 }
 
 //give up control of the guided missile

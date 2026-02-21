@@ -653,7 +653,7 @@ static void do_render_object(grs_canvas &canvas, const d_level_unique_light_stat
 #if DXX_BUILD_DESCENT == 2
    if (Newdemo_state==ND_STATE_PLAYBACK)  
 	 {
-	  if ((DemoDoingLeft==6 || DemoDoingRight==6) && obj->type==OBJ_PLAYER)
+	  if ((DemoDoingLeft==6 || DemoDoingRight==6) && obj->type==object_type::OBJ_PLAYER)
 		{
 			// A nice fat hack: keeps the player ship from showing up in the
 			// small extra view when guiding a missile in the big window
@@ -666,7 +666,7 @@ static void do_render_object(grs_canvas &canvas, const d_level_unique_light_stat
 	//	Added by MK on 09/07/94 (at about 5:28 pm, CDT, on a beautiful, sunny late summer day!) so
 	//	that the guided missile system will know what objects to look at.
 	//	I didn't know we had guided missiles before the release of D1. --MK
-	if (obj->type == OBJ_ROBOT && obj->ctype.ai_info.ail.player_awareness_type == player_awareness_type_t::PA_NONE && (obj.get_unchecked_index() & 3) == (d_tick_count & 3))
+	if (obj->type == object_type::OBJ_ROBOT && obj->ctype.ai_info.ail.player_awareness_type == player_awareness_type_t::PA_NONE && (obj.get_unchecked_index() & 3) == (d_tick_count & 3))
 		window.rendered_robots.emplace_back(obj);
 
 	if ((count++ > MAX_OBJECTS) || (obj->next == obj)) {
@@ -690,7 +690,7 @@ static void do_render_object(grs_canvas &canvas, const d_level_unique_light_stat
 	for (auto n = obj->attached_obj; n != object_none;)
 	{
 		const auto &&o = obj.absolute_sibling(n);
-		Assert(o->type == OBJ_FIREBALL);
+		Assert(o->type == object_type::OBJ_FIREBALL);
 		assert(o->control_source == object::control_type::explosion);
 		Assert(o->flags & OF_ATTACHED);
 		n = o->ctype.expl_info.next_attach;
@@ -772,7 +772,7 @@ static void render_segment(fvcvertptr &vcvertptr, fvcwallptr &vcwallptr, const v
 	{		//all off screen?
 
 #if DXX_BUILD_DESCENT == 2
-		if (Viewer->type != OBJ_ROBOT)
+		if (Viewer->type != object_type::OBJ_ROBOT)
 #endif
 		{
 			LevelUniqueAutomapState.Automap_visited[seg] = 1;
@@ -1128,15 +1128,15 @@ bool render_compare_context_t::operator()(const distant_object &a, const distant
 		//or laser or something that should plot on top.  Don't do this for
 		//the afterburner blobs, though.
 
-		if (obj_a->type == OBJ_WEAPON || (obj_a->type == OBJ_FIREBALL && get_fireball_id(*obj_a) != vclip_index::afterburner_blob))
+		if (obj_a->type == object_type::OBJ_WEAPON || (obj_a->type == object_type::OBJ_FIREBALL && get_fireball_id(*obj_a) != vclip_index::afterburner_blob))
 		{
-			if (!(obj_b->type == OBJ_WEAPON || obj_b->type == OBJ_FIREBALL))
+			if (!(obj_b->type == object_type::OBJ_WEAPON || obj_b->type == object_type::OBJ_FIREBALL))
 				return true;	//a is weapon, b is not, so say a is closer
 			//both are weapons 
 		}
 		else
 		{
-			if (obj_b->type == OBJ_WEAPON || (obj_b->type == OBJ_FIREBALL && get_fireball_id(*obj_b) != vclip_index::afterburner_blob))
+			if (obj_b->type == object_type::OBJ_WEAPON || (obj_b->type == object_type::OBJ_FIREBALL && get_fireball_id(*obj_b) != vclip_index::afterburner_blob))
 				return false;	//b is weapon, a is not, so say a is farther
 		}
 
@@ -1176,9 +1176,9 @@ static void build_object_lists(object_array &Objects, fvcsegptr &vcsegptr, const
 			for (const auto obj : objects_in(vcsegptr(segnum), Objects.vcptridx, vcsegptr))
 			{
 				int list_pos;
-				if (obj->type == OBJ_NONE)
+				if (obj->type == object_type::OBJ_NONE)
 				{
-					assert(obj->type != OBJ_NONE);
+					assert(obj->type != object_type::OBJ_NONE);
 					continue;
 				}
 				if (unlikely(obj == viewer) && likely(obj->attached_obj == object_none))
@@ -1191,10 +1191,10 @@ static void build_object_lists(object_array &Objects, fvcsegptr &vcsegptr, const
 
 #if DXX_BUILD_DESCENT == 1
 				int did_migrate;
-				if (obj->type != OBJ_CNTRLCEN)		//don't migrate controlcen
+				if (obj->type != object_type::OBJ_CNTRLCEN)		//don't migrate controlcen
 #elif DXX_BUILD_DESCENT == 2
 				const int did_migrate = 0;
-				if (obj->type != OBJ_CNTRLCEN && !(obj->type==OBJ_ROBOT && get_robot_id(obj) == robot_id::special_reactor))		//don't migrate controlcen
+				if (obj->type != object_type::OBJ_CNTRLCEN && !(obj->type==object_type::OBJ_ROBOT && get_robot_id(obj) == robot_id::special_reactor))		//don't migrate controlcen
 #endif
 				do {
 #if DXX_BUILD_DESCENT == 1
@@ -1284,7 +1284,7 @@ void render_frame(grs_canvas &canvas, fix eye_offset, window_rendered_data &wind
 
 	auto Viewer_eye = Viewer->pos;
 
-//	if (Viewer->type == OBJ_PLAYER && (PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW))
+//	if (Viewer->type == object_type::OBJ_PLAYER && (PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW))
 //		vm_vec_scale_add2(&Viewer_eye,&Viewer->orient.fvec,(Viewer->size*3)/4);
 
 	if (eye_offset)	{
@@ -1679,7 +1679,7 @@ void render_mine(grs_canvas &canvas, const vms_vector &Viewer_eye, const vcsegid
 				if (rotate_list(vcvertptr, seg->verts).uand == clipping_code::None)
 				{		//all off screen?
 
-					if (Viewer->type!=OBJ_ROBOT)
+					if (Viewer->type!=object_type::OBJ_ROBOT)
 						LevelUniqueAutomapState.Automap_visited[segnum] = 1;
 
 					for (const auto sn : MAX_SIDES_PER_SEGMENT)
@@ -1737,7 +1737,7 @@ void render_mine(grs_canvas &canvas, const vms_vector &Viewer_eye, const vcsegid
 				if (rotate_list(vcvertptr, seg->verts).uand == clipping_code::None)
 				{		//all off screen?
 
-					if (Viewer->type!=OBJ_ROBOT)
+					if (Viewer->type!=object_type::OBJ_ROBOT)
 						LevelUniqueAutomapState.Automap_visited[segnum] = 1;
 
 					for (const auto sn : MAX_SIDES_PER_SEGMENT)

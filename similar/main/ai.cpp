@@ -692,7 +692,7 @@ void init_ai_objects(const d_robot_info_array &Robot_info)
 	range_for (const auto &&o, vmobjptridx)
 	{
 		auto &obj = *o;
-		if (obj.type == OBJ_ROBOT && obj.control_source == object::control_type::ai)
+		if (obj.type == object_type::OBJ_ROBOT && obj.control_source == object::control_type::ai)
 			init_ai_object(Robot_info, o, obj.ctype.ai_info.behavior, obj.ctype.ai_info.hide_segment);
 	}
 
@@ -738,7 +738,7 @@ void ai_turn_towards_vector(const vms_vector &goal_vector, object_base &objp, fi
 	if (rate == 0)
 		return;
 
-	if (objp.type == OBJ_ROBOT && get_robot_id(objp) == robot_id::baby_spider)
+	if (objp.type == object_type::OBJ_ROBOT && get_robot_id(objp) == robot_id::baby_spider)
 	{
 		physics_turn_towards_vector(goal_vector, objp, rate);
 		return;
@@ -1046,7 +1046,7 @@ void do_ai_robot_hit_attack(const d_robot_info_array &Robot_info, const vmobjptr
 
 	//	If player is dead, stop firing.
 	object &plrobj = *playerobj;
-	if (plrobj.type == OBJ_GHOST)
+	if (plrobj.type == object_type::OBJ_GHOST)
 		return;
 
 	if (robptr.attack_type == 1) {
@@ -1552,7 +1552,7 @@ static void ai_move_relative_to_player(const d_robot_info_array &Robot_info, con
 	if (objp->ctype.ai_info.danger_laser_num != object_none) {
 		const auto &&dobjp = objp.absolute_sibling(objp->ctype.ai_info.danger_laser_num);
 
-		if ((dobjp->type == OBJ_WEAPON) && (dobjp->signature == objp->ctype.ai_info.danger_laser_signature)) {
+		if ((dobjp->type == object_type::OBJ_WEAPON) && (dobjp->signature == objp->ctype.ai_info.danger_laser_signature)) {
 			vms_vector	laser_fvec;
 
 			const fix field_of_view = robptr.field_of_view[Difficulty_level];
@@ -2116,7 +2116,7 @@ static int check_object_object_intersection(const vms_vector &pos, fix size, con
 	//	If this would intersect with another object (only check those in this segment), then try to move.
 	for (auto &curobj : objects_in<const object_base>(segp, vcobjptridx, vcsegptr))
 	{
-		if (curobj.type == OBJ_PLAYER || curobj.type == OBJ_ROBOT || curobj.type == OBJ_CNTRLCEN)
+		if (curobj.type == object_type::OBJ_PLAYER || curobj.type == object_type::OBJ_ROBOT || curobj.type == object_type::OBJ_CNTRLCEN)
 		{
 			if (vm_vec_dist_quick(pos, curobj.pos) < size + curobj.size)
 				return 1;
@@ -2147,7 +2147,7 @@ static imobjptridx_t create_gated_robot(const d_robot_info_array &Robot_info, co
 	unsigned count{0};
 	for (auto &obj : vcobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 			if (obj.matcen_creator == BOSS_GATE_MATCEN_NUM)
 				count++;
 	}
@@ -3135,7 +3135,7 @@ static void make_nearby_robot_snipe(fvmsegptr &vmsegptr, const object &robot, co
 	range_for (auto &i, partial_const_range(bfs_list, bfs_length)) {
 		for (auto &obj : objects_in<object>(vmsegptr(i), vmobjptridx, vmsegptr))
 		{
-			if (obj.type != OBJ_ROBOT)
+			if (obj.type != object_type::OBJ_ROBOT)
 				continue;
 			if (obj.ctype.ai_info.behavior == ai_behavior::AIB_SNIPE)
 				continue;
@@ -3204,7 +3204,7 @@ static unsigned guidebot_should_fire_flare(fvcobjptr &vcobjptr, fvcsegptr &vcseg
 		/* should never happen */
 		return 0;
 	auto &plrobj = *vcobjptr(plr.objnum);
-	if (plrobj.type != OBJ_PLAYER)
+	if (plrobj.type != object_type::OBJ_PLAYER)
 		return 0;
 	vms_vector vec_to_controller;
 	const auto dist_to_controller = vm_vec_normalized_dir_quick(vec_to_controller, plrobj.pos, buddy_obj.pos);
@@ -3401,7 +3401,7 @@ void do_ai_frame(const d_level_shared_robot_info_state &LevelSharedRobotInfoStat
 
 				for (auto &obj_search : vcobjptr)
 				{
-					if (&obj_search != obj && obj_search.type == OBJ_ROBOT)
+					if (&obj_search != obj && obj_search.type == object_type::OBJ_ROBOT)
 					{
 						cur_dist = vm_vec_dist_quick(obj->pos, obj_search.pos);
 						if (cur_dist < F1_0*100)
@@ -3830,7 +3830,7 @@ _exit_cheat:
 
 		if (obj->ctype.ai_info.danger_laser_num != object_none) {
 			auto &dobjp = *vcobjptr(obj->ctype.ai_info.danger_laser_num);
-			if ((dobjp.type == OBJ_WEAPON) && (dobjp.signature == obj->ctype.ai_info.danger_laser_signature))
+			if ((dobjp.type == object_type::OBJ_WEAPON) && (dobjp.signature == obj->ctype.ai_info.danger_laser_signature))
 			{
 				fix circle_distance;
 				circle_distance = robptr.circle_distance[Difficulty_level] + ConsoleObject->size;
@@ -4549,7 +4549,7 @@ static int add_awareness_event(const object_base &objp, player_awareness_type_t 
 	{
 		if (type == player_awareness_type_t::PA_WEAPON_WALL_COLLISION ||
 			type == player_awareness_type_t::PA_WEAPON_ROBOT_COLLISION)
-			if (objp.type == OBJ_WEAPON && get_weapon_id(objp) == weapon_id_type::VULCAN_ID)
+			if (objp.type == object_type::OBJ_WEAPON && get_weapon_id(objp) == weapon_id_type::VULCAN_ID)
 				if (d_rand() > 3276)
 					return 0;       // For vulcan cannon, only about 1/10 actually cause awareness
 
@@ -4620,7 +4620,7 @@ static void set_player_awareness_all(fvmobjptr &vmobjptr, fvcsegptridx &vcsegptr
 
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT && obj.control_source == object::control_type::ai)
+		if (obj.type == object_type::OBJ_ROBOT && obj.control_source == object::control_type::ai)
 		{
 			auto &ailp = obj.ctype.ai_info.ail;
 			auto &na = New_awareness[obj.segnum];
@@ -4657,11 +4657,11 @@ void do_ai_frame_all(const d_robot_info_array &Robot_info)
 	if (Ai_last_missile_camera)
 	{
 		// Clear if supposed misisle camera is not a weapon, or just every so often, just in case.
-		if (((d_tick_count & 0x0f) == 0) || (Ai_last_missile_camera->type != OBJ_WEAPON)) {
+		if (((d_tick_count & 0x0f) == 0) || (Ai_last_missile_camera->type != object_type::OBJ_WEAPON)) {
 			Ai_last_missile_camera = nullptr;
 			for (auto &obj : vmobjptr)
 			{
-				if (obj.type == OBJ_ROBOT)
+				if (obj.type == object_type::OBJ_ROBOT)
 					obj.ctype.ai_info.SUB_FLAGS &= ~SUB_FLAGS_CAMERA_AWAKE;
 			}
 		}
@@ -4671,7 +4671,7 @@ void do_ai_frame_all(const d_robot_info_array &Robot_info)
 	if (BossUniqueState.Boss_dying) {
 		range_for (const auto &&objp, vmobjptridx)
 		{
-			if (objp->type == OBJ_ROBOT)
+			if (objp->type == object_type::OBJ_ROBOT)
 				if (Robot_info[get_robot_id(objp)].boss_flag != boss_robot_id::None)
 					do_boss_dying_frame(Robot_info, objp);
 		}
@@ -4778,7 +4778,7 @@ void ai_save_state(PHYSFS_File *fp)
 		range_for (const auto &i, Objects)
 		{
 			ai_local_rw ail_rw;
-			PHYSFSX_writeBytes(fp, i.type == OBJ_ROBOT ? (state_ai_local_to_ai_local_rw(&i.ctype.ai_info.ail, &ail_rw), &ail_rw) : &zero, sizeof(ail_rw));
+			PHYSFSX_writeBytes(fp, i.type == object_type::OBJ_ROBOT ? (state_ai_local_to_ai_local_rw(&i.ctype.ai_info.ail, &ail_rw), &ail_rw) : &zero, sizeof(ail_rw));
 		}
 	}
 	PHYSFSX_serialize_write(fp, Point_segs);
@@ -5041,7 +5041,7 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 	range_for (object &obj, Objects)
 	{
 		ai_local discard;
-		ai_local_read_swap(obj.type == OBJ_ROBOT ? &obj.ctype.ai_info.ail : &discard, swap, fp);
+		ai_local_read_swap(obj.type == object_type::OBJ_ROBOT ? &obj.ctype.ai_info.ail : &discard, swap, fp);
 	}
 	PHYSFSX_serialize_read(fp, Point_segs);
 	ai_cloak_info_read_n_swap(Ai_cloak_info.data(), Ai_cloak_info.size(), swap, fp);
@@ -5056,7 +5056,7 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 #endif
 		range_for (const auto &&o, vmobjptridx)
 		{
-			if (o->type == OBJ_ROBOT)
+			if (o->type == object_type::OBJ_ROBOT)
 			{
 				const auto boss_id = Robot_info[get_robot_id(o)].boss_flag;
 				if (boss_id != boss_robot_id::None)

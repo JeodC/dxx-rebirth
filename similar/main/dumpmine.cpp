@@ -124,7 +124,7 @@ const std::array<char[9], MAX_OBJECT_TYPES> Object_type_names{{
 static const char *object_types(const object_base &objp)
 {
 	const auto type{objp.type};
-	assert(type == OBJ_NONE || type < MAX_OBJECT_TYPES);
+	assert(type == object_type::OBJ_NONE || type < MAX_OBJECT_TYPES);
 	return &Object_type_names[type][0];
 }
 }
@@ -137,9 +137,9 @@ static const char *object_ids(const object_base &objp)
 {
 	switch (objp.type)
 	{
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 			return Robot_names[get_robot_id(objp)].data();
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 			return Powerup_names[get_powerup_id(objp)].data();
 		default:
 			return nullptr;
@@ -347,7 +347,7 @@ static void write_key_text(fvcobjptridx &vcobjptridx, segment_array &segments, f
 
 	range_for (const auto &&objp, vcobjptridx)
 	{
-		if (objp->type == OBJ_POWERUP)
+		if (objp->type == object_type::OBJ_POWERUP)
 		{
 			const char *color;
 			const auto id = get_powerup_id(objp);
@@ -402,7 +402,7 @@ static void write_control_center_text(fvcsegptridx &vcsegptridx, PHYSFS_File *my
 			count2 = 0;
 			for (auto &objp : objects_in<const object_base>(segp, vcobjptridx, vcsegptr))
 			{
-				if (objp.type == OBJ_CNTRLCEN)
+				if (objp.type == object_type::OBJ_CNTRLCEN)
 					count2++;
 			}
 			if (count2 == 0)
@@ -578,7 +578,7 @@ static void write_player_text(fvcobjptridx &vcobjptridx, PHYSFS_File *my_file)
 	PHYSFSX_puts_literal(my_file, "Players:\n");
 	range_for (const auto &&objp, vcobjptridx)
 	{
-		if (objp->type == OBJ_PLAYER)
+		if (objp->type == object_type::OBJ_PLAYER)
 		{
 			num_players++;
 			PHYSFSX_printf(my_file, "Player %2i is object #%3hu in segment #%3i.\n", get_player_id(objp), static_cast<uint16_t>(objp), objp->segnum);
@@ -1027,7 +1027,7 @@ static void say_totals(fvcobjptridx &vcobjptridx, PHYSFS_File *my_file, const ch
 
 		range_for (const auto &&objp, vcobjptridx)
 		{
-			if (!used_objects[objp] && objp->type != OBJ_NONE)
+			if (!used_objects[objp] && objp->type != object_type::OBJ_NONE)
 			{
 				const auto cur_obj_val = (objp->type << 10) + objp->id;
 				if (cur_obj_val < min_obj_val) {
@@ -1036,7 +1036,7 @@ static void say_totals(fvcobjptridx &vcobjptridx, PHYSFS_File *my_file, const ch
 				}
 			}
 		}
-		if (!min_objp || min_objp->type == OBJ_NONE)
+		if (!min_objp || min_objp->type == object_type::OBJ_NONE)
 			break;
 
 		objcount = 0;
@@ -1052,10 +1052,10 @@ static void say_totals(fvcobjptridx &vcobjptridx, PHYSFS_File *my_file, const ch
 			else
 			{
 				if ((objp->type == objtype && objp->id == objid) ||
-						(objp->type == objtype && objtype == OBJ_PLAYER) ||
-						(objp->type == objtype && objtype == OBJ_COOP) ||
-						(objp->type == objtype && objtype == OBJ_HOSTAGE)) {
-					if (objp->type == OBJ_ROBOT)
+						(objp->type == objtype && objtype == object_type::OBJ_PLAYER) ||
+						(objp->type == objtype && objtype == object_type::OBJ_COOP) ||
+						(objp->type == objtype && objtype == object_type::OBJ_HOSTAGE)) {
+					if (objp->type == object_type::OBJ_ROBOT)
 						total_robots++;
 					uo = true;
 					objcount++;

@@ -1259,7 +1259,7 @@ void weapons_homing_all()
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptr = Objects.vmptr;
 	for(auto &obj : vmobjptr)
-		if (obj.type == OBJ_WEAPON)
+		if (obj.type == object_type::OBJ_WEAPON)
 			obj.ctype.laser_info.track_goal = object_none;
 	for (auto &w : Weapon_info)
 		w.homing_flag |= 2;
@@ -1460,7 +1460,7 @@ void process_super_mines_frame(void)
 
 	for (objnum_t i=start; i<=Highest_object_index; i+=add) {
 		const auto io = vmobjptridx(i);
-		if (likely(io->type != OBJ_WEAPON || get_weapon_id(io) != weapon_id_type::SUPERPROX_ID))
+		if (likely(io->type != object_type::OBJ_WEAPON || get_weapon_id(io) != weapon_id_type::SUPERPROX_ID))
 			continue;
 		Super_mines_yes = 1;
 		if (unlikely(io->lifeleft + F1_0*2 >= Weapon_info[weapon_id_type::SUPERPROX_ID].lifetime))
@@ -1471,7 +1471,7 @@ void process_super_mines_frame(void)
 		{
 			if (unlikely(jo == parent_num))
 				continue;
-			if (jo->type != OBJ_PLAYER && jo->type != OBJ_ROBOT)
+			if (jo->type != object_type::OBJ_PLAYER && jo->type != object_type::OBJ_ROBOT)
 				continue;
 			const auto dist_squared = vm_vec_dist2(bombpos, jo->pos);
 			const vm_distance distance_threshold{F1_0 * 20};
@@ -1519,7 +1519,7 @@ imobjptridx_t spit_powerup(d_level_unique_object_state &LevelUniqueObjectState, 
 		}
 	}
 
-	const auto &&objp = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(id), vmsegptridx(spitter.segnum), new_pos, &vmd_identity_matrix, Powerup_info[id].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP);
+	const auto &&objp = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_POWERUP, underlying_value(id), vmsegptridx(spitter.segnum), new_pos, &vmd_identity_matrix, Powerup_info[id].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP);
 
 	if (objp == object_none)
 		return objp;

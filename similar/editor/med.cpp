@@ -438,7 +438,7 @@ void init_editor()
 	//	_MARK_("start of editor");//Nuked to compile -KRB
 	
 	//@@	//create a camera for viewing in the editor. copy position from ConsoleObject
-	//@@	camera_objnum = obj_create(OBJ_CAMERA,0,ConsoleObject->segnum,&ConsoleObject->pos,&ConsoleObject->orient,0);
+	//@@	camera_objnum = obj_create(object_type::OBJ_CAMERA,0,ConsoleObject->segnum,&ConsoleObject->pos,&ConsoleObject->orient,0);
 	//@@	Viewer = &Objects[camera_objnum];
 	//@@	slew_init(Viewer);		//camera is slewing
 	

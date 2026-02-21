@@ -295,7 +295,7 @@ static uint8_t ok_for_buddy_to_talk(void)
 
 	const vmobjptridx_t buddy = vmobjptridx(Buddy_objnum);
 	const auto buddy_type = buddy->type;
-	if (buddy_type != OBJ_ROBOT) {
+	if (buddy_type != object_type::OBJ_ROBOT) {
 		BuddyState.Buddy_allowed_to_talk = 0;
 		BuddyState.Buddy_objnum = object_none;
 		con_printf(CON_URGENT, "BUG: buddy is object %u, but that object is type %u.", Buddy_objnum.get_unchecked_index(), buddy_type);
@@ -390,7 +390,7 @@ void detect_escort_goal_accomplished(const vmobjptridx_t index)
 		return;
 	}
 
-	if (index->type == OBJ_POWERUP)  {
+	if (index->type == object_type::OBJ_POWERUP)  {
 		const auto index_id = get_powerup_id(index);
 		escort_goal_t goal_key;
 		if ((index_id == powerup_type_t::POW_KEY_BLUE && (goal_key = ESCORT_GOAL_BLUE_KEY, true)) ||
@@ -407,7 +407,7 @@ void detect_escort_goal_accomplished(const vmobjptridx_t index)
 	}
 	if (BuddyState.Escort_special_goal != ESCORT_GOAL_UNSPECIFIED)
 	{
-		if (index->type == OBJ_POWERUP && BuddyState.Escort_special_goal == ESCORT_GOAL_POWERUP)
+		if (index->type == object_type::OBJ_POWERUP && BuddyState.Escort_special_goal == ESCORT_GOAL_POWERUP)
 			record_escort_goal_accomplished();	//	Any type of powerup picked up will do.
 		else
 		{
@@ -532,7 +532,7 @@ static int marker_exists_in_mine(const game_marker_index id)
 	auto &vcobjptr = Objects.vcptr;
 	for (auto &obj : vcobjptr)
 	{
-		if (obj.type == OBJ_MARKER)
+		if (obj.type == object_type::OBJ_MARKER)
 			if (get_marker_id(obj) == id)
 				return 1;
 	}
@@ -630,7 +630,7 @@ static robot_id get_boss_id(void)
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	for (auto &obj : vcobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 		{
 			const auto objp_id{get_robot_id(obj)};
 			if (Robot_info[objp_id].boss_flag != boss_robot_id::None)
@@ -650,7 +650,7 @@ static icobjidx_t exists_in_mine_2(const unique_segment &segp, const std::option
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	range_for (const auto curobjp, objects_in(segp, vcobjptridx, vcsegptr))
 	{
-			if (special == ESCORT_GOAL_PLAYER_SPEW && curobjp->type == OBJ_POWERUP)
+			if (special == ESCORT_GOAL_PLAYER_SPEW && curobjp->type == object_type::OBJ_POWERUP)
 			{
 				if (curobjp->flags & OF_PLAYER_DROPPED)
 					return curobjp;
@@ -661,7 +661,7 @@ static icobjidx_t exists_in_mine_2(const unique_segment &segp, const std::option
 			const auto t = *objtype;
 			if (curobjp->type == t) {
 				//	Don't find escort robots if looking for robot!
-				if (t == OBJ_ROBOT && (Robot_info[get_robot_id(curobjp)].companion))
+				if (t == object_type::OBJ_ROBOT && (Robot_info[get_robot_id(curobjp)].companion))
 					;
 				else if (!objid)
 				{
@@ -677,7 +677,7 @@ static icobjidx_t exists_in_mine_2(const unique_segment &segp, const std::option
 					return curobjp;
 			}
 
-			if (t == OBJ_POWERUP && objid && curobjp->type == OBJ_ROBOT)
+			if (t == object_type::OBJ_POWERUP && objid && curobjp->type == object_type::OBJ_ROBOT)
 				/* As a special case, if seeking a specific powerup and the
 				 * current object is a robot that will drop that powerup, then
 				 * consider the robot to be a match.
@@ -864,7 +864,7 @@ static void escort_go_to_goal(const vmobjptridx_t objp, const robot_info &robptr
 		if (plr.objnum == object_none)
 			return;
 		auto &plrobj = *Objects.vcptr(plr.objnum);
-		if (plrobj.type != OBJ_PLAYER)
+		if (plrobj.type != object_type::OBJ_PLAYER)
 			return;
 		buddy_message_ignore_time("Cannot reach %s.", goal_text_index < Escort_goal_text.size() ? Escort_goal_text[goal_text_index] : "<unknown>");
 		const auto goal_segment{plrobj.segnum};
@@ -894,7 +894,7 @@ static imsegidx_t escort_get_goal_segment(const object &buddy_obj, const object_
 
 static inline imsegidx_t escort_get_goal_segment(const object &buddy_obj, const powerup_type_t objid, const player_flags powerup_flags)
 {
-	return escort_get_goal_segment(buddy_obj, OBJ_POWERUP, underlying_value(objid), powerup_flags);
+	return escort_get_goal_segment(buddy_obj, object_type::OBJ_POWERUP, underlying_value(objid), powerup_flags);
 }
 
 static void set_escort_goal_non_object(d_unique_buddy_state &BuddyState)
@@ -919,7 +919,7 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 	const auto Escort_goal_object = BuddyState.Escort_goal_object;
 	if (BuddyState.Looking_for_marker != game_marker_index::None)
 	{
-		goal_seg = escort_get_goal_segment(objp, OBJ_MARKER, Escort_goal_object - ESCORT_GOAL_MARKER1, powerup_flags);
+		goal_seg = escort_get_goal_segment(objp, object_type::OBJ_MARKER, Escort_goal_object - ESCORT_GOAL_MARKER1, powerup_flags);
 	} else {
 		switch (Escort_goal_object) {
 			case ESCORT_GOAL_BLUE_KEY:
@@ -932,7 +932,7 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_KEY_RED, powerup_flags);
 				break;
 			case ESCORT_GOAL_CONTROLCEN:
-				goal_seg = escort_get_goal_segment(objp, OBJ_CNTRLCEN, std::nullopt, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, object_type::OBJ_CNTRLCEN, std::nullopt, powerup_flags);
 				break;
 			case ESCORT_GOAL_EXIT:
 				goal_seg = find_exit_segment();
@@ -963,13 +963,13 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 				goal_seg = escort_get_goal_segment(objp, powerup_type_t::POW_SHIELD_BOOST, powerup_flags);
 				break;
 			case ESCORT_GOAL_POWERUP:
-				goal_seg = escort_get_goal_segment(objp, OBJ_POWERUP, std::nullopt, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, object_type::OBJ_POWERUP, std::nullopt, powerup_flags);
 				break;
 			case ESCORT_GOAL_ROBOT:
-				goal_seg = escort_get_goal_segment(objp, OBJ_ROBOT, std::nullopt, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, object_type::OBJ_ROBOT, std::nullopt, powerup_flags);
 				break;
 			case ESCORT_GOAL_HOSTAGE:
-				goal_seg = escort_get_goal_segment(objp, OBJ_HOSTAGE, std::nullopt, powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, object_type::OBJ_HOSTAGE, std::nullopt, powerup_flags);
 				break;
 			case ESCORT_GOAL_PLAYER_SPEW:
 				{
@@ -986,7 +986,7 @@ static void escort_create_path_to_goal(const vmobjptridx_t objp, const robot_inf
 			case ESCORT_GOAL_BOSS: {
 				const auto boss_id = get_boss_id();
 				assert(boss_id != robot_id::None);
-				goal_seg = escort_get_goal_segment(objp, OBJ_ROBOT, underlying_value(boss_id), powerup_flags);
+				goal_seg = escort_get_goal_segment(objp, object_type::OBJ_ROBOT, underlying_value(boss_id), powerup_flags);
 				break;
 			}
 			default:
@@ -1035,7 +1035,7 @@ static escort_goal_t escort_set_goal_object(const object &Buddy_objp, const play
 		/* should never happen */
 		return ESCORT_GOAL_UNSPECIFIED;
 	auto &plrobj = *Objects.vcptr(plr.objnum);
-	if (plrobj.type != OBJ_PLAYER)
+	if (plrobj.type != object_type::OBJ_PLAYER)
 		return ESCORT_GOAL_UNSPECIFIED;
 
 	const auto need_key_and_key_exists = [&Buddy_objp, pl_flags, start_search_seg = plrobj.segnum](const PLAYER_FLAG flag_key, const powerup_type_t powerup_key) {
@@ -1043,7 +1043,7 @@ static escort_goal_t escort_set_goal_object(const object &Buddy_objp, const play
 			/* Player already has this key, so no need to get it again.
 			 */
 			return false;
-		const auto &&e = exists_in_mine(Buddy_objp, start_search_seg, OBJ_POWERUP, underlying_value(powerup_key), -1, pl_flags);
+		const auto &&e = exists_in_mine(Buddy_objp, start_search_seg, object_type::OBJ_POWERUP, underlying_value(powerup_key), -1, pl_flags);
 		/* For compatibility with classic Descent 2, test only whether
 		 * the key exists, but ignore whether it can be reached by the
 		 * guide bot.
@@ -1076,7 +1076,7 @@ static const player *time_to_visit_player(const d_level_unique_object_state &Lev
 		return nullptr;
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &plrobj = *Objects.vcptr(plr.objnum);
-	if (plrobj.type != OBJ_PLAYER)
+	if (plrobj.type != object_type::OBJ_PLAYER)
 		return nullptr;
 	//	Note: This one has highest priority because, even if already going towards player,
 	//	might be necessary to create a new path, as player can move.
@@ -1108,7 +1108,7 @@ static void bash_buddy_weapon_info(d_unique_buddy_state &BuddyState, fvmobjptrid
 	auto &&plrobj = vmobjptridx(plr.objnum);
 	auto &laser_info = weapon_obj.ctype.laser_info;
 	laser_info.parent_num = plrobj;
-	laser_info.parent_type = OBJ_PLAYER;
+	laser_info.parent_type = object_type::OBJ_PLAYER;
 	laser_info.parent_signature = plrobj->signature;
 }
 
@@ -1187,7 +1187,7 @@ static void do_buddy_dude_stuff(const vmobjptridx_t buddy_objp)
 		const std::ranges::subrange rh{vmobjptridx};
 		range_for (const auto &&objp, rh)
 		{
-			if ((objp->type == OBJ_ROBOT) && !Robot_info[get_robot_id(objp)].companion)
+			if ((objp->type == object_type::OBJ_ROBOT) && !Robot_info[get_robot_id(objp)].companion)
 				if (maybe_buddy_fire_mega(objp, buddy_objp)) {
 					BuddyState.Buddy_last_missile_time = {GameTime64};
 					return;
@@ -1197,7 +1197,7 @@ static void do_buddy_dude_stuff(const vmobjptridx_t buddy_objp)
 		//	See if a robot near enough that buddy should fire smart missile
 		range_for (const auto &&objp, rh)
 		{
-			if ((objp->type == OBJ_ROBOT) && !Robot_info[get_robot_id(objp)].companion)
+			if ((objp->type == object_type::OBJ_ROBOT) && !Robot_info[get_robot_id(objp)].companion)
 				if (maybe_buddy_fire_smart(objp, buddy_objp)) {
 					BuddyState.Buddy_last_missile_time = {GameTime64};
 					return;
@@ -1215,7 +1215,7 @@ static void escort_set_goal_toward_controlling_player(d_unique_buddy_state &Budd
 		if (plr.objnum != object_none)
 		{
 			auto &plrobj = *vcobjptr(plr.objnum);
-			if (plrobj.type == OBJ_PLAYER)
+			if (plrobj.type == object_type::OBJ_PLAYER)
 				create_n_segment_path(buddy_obj, robptr, 5, plrobj.segnum);
 		}
 	}
@@ -1284,7 +1284,7 @@ void do_escort_frame(const vmobjptridx_t objp, const robot_info &robptr, const o
 		if (plr.objnum == object_none)
 			return;
 		auto &plrobj = *Objects.vcptr(plr.objnum);
-		if (plrobj.type != OBJ_PLAYER)
+		if (plrobj.type != object_type::OBJ_PLAYER)
 			return;
 		if (player_is_visible(player_visibility))
 			if (BuddyState.Escort_last_path_created + F1_0*3 < GameTime64) {

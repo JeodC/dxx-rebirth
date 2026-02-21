@@ -342,23 +342,23 @@ static void draw_window_label(object_array &Objects, grs_canvas &canvas)
 		viewer_id = "";
 		switch( Viewer->type )
 		{
-			case OBJ_FIREBALL:	viewer_name = "Fireball"; break;
-			case OBJ_ROBOT:		viewer_name = "Robot";
+			case object_type::OBJ_FIREBALL:	viewer_name = "Fireball"; break;
+			case object_type::OBJ_ROBOT:		viewer_name = "Robot";
 #if DXX_USE_EDITOR
 				viewer_id = Robot_names[get_robot_id(*Viewer)].data();
 #endif
 				break;
-			case OBJ_HOSTAGE:		viewer_name = "Hostage"; break;
-			case OBJ_PLAYER:		viewer_name = "Player"; break;
-			case OBJ_WEAPON:		viewer_name = "Weapon"; break;
-			case OBJ_CAMERA:		viewer_name = "Camera"; break;
-			case OBJ_POWERUP:		viewer_name = "Powerup";
+			case object_type::OBJ_HOSTAGE:		viewer_name = "Hostage"; break;
+			case object_type::OBJ_PLAYER:		viewer_name = "Player"; break;
+			case object_type::OBJ_WEAPON:		viewer_name = "Weapon"; break;
+			case object_type::OBJ_CAMERA:		viewer_name = "Camera"; break;
+			case object_type::OBJ_POWERUP:		viewer_name = "Powerup";
 #if DXX_USE_EDITOR
 				viewer_id = Powerup_names[get_powerup_id(*Viewer)].data();
 #endif
 				break;
-			case OBJ_DEBRIS:		viewer_name = "Debris"; break;
-			case OBJ_CNTRLCEN:	viewer_name = "Reactor"; break;
+			case object_type::OBJ_DEBRIS:		viewer_name = "Debris"; break;
+			case object_type::OBJ_CNTRLCEN:	viewer_name = "Reactor"; break;
 			default:					viewer_name = "Unknown"; break;
 		}
 
@@ -545,7 +545,7 @@ static bool choose_missile_viewer()
 	const auto need_new_missile_viewer = []{
 		if (!Missile_viewer)
 			return true;
-		if (Missile_viewer->type != OBJ_WEAPON)
+		if (Missile_viewer->type != object_type::OBJ_WEAPON)
 			return true;
 		if (Missile_viewer->signature != Missile_viewer_sig)
 			return true;
@@ -568,9 +568,9 @@ static bool choose_missile_viewer()
 	const auto local_player_objnum = get_local_player().objnum;
 	range_for (object &o, vmobjptr)
 	{
-		if (o.type != OBJ_WEAPON)
+		if (o.type != object_type::OBJ_WEAPON)
 			continue;
-		if (o.ctype.laser_info.parent_type != OBJ_PLAYER)
+		if (o.ctype.laser_info.parent_type != object_type::OBJ_PLAYER)
 			continue;
 		const auto laser_type = get_weapon_id(o);
 		if (!is_viewable_missile(laser_type))

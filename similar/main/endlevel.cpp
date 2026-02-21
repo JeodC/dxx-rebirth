@@ -684,7 +684,7 @@ window_event_result start_endlevel_sequence()
 	//	Dematerialize Buddy!
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 			if (Robot_info[get_robot_id(obj)].companion) {
 				object_create_explosion_without_damage(Vclip, vmsegptridx(obj.segnum), obj.pos, F1_0 * 7 / 2, vclip_index::powerup_disappearance);
 				obj.flags |= OF_SHOULD_BE_DEAD;
@@ -934,7 +934,7 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 					Endlevel_sequence = EL_LOOKBACK;
 
-					const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_CAMERA, 0,
+					const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_CAMERA, 0,
 					                    vmsegptridx(ConsoleObject->segnum), ConsoleObject->pos, &ConsoleObject->orient, 0, 
 					                    object::control_type::None, object::movement_type::None, render_type::RT_NONE);
 
@@ -1124,7 +1124,7 @@ static void endlevel_render_mine(const d_level_shared_segment_state &LevelShared
 {
 	auto Viewer_eye = Viewer->pos;
 
-	if (Viewer->type == OBJ_PLAYER )
+	if (Viewer->type == object_type::OBJ_PLAYER )
 		vm_vec_scale_add2(Viewer_eye,Viewer->orient.fvec,(Viewer->size*3)/4);
 
 	if (eye_offset)

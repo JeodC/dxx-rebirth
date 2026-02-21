@@ -302,7 +302,7 @@ icobjptridx_t newdemo_find_object(object_signature_t signature)
 	auto &vcobjptridx = Objects.vcptridx;
 	range_for (const auto &&objp, vcobjptridx)
 	{
-		if ( (objp->type != OBJ_NONE) && (objp->signature == signature))
+		if ( (objp->type != object_type::OBJ_NONE) && (objp->signature == signature))
 			return objp;
 	}
 	return object_none;
@@ -395,7 +395,7 @@ static void nd_write_shortpos(const object_base &obj)
 	auto sp{create_shortpos_native(LevelSharedSegmentState, obj)};
 
 	const auto rtype = obj.render_type;
-	if ((rtype == render_type::RT_POLYOBJ || rtype == render_type::RT_HOSTAGE || rtype == render_type::RT_MORPH) || obj.type == OBJ_CAMERA)
+	if ((rtype == render_type::RT_POLYOBJ || rtype == render_type::RT_HOSTAGE || rtype == render_type::RT_MORPH) || obj.type == object_type::OBJ_CAMERA)
 	{
 		uint8_t mask{0};
 		range_for (auto &i, sp.bytemat)
@@ -529,7 +529,7 @@ static void nd_read_shortpos(object_base &obj)
 	shortpos sp{};
 
 	const auto rtype = obj.render_type;
-	if ((rtype == render_type::RT_POLYOBJ || rtype == render_type::RT_HOSTAGE || rtype == render_type::RT_MORPH) || obj.type == OBJ_CAMERA)
+	if ((rtype == render_type::RT_POLYOBJ || rtype == render_type::RT_HOSTAGE || rtype == render_type::RT_MORPH) || obj.type == object_type::OBJ_CAMERA)
 	{
 		range_for (auto &i, sp.bytemat)
 			nd_read_byte(&i);
@@ -544,7 +544,7 @@ static void nd_read_shortpos(object_base &obj)
 	nd_read_short(&sp.velz);
 
 	my_extract_shortpos(obj, &sp);
-	if (obj.type == OBJ_FIREBALL && get_fireball_id(obj) == vclip_index::morphing_robot && rtype == render_type::RT_FIREBALL && obj.control_source == object::control_type::explosion)
+	if (obj.type == object_type::OBJ_FIREBALL && get_fireball_id(obj) == vclip_index::morphing_robot && rtype == render_type::RT_FIREBALL && obj.control_source == object::control_type::explosion)
 	{
 		reconstruct_at(obj.orient, extract_orient_from_segment, Vertices.vcptr, vcsegptr(obj.segnum));
 	}
@@ -600,7 +600,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		nd_read_byte(&t);
 		obj->type = build_valid_object_type_from_untrusted({t});
 	}
-	if (obj->render_type == render_type::RT_NONE && obj->type != OBJ_CAMERA)
+	if (obj->render_type == render_type::RT_NONE && obj->type != object_type::OBJ_CAMERA)
 		return;
 
 	nd_read_byte(&obj->id);
@@ -611,7 +611,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 	nd_read_shortpos(obj);
 
 #if DXX_BUILD_DESCENT == 2
-	if (obj->type == OBJ_ROBOT && get_robot_id(obj) == robot_id::special_reactor)
+	if (obj->type == object_type::OBJ_ROBOT && get_robot_id(obj) == robot_id::special_reactor)
 		Int3();
 #endif
 
@@ -620,13 +620,13 @@ static void nd_read_object(const vmobjptridx_t obj)
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	switch(obj->type) {
 
-	case OBJ_HOSTAGE:
+	case object_type::OBJ_HOSTAGE:
 		obj->control_source = object::control_type::powerup;
 		obj->movement_source = object::movement_type::None;
 		obj->size = HOSTAGE_SIZE;
 		break;
 
-	case OBJ_ROBOT:
+	case object_type::OBJ_ROBOT:
 		obj->control_source = object::control_type::ai;
 		// (MarkA and MikeK said we should not do the crazy last secret stuff with multiple reactors...
 		// This necessary code is our vindication. --MK, 2/15/96)
@@ -642,7 +642,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		obj->ctype.ai_info.CLOAKED = (Robot_info[get_robot_id(obj)].cloak_type?1:0);
 		break;
 
-	case OBJ_POWERUP:
+	case object_type::OBJ_POWERUP:
 		obj->control_source = object::control_type::powerup;
 		{
 			uint8_t movement_type;
@@ -652,7 +652,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		obj->size = Powerup_info[get_powerup_id(obj)].size;
 		break;
 
-	case OBJ_PLAYER:
+	case object_type::OBJ_PLAYER:
 		obj->control_source = object::control_type::None;
 		obj->movement_source = object::movement_type::physics;
 		obj->size = Polygon_models[Player_ship->model_num].rad;
@@ -660,7 +660,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		obj->rtype.pobj_info.subobj_flags = 0;
 		break;
 
-	case OBJ_CLUTTER:
+	case object_type::OBJ_CLUTTER:
 		obj->control_source = object::control_type::None;
 		obj->movement_source = object::movement_type::None;
 		{
@@ -691,7 +691,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		vms_vector last_pos;
 		nd_read_vector(last_pos);
 	}
-	if (obj->type == OBJ_WEAPON && obj->render_type == render_type::RT_WEAPON_VCLIP)
+	if (obj->type == object_type::OBJ_WEAPON && obj->render_type == render_type::RT_WEAPON_VCLIP)
 		nd_read_fix(&(obj->lifeleft));
 	else {
 		sbyte b;
@@ -705,7 +705,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 			obj->lifeleft = obj->lifeleft << 12;
 	}
 
-	if ((obj->type == OBJ_ROBOT) && !shareware) {
+	if ((obj->type == object_type::OBJ_ROBOT) && !shareware) {
 		if (Robot_info[get_robot_id(obj)].boss_flag != boss_robot_id::None)
 		{
 			sbyte cloaked;
@@ -790,7 +790,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		case render_type::RT_POLYOBJ: {
 		int tmo;
 
-		if ((obj->type != OBJ_ROBOT) && (obj->type != OBJ_PLAYER) && (obj->type != OBJ_CLUTTER)) {
+		if ((obj->type != object_type::OBJ_ROBOT) && (obj->type != object_type::OBJ_PLAYER) && (obj->type != object_type::OBJ_CLUTTER)) {
 			int i;
 			nd_read_int(&i);
 			obj->rtype.pobj_info.model_num = static_cast<polygon_model_index>(i);
@@ -798,7 +798,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 			obj->rtype.pobj_info.subobj_flags = i;
 		}
 
-		if ((obj->type != OBJ_PLAYER) && (obj->type != OBJ_DEBRIS))
+		if ((obj->type != object_type::OBJ_PLAYER) && (obj->type != object_type::OBJ_DEBRIS))
 #if 0
 			range_for (auto &i, obj->pobj_info.anim_angles)
 				nd_read_angvec(&(i));
@@ -861,7 +861,7 @@ static void nd_write_object(const vcobjptridx_t objp)
 	short shortsig{0};
 
 #if DXX_BUILD_DESCENT == 2
-	if (obj.type == OBJ_ROBOT && get_robot_id(obj) == robot_id::special_reactor)
+	if (obj.type == object_type::OBJ_ROBOT && get_robot_id(obj) == robot_id::special_reactor)
 		Int3();
 #endif
 
@@ -871,7 +871,7 @@ static void nd_write_object(const vcobjptridx_t objp)
 	 */
 	nd_write_byte(underlying_value(obj.render_type));
 	nd_write_byte(obj.type);
-	if (obj.render_type == render_type::RT_NONE && obj.type != OBJ_CAMERA)
+	if (obj.render_type == render_type::RT_NONE && obj.type != object_type::OBJ_CAMERA)
 		return;
 
 	nd_write_byte(obj.id);
@@ -880,18 +880,18 @@ static void nd_write_object(const vcobjptridx_t objp)
 	nd_write_short(shortsig);
 	nd_write_shortpos(obj);
 
-	if (obj.type != OBJ_HOSTAGE && obj.type != OBJ_ROBOT && obj.type != OBJ_PLAYER && obj.type != OBJ_POWERUP && obj.type != OBJ_CLUTTER)
+	if (obj.type != object_type::OBJ_HOSTAGE && obj.type != object_type::OBJ_ROBOT && obj.type != object_type::OBJ_PLAYER && obj.type != object_type::OBJ_POWERUP && obj.type != object_type::OBJ_CLUTTER)
 	{
 		nd_write_byte(static_cast<uint8_t>(obj.control_source));
 		nd_write_byte(static_cast<uint8_t>(obj.movement_source));
 		nd_write_fix(obj.size);
 	}
-	if (obj.type == OBJ_POWERUP)
+	if (obj.type == object_type::OBJ_POWERUP)
 		nd_write_byte(static_cast<uint8_t>(obj.movement_source));
 
 	nd_write_vector(obj.pos);
 
-	if (obj.type == OBJ_WEAPON && obj.render_type == render_type::RT_WEAPON_VCLIP)
+	if (obj.type == object_type::OBJ_WEAPON && obj.render_type == render_type::RT_WEAPON_VCLIP)
 		nd_write_fix(obj.lifeleft);
 	else {
 		life = static_cast<int>(obj.lifeleft);
@@ -901,7 +901,7 @@ static void nd_write_object(const vcobjptridx_t objp)
 		nd_write_byte(static_cast<uint8_t>(life));
 	}
 
-	if (obj.type == OBJ_ROBOT) {
+	if (obj.type == object_type::OBJ_ROBOT) {
 		if (Robot_info[get_robot_id(obj)].boss_flag != boss_robot_id::None)
 		{
 			const auto Boss_cloak_start_time = BossUniqueState.Boss_cloak_start_time;
@@ -975,12 +975,12 @@ static void nd_write_object(const vcobjptridx_t objp)
 
 		case render_type::RT_MORPH:
 		case render_type::RT_POLYOBJ: {
-		if ((obj.type != OBJ_ROBOT) && (obj.type != OBJ_PLAYER) && (obj.type != OBJ_CLUTTER)) {
+		if ((obj.type != object_type::OBJ_ROBOT) && (obj.type != object_type::OBJ_PLAYER) && (obj.type != object_type::OBJ_CLUTTER)) {
 			nd_write_int(underlying_value(obj.rtype.pobj_info.model_num));
 			nd_write_int(obj.rtype.pobj_info.subobj_flags);
 		}
 
-		if ((obj.type != OBJ_PLAYER) && (obj.type != OBJ_DEBRIS))
+		if ((obj.type != object_type::OBJ_PLAYER) && (obj.type != object_type::OBJ_DEBRIS))
 			range_for (auto &i, partial_const_range(obj.rtype.pobj_info.anim_angles, Polygon_models[obj.rtype.pobj_info.model_num].n_models))
 			nd_write_angvec(i);
 
@@ -2213,7 +2213,7 @@ static int newdemo_read_frame_information(int rewrite)
 					break;
 
 				obj_link_unchecked(Objects.vmptr, obj, Segments.vmptridx(segnum));
-				if (obj->type == OBJ_PLAYER && +(Newdemo_game_mode & GM_MULTI)) {
+				if (obj->type == object_type::OBJ_PLAYER && +(Newdemo_game_mode & GM_MULTI)) {
 					int player;
 
 					if (+(Newdemo_game_mode & GM_TEAM))
@@ -2781,7 +2781,7 @@ static int newdemo_read_frame_information(int rewrite)
 			//the monitor. the blowup code wants to know who the parent of the
 			//laser is, so create a laser whose parent is the player
 				laser_parent dummy;
-				dummy.parent_type = OBJ_PLAYER;
+				dummy.parent_type = object_type::OBJ_PLAYER;
 				dummy.parent_num = Player_num;
 				check_effect_blowup(LevelSharedDestructibleLightState, Vclip, vmsegptridx(segnum), static_cast<sidenum_t>(side), pnt, dummy, 0, 0);
 #endif

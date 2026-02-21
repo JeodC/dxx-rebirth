@@ -92,7 +92,7 @@ struct fvi_query
 	const std::ranges::subrange<const vcobjidx_t *> ignore_obj_list;
 	const d_level_unique_object_state *const LevelUniqueObjectState;
 	/* This member is required when LevelUniqueObjectState != nullptr and
-	 * thisobjnum->type == OBJ_ROBOT.
+	 * thisobjnum->type == object_type::OBJ_ROBOT.
 	 * Otherwise, it is ignored.
 	 */
 	const d_robot_info_array *const Robot_info;

@@ -116,9 +116,9 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 	switch (obj_type)
 	{
 
-		case OBJ_HOSTAGE:
+		case object_type::OBJ_HOSTAGE:
 		{
-			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_HOSTAGE, -1, 
+			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_HOSTAGE, -1, 
 					segp,object_pos,&seg_matrix,HOSTAGE_SIZE,
 					object::control_type::None, object::movement_type::None, render_type::RT_HOSTAGE);
 
@@ -137,7 +137,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 			obj->rtype.vclip_info.framenum = 0;
 			break;
 		}
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 		{
 			segnum_t hide_segment;
 			if (Markedsegp)
@@ -175,9 +175,9 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 			obj->shields = ri.strength;
 			break;
 		}
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 		{
-			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, object_id,
+			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_POWERUP, object_id,
 					segp, object_pos, &seg_matrix, Powerup_info[(powerup_type_t{object_id})].size,
 					object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
 
@@ -198,7 +198,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 				obj->ctype.powerup_info.count = 1;
 			break;
 		}
-		case OBJ_CNTRLCEN: 
+		case object_type::OBJ_CNTRLCEN: 
 		{
 			const auto model_num =
 #if DXX_BUILD_DESCENT == 1
@@ -206,7 +206,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 #elif DXX_BUILD_DESCENT == 2
 			Reactors[object_id].model_num;
 #endif
-			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_CNTRLCEN, object_id, segp, object_pos,
+			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_CNTRLCEN, object_id, segp, object_pos,
 					&seg_matrix, Polygon_models[model_num].rad,
 					object::control_type::cntrlcen, object::movement_type::None, render_type::RT_POLYOBJ);
 
@@ -222,8 +222,8 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 
 			break;
 		}
-		case OBJ_PLAYER:	{
-			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_PLAYER, object_id, segp, object_pos,
+		case object_type::OBJ_PLAYER:	{
+			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_PLAYER, object_id, segp, object_pos,
 				&seg_matrix, Polygon_models[Player_ship->model_num].rad,
 				object::control_type::None, object::movement_type::physics, render_type::RT_POLYOBJ);
 
@@ -270,7 +270,7 @@ static int compute_num_players(void)
 
 	for (auto &obj : vcobjptr)
 	{
-		if (obj.type == OBJ_PLAYER)
+		if (obj.type == object_type::OBJ_PLAYER)
 			count++;
 	}
 
@@ -284,12 +284,12 @@ int ObjectMakeCoop(void)
 	auto &vmobjptr = Objects.vmptr;
 	Assert(Cur_object_index != object_none);
 	Assert(Cur_object_index < MAX_OBJECTS);
-//	Assert(Objects[Cur_object_index.type == OBJ_PLAYER);
+//	Assert(Objects[Cur_object_index.type == object_type::OBJ_PLAYER);
 
 	const auto &&objp = vmobjptr(Cur_object_index);
-	if (objp->type == OBJ_PLAYER)
+	if (objp->type == object_type::OBJ_PLAYER)
 	{
-		objp->type = OBJ_COOP;
+		objp->type = object_type::OBJ_COOP;
 		editor_status("You just made a player object COOPERATIVE");
 	} else
 		editor_status("This is not a player object");
@@ -306,7 +306,7 @@ int ObjectPlaceObject(void)
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vmobjptr = Objects.vmptr;
 	int	old_cur_object_index;
-	if (Cur_object_type == OBJ_PLAYER)
+	if (Cur_object_type == object_type::OBJ_PLAYER)
 	{
 		int num_players = compute_num_players();
 		Assert(num_players <= MAX_MULTI_PLAYERS);
@@ -399,7 +399,7 @@ int ObjectSelectNextInMine()
 		if (Cur_object_index>= MAX_OBJECTS ) Cur_object_index= 0;
 
 		const auto &&objp = vcobjptr(Cur_object_index);
-		if (objp->type != OBJ_NONE && objp != ConsoleObject)
+		if (objp->type != object_type::OBJ_NONE && objp != ConsoleObject)
 		{
 			Cursegp = imsegptridx(objp->segnum);
 			med_create_new_segment_from_cursegp();
@@ -424,7 +424,7 @@ int ObjectSelectPrevInMine()
 			Cur_object_index = MAX_OBJECTS-1;
 
 		const auto &&objp = vcobjptr(Cur_object_index);
-		if (objp->type != OBJ_NONE && objp != ConsoleObject)
+		if (objp->type != object_type::OBJ_NONE && objp != ConsoleObject)
 		{
 			Cursegp = imsegptridx(objp->segnum);
 			med_create_new_segment_from_cursegp();

@@ -506,7 +506,7 @@ void ogl_cache_level_textures(void)
 
 		range_for (const auto &&objp, vcobjptridx)
 		{
-			if (objp->type == OBJ_POWERUP && objp->render_type == render_type::RT_POWERUP)
+			if (objp->type == object_type::OBJ_POWERUP && objp->render_type == render_type::RT_POWERUP)
 			{
 				ogl_cache_vclipn_textures(Vclip, objp->rtype.vclip_info.vclip_num);
 				const auto id = get_powerup_id(objp);
@@ -535,9 +535,9 @@ void ogl_cache_level_textures(void)
 					ogl_cache_weapon_textures(Vclip, Weapon_info, w);
 				}
 			}
-			else if (objp->type != OBJ_NONE && objp->render_type == render_type::RT_POLYOBJ)
+			else if (objp->type != object_type::OBJ_NONE && objp->render_type == render_type::RT_POLYOBJ)
 			{
-				if (objp->type == OBJ_ROBOT)
+				if (objp->type == object_type::OBJ_ROBOT)
 				{
 					auto &ri = Robot_info[get_robot_id(objp)];
 					ogl_cache_vclipn_textures(Vclip, ri.exp1_vclip_num);

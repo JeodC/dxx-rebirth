@@ -481,7 +481,7 @@ static void state_object_to_object_rw(const object &obj, object_rw *const obj_rw
 	switch (rtype)
 	{
 		case render_type::RT_NONE:
-			if (obj.type != OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time. Here it's not important, but it might be for Multiplayer Savegames.
+			if (obj.type != object_type::OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time. Here it's not important, but it might be for Multiplayer Savegames.
 				break;
 			[[fallthrough]];
 		case render_type::RT_MORPH:
@@ -522,7 +522,7 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 	obj = {};
 	DXX_POISON_VAR(obj, 0xfd);
 	obj.type = build_valid_object_type_from_untrusted({obj_rw->type});
-	if (obj.type == OBJ_NONE)
+	if (obj.type == object_type::OBJ_NONE)
 	{
 		obj.signature = object_signature_t{0};
 		return;
@@ -679,17 +679,17 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 			break;
 		case object::control_type::cntrlcen:
 		{
-			if (obj.type == OBJ_GHOST)
+			if (obj.type == object_type::OBJ_GHOST)
 			{
-				/* Boss missions convert the reactor into OBJ_GHOST
+				/* Boss missions convert the reactor into object_type::OBJ_GHOST
 				 * instead of freeing it.  Old releases (before
 				 * ed46a05296f9d480f934d8c951c4755ebac1d5e7 ("Update
 				 * control_type when ghosting reactor")) did not update
 				 * `control_type`, so games saved by those releases have an
-				 * object with obj->type == OBJ_GHOST and obj->control_source ==
+				 * object with obj->type == object_type::OBJ_GHOST and obj->control_source ==
 				 * object::control_type::cntrlcen.  That inconsistency triggers an assertion down
 				 * in `calc_controlcen_gun_point` because obj->type !=
-				 * OBJ_CNTRLCEN.
+				 * object_type::OBJ_CNTRLCEN.
 				 *
 				 * Add a special case here to correct this
 				 * inconsistency.
@@ -716,7 +716,7 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 	switch (obj.render_type)
 	{
 		case render_type::RT_NONE:
-			if (obj.type != OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time. Here it's not important, but it might be for Multiplayer Savegames.
+			if (obj.type != object_type::OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time. Here it's not important, but it might be for Multiplayer Savegames.
 				break;
 			[[fallthrough]];
 		case render_type::RT_MORPH:
@@ -1442,7 +1442,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 //Finish all morph objects
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type != OBJ_NONE && obj.render_type == render_type::RT_MORPH)
+		if (obj.type != object_type::OBJ_NONE && obj.render_type == render_type::RT_MORPH)
 		{
 			if (const auto umd = find_morph_data(LevelUniqueMorphObjectState, obj))
 			{
@@ -1468,11 +1468,11 @@ int state_save_all_sub(const char *filename, const char *desc)
 	}
 	{
 		object_rw None{};
-		None.type = OBJ_NONE;
+		None.type = object_type::OBJ_NONE;
 		for (auto &obj : vcobjptr)
 		{
 			object_rw obj_rw;
-			PHYSFSX_writeBytes(fp, obj.type == OBJ_NONE ? &None : (state_object_to_object_rw(obj, &obj_rw), &obj_rw), sizeof(obj_rw));
+			PHYSFSX_writeBytes(fp, obj.type == object_type::OBJ_NONE ? &None : (state_object_to_object_rw(obj, &obj_rw), &obj_rw), sizeof(obj_rw));
 		}
 	}
 	
@@ -2115,13 +2115,13 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	range_for (const auto &&obj, vmobjptridx)
 	{
 		obj->rtype.pobj_info.alt_textures = -1;
-		if ( obj->type != OBJ_NONE )	{
+		if ( obj->type != object_type::OBJ_NONE )	{
 			const auto segnum = obj->segnum;
 			obj_link_unchecked(Objects.vmptr, obj, Segments.vmptridx(segnum));
 		}
 #if DXX_BUILD_DESCENT == 2
 		//look for, and fix, boss with bogus shields
-		if (obj->type == OBJ_ROBOT && Robot_info[get_robot_id(obj)].boss_flag != boss_robot_id::None)
+		if (obj->type == object_type::OBJ_ROBOT && Robot_info[get_robot_id(obj)].boss_flag != boss_robot_id::None)
 		{
 			fix save_shields = obj->shields;
 
@@ -2469,12 +2469,12 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 			
 			// make all (previous) player objects to ghosts but store them first for later remapping
 			const auto &&obj = vmobjptr(restore_players[i].objnum);
-			if (restore_players[i].connected == player_connection_status::playing && obj->type == OBJ_PLAYER)
+			if (restore_players[i].connected == player_connection_status::playing && obj->type == object_type::OBJ_PLAYER)
 			{
 				obj->ctype.player_info = pl_info;
 				obj->shields = rpd.shields;
 				restore_objects[i] = *obj;
-				obj->type = OBJ_GHOST;
+				obj->type = object_type::OBJ_GHOST;
 				multi_reset_player_object(obj);
 			}
 		}
@@ -2503,8 +2503,8 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 					obj->mtype.phys_info = restore_objects[j].mtype.phys_info;
 					obj->rtype.pobj_info = restore_objects[j].rtype.pobj_info;
 					// make this restored player object an actual player again
-					assert(obj->type == OBJ_GHOST);
-					obj->type = OBJ_PLAYER;
+					assert(obj->type == object_type::OBJ_GHOST);
+					obj->type = object_type::OBJ_PLAYER;
 					set_player_id(obj, i); // assign player object id to player number
 					multi_reset_player_object(obj);
 					update_object_seg(vmobjptr, LevelSharedSegmentState, LevelUniqueSegmentState, obj);

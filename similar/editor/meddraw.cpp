@@ -96,7 +96,7 @@ static void draw_seg_objects(grs_canvas &canvas, const unique_segment &seg)
 	const g3_instance_context viewer_context{View_matrix, View_position};
 	range_for (const auto obj, objects_in(seg, vcobjptridx, vcsegptr))
 	{
-		const uint8_t color = (obj->type == OBJ_PLAYER && static_cast<icobjptridx_t::index_type>(obj) > 0)
+		const uint8_t color = (obj->type == object_type::OBJ_PLAYER && static_cast<icobjptridx_t::index_type>(obj) > 0)
 			? BM_XRGB(0,  25, 0)
 			: (obj == ConsoleObject
 				? PLAYER_COLOR

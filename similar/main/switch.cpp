@@ -538,7 +538,7 @@ window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side,
 	if (objnum == &plrobj)
 #elif DXX_BUILD_DESCENT == 2
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
-	if (objnum == &plrobj || (objnum->type == OBJ_ROBOT && Robot_info[get_robot_id(objnum)].companion))
+	if (objnum == &plrobj || (objnum->type == object_type::OBJ_ROBOT && Robot_info[get_robot_id(objnum)].companion))
 #endif
 	{
 

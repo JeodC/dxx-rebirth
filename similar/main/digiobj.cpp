@@ -623,7 +623,7 @@ void digi_sync_sounds()
 					return vcobjptr(object_first);
 				}()};
 
-				if ((objp.type==OBJ_NONE) || (objp.signature!=s.link_type.obj.objsignature))	{
+				if ((objp.type==object_type::OBJ_NONE) || (objp.signature!=s.link_type.obj.objsignature))	{
 					// The object that this is linked to is dead, so just end this sound if it is looping.
 					if (s.channel != sound_channel::None)
 					{

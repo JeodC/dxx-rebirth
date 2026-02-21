@@ -685,7 +685,7 @@ void multi_make_player_ghost(const playernum_t playernum)
 		return;
 	}
 	const auto &&obj = vmobjptridx(vcplayerptr(playernum)->objnum);
-	obj->type = OBJ_GHOST;
+	obj->type = object_type::OBJ_GHOST;
 	obj->render_type = render_type::RT_NONE;
 	obj->movement_source = object::movement_type::None;
 	multi_reset_player_object(obj);
@@ -702,7 +702,7 @@ void multi_make_ghost_player(const playernum_t playernum)
 		return;
 	}
 	const auto &&obj = vmobjptridx(vcplayerptr(playernum)->objnum);
-	obj->type = OBJ_PLAYER;
+	obj->type = object_type::OBJ_PLAYER;
 	obj->movement_source = object::movement_type::physics;
 	multi_reset_player_object(obj);
 	if (playernum != Player_num)
@@ -810,7 +810,7 @@ static void net_destroy_controlcen(object_array &Objects, const d_robot_info_arr
 {
 	print_kill_goal_tables(Objects.vcptr);
 	HUD_init_message_literal(HM_MULTI, "The control center has been destroyed!");
-	net_destroy_controlcen_object(Robot_info, obj_find_first_of_type(Objects.vmptridx, OBJ_CNTRLCEN));
+	net_destroy_controlcen_object(Robot_info, obj_find_first_of_type(Objects.vmptridx, object_type::OBJ_CNTRLCEN));
 }
 
 static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobjptridx_t killer, object &killed)
@@ -828,7 +828,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	// Both object numbers are localized already!
 
 	const auto killed_type{killed.type};
-	if ((killed_type != OBJ_PLAYER) && (killed_type != OBJ_GHOST))
+	if ((killed_type != object_type::OBJ_PLAYER) && (killed_type != object_type::OBJ_GHOST))
 	{
 		Int3(); // compute_kill passed non-player object!
 		return;
@@ -854,7 +854,7 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 	if (killer == object_none)
 		return;
 	const auto killer_type = killer->type;
-	if (killer_type == OBJ_CNTRLCEN)
+	if (killer_type == object_type::OBJ_CNTRLCEN)
 	{
 		if (+(Game_mode & GM_TEAM))
 			-- team_kills[multi_get_team_from_player(Netgame, killed_pnum)];
@@ -875,10 +875,10 @@ static void multi_compute_kill(const d_robot_info_array &Robot_info, const imobj
 		return;
 	}
 
-	else if ((killer_type != OBJ_PLAYER) && (killer_type != OBJ_GHOST))
+	else if ((killer_type != object_type::OBJ_PLAYER) && (killer_type != object_type::OBJ_GHOST))
 	{
 #if DXX_BUILD_DESCENT == 2
-		if (killer_type == OBJ_WEAPON && get_weapon_id(killer) == weapon_id_type::PMINE_ID)
+		if (killer_type == object_type::OBJ_WEAPON && get_weapon_id(killer) == weapon_id_type::PMINE_ID)
 		{
 			if (killed_pnum == Player_num)
 				HUD_init_message_literal(HM_MULTI, "You were killed by a mine!");
@@ -1657,7 +1657,7 @@ static void multi_do_fire(fvmobjptridx &vmobjptridx, const playernum_t pnum, con
 	Assert (pnum < N_players);
 
 	const auto &&obj = vmobjptridx(vcplayerptr(pnum)->objnum);
-	if (obj->type == OBJ_GHOST)
+	if (obj->type == object_type::OBJ_GHOST)
 		multi_make_ghost_player(pnum);
 
 	if (untrusted_raw_weapon == FLARE_ADJUST)
@@ -1779,9 +1779,9 @@ static void multi_do_reappear(const playernum_t pnum, const multiplayer_rspan<mu
 	if (!uobj)
 		return;
 	auto &obj = **uobj;
-	if (obj.type != OBJ_PLAYER && obj.type != OBJ_GHOST)
+	if (obj.type != object_type::OBJ_PLAYER && obj.type != object_type::OBJ_GHOST)
 	{
-		con_printf(CON_URGENT, "%s:%u: BUG: object %hu has type %u, expected %u or %u", __FILE__, __LINE__, objnum, obj.type, OBJ_PLAYER, OBJ_GHOST);
+		con_printf(CON_URGENT, "%s:%u: BUG: object %hu has type %u, expected %u or %u", __FILE__, __LINE__, objnum, obj.type, object_type::OBJ_PLAYER, object_type::OBJ_GHOST);
 		return;
 	}
 	/* Override macro, call only the getter.
@@ -2014,7 +2014,7 @@ static void multi_do_remobj(fvmobjptr &vmobjptr, const multiplayer_rspan<multipl
 	}
 
 	auto &obj = *vmobjptr(local_objnum);
-	if (obj.type != OBJ_POWERUP && obj.type != OBJ_HOSTAGE)
+	if (obj.type != object_type::OBJ_POWERUP && obj.type != object_type::OBJ_HOSTAGE)
 	{
 		return;
 	}
@@ -2347,7 +2347,7 @@ static void multi_do_effect_blowup(const playernum_t pnum, const multiplayer_rsp
 	//the monitor. the blowup code wants to know who the parent of the
 	//laser is, so create a laser whose parent is the player
 	laser_parent laser;
-	laser.parent_type = OBJ_PLAYER;
+	laser.parent_type = object_type::OBJ_PLAYER;
 	laser.parent_num = pnum;
 
 	auto &LevelSharedDestructibleLightState = LevelSharedSegmentState.DestructibleLights;
@@ -2434,7 +2434,7 @@ namespace dsx {
 void multi_reset_player_object(object &objp)
 {
 	//Init physics for a non-console player
-	Assert((objp.type == OBJ_PLAYER) || (objp.type == OBJ_GHOST));
+	Assert((objp.type == object_type::OBJ_PLAYER) || (objp.type == object_type::OBJ_GHOST));
 
 	objp.mtype.phys_info.velocity = {};
 	objp.mtype.phys_info.thrust = {};
@@ -2443,7 +2443,7 @@ void multi_reset_player_object(object &objp)
 	objp.mtype.phys_info.turnroll = 0;
 	objp.mtype.phys_info.mass = Player_ship->mass;
 	objp.mtype.phys_info.drag = Player_ship->drag;
-	if (objp.type == OBJ_PLAYER)
+	if (objp.type == object_type::OBJ_PLAYER)
 		objp.mtype.phys_info.flags = PF_TURNROLL | PF_WIGGLE | PF_USES_THRUST;
 	else
 		objp.mtype.phys_info.flags &= ~(PF_TURNROLL | PF_LEVELLING | PF_WIGGLE);
@@ -2459,7 +2459,7 @@ void multi_reset_player_object(object &objp)
 
 	objp.flags = 0;
 
-	if (objp.type == OBJ_GHOST)
+	if (objp.type == object_type::OBJ_GHOST)
 		objp.render_type = render_type::RT_NONE;
 	//reset textures for this, if not player 0
 	multi_reset_object_texture (objp);
@@ -2469,7 +2469,7 @@ namespace {
 
 static void multi_reset_object_texture(object_base &objp)
 {
-	if (objp.type == OBJ_GHOST)
+	if (objp.type == object_type::OBJ_GHOST)
                 return;
 
 	const auto player_id = get_player_id(objp);
@@ -3364,7 +3364,7 @@ void update_item_state::process_powerup(const d_vclip_array &Vclip, fvmsegptridx
 	{
 		assert(o.movement_source == object::movement_type::None);
 		assert(o.render_type == render_type::RT_POWERUP);
-		const auto &&no = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(id), segp, vm_vec_build_avg(o.pos, vcvertptr(seg_verts[static_cast<segment_relative_vertnum>(i % seg_verts.size())])), &vmd_identity_matrix, o.size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
+		const auto &&no = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_POWERUP, underlying_value(id), segp, vm_vec_build_avg(o.pos, vcvertptr(seg_verts[static_cast<segment_relative_vertnum>(i % seg_verts.size())])), &vmd_identity_matrix, o.size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
 		if (no == object_none)
 			return;
 		m_modified.set(no);
@@ -3428,12 +3428,12 @@ void multi_prep_level_objects(const d_powerup_info_array &Powerup_info, const d_
 	update_item_state duplicates;
 	range_for (const auto &&o, vmobjptridx)
 	{
-		if ((o->type == OBJ_HOSTAGE) && !(Game_mode & GM_MULTI_COOP))
+		if ((o->type == object_type::OBJ_HOSTAGE) && !(Game_mode & GM_MULTI_COOP))
 		{
 			/* In non-cooperative multiplayer games, replace hostage powerups
 			 * with shield powerups.
 			 */
-			const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(powerup_type_t::POW_SHIELD_BOOST), vmsegptridx(o->segnum), o->pos, &vmd_identity_matrix, Powerup_info[powerup_type_t::POW_SHIELD_BOOST].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP);
+			const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_POWERUP, underlying_value(powerup_type_t::POW_SHIELD_BOOST), vmsegptridx(o->segnum), o->pos, &vmd_identity_matrix, Powerup_info[powerup_type_t::POW_SHIELD_BOOST].size, object::control_type::powerup, object::movement_type::physics, render_type::RT_POWERUP);
 			obj_delete(LevelUniqueObjectState, Segments, o);
 			if (objnum != object_none)
 			{
@@ -3447,7 +3447,7 @@ void multi_prep_level_objects(const d_powerup_info_array &Powerup_info, const d_
 			continue;
 		}
 
-		if (o->type == OBJ_POWERUP && !duplicates.must_skip(o))
+		if (o->type == object_type::OBJ_POWERUP && !duplicates.must_skip(o))
 		{
 			switch (const auto id = get_powerup_id(o))
 			{
@@ -3621,14 +3621,14 @@ namespace {
 
 static int object_allowed_in_anarchy(const object_base &objp)
 {
-	if (objp.type == OBJ_NONE ||
-		objp.type == OBJ_PLAYER ||
-		objp.type == OBJ_POWERUP ||
-		objp.type == OBJ_CNTRLCEN ||
-		objp.type == OBJ_HOSTAGE)
+	if (objp.type == object_type::OBJ_NONE ||
+		objp.type == object_type::OBJ_PLAYER ||
+		objp.type == object_type::OBJ_POWERUP ||
+		objp.type == object_type::OBJ_CNTRLCEN ||
+		objp.type == object_type::OBJ_HOSTAGE)
 		return 1;
 #if DXX_BUILD_DESCENT == 2
-	if (objp.type == OBJ_WEAPON && get_weapon_id(objp) == weapon_id_type::PMINE_ID)
+	if (objp.type == object_type::OBJ_WEAPON && get_weapon_id(objp) == weapon_id_type::PMINE_ID)
 		return 1;
 #endif
 	return 0;
@@ -3754,11 +3754,11 @@ void multi_update_objects_for_non_cooperative()
 	range_for (const auto &&objp, vmobjptridx)
 	{
 		const auto obj_type = objp->type;
-		if (obj_type == OBJ_PLAYER || obj_type == OBJ_GHOST)
+		if (obj_type == object_type::OBJ_PLAYER || obj_type == object_type::OBJ_GHOST)
 			continue;
-		else if (obj_type == OBJ_ROBOT && +(game_mode & GM_MULTI_ROBOTS))
+		else if (obj_type == object_type::OBJ_ROBOT && +(game_mode & GM_MULTI_ROBOTS))
 			continue;
-		else if (obj_type == OBJ_POWERUP)
+		else if (obj_type == object_type::OBJ_POWERUP)
 		{
 			powerup_shuffle.record_powerup(objp);
 			continue;
@@ -3766,7 +3766,7 @@ void multi_update_objects_for_non_cooperative()
 		else if (!object_allowed_in_anarchy(objp) ) {
 #if DXX_BUILD_DESCENT == 2
 			// Before deleting object, if it's a robot, drop it's special powerup, if any
-			if (obj_type == OBJ_ROBOT)
+			if (obj_type == object_type::OBJ_ROBOT)
 				if (objp->contains.count && objp->contains.type == contained_object_type::powerup)
 					object_create_robot_egg(LevelSharedRobotInfoState.Robot_info, objp);
 #endif
@@ -3811,7 +3811,7 @@ int multi_all_players_alive(const fvcobjptr &vcobjptr, const std::ranges::subran
 		const auto connected{plr.connected};
 		if (connected == player_connection_status::playing)
 		{
-			if (vcobjptr(plr.objnum)->type == OBJ_GHOST) // player alive?
+			if (vcobjptr(plr.objnum)->type == object_type::OBJ_GHOST) // player alive?
 				return 0;
 		}
 		else if (connected != player_connection_status::disconnected) // ... and actually playing?
@@ -3925,7 +3925,7 @@ static void multi_do_vulcan_weapon_ammo_adjust(fvmobjptr &vmobjptr, const multip
 	}
 
 	const auto &&obj = vmobjptr(local_objnum);
-	if (obj->type != OBJ_POWERUP)
+	if (obj->type != object_type::OBJ_POWERUP)
 	{
 		return;
 	}
@@ -4875,7 +4875,7 @@ int multi_maybe_disable_friendly_fire(const object_base *const killer)
 		return 0;
 	if (!killer) // no actual killer -> harm me!
 		return 0;
-	if (killer->type != OBJ_PLAYER) // not a player -> harm me!
+	if (killer->type != object_type::OBJ_PLAYER) // not a player -> harm me!
 		return 0;
 	if (const auto is_coop{+(Game_mode & GM_MULTI_COOP)}) // coop mode -> don't harm me!
 		return is_coop;
@@ -5317,7 +5317,7 @@ static void MultiLevelInv_CountLevelPowerups()
 
         range_for (const auto &&objp, vmobjptridx)
         {
-                if (objp->type == OBJ_WEAPON) // keep live bombs in inventory so they will respawn after they're gone
+                if (objp->type == object_type::OBJ_WEAPON) // keep live bombs in inventory so they will respawn after they're gone
                 {
                         auto wid = get_weapon_id(objp);
                         if (wid == weapon_id_type::PROXIMITY_ID)
@@ -5327,7 +5327,7 @@ static void MultiLevelInv_CountLevelPowerups()
                                 MultiLevelInv.Current[powerup_type_t::POW_SMART_MINE]++;
 #endif
                 }
-                if (objp->type != OBJ_POWERUP)
+                if (objp->type != object_type::OBJ_POWERUP)
                         continue;
                 auto pid = get_powerup_id(objp);
                 switch (pid)
@@ -5403,7 +5403,7 @@ static void MultiLevelInv_CountPlayerInventory()
 					if (vcplayerptr(i)->connected != player_connection_status::playing)
                                 continue;
 		auto &obj = *vcobjptr(vcplayerptr(i)->objnum);
-		if (obj.type == OBJ_GHOST) // Player is dead. Their items are dropped now.
+		if (obj.type == object_type::OBJ_GHOST) // Player is dead. Their items are dropped now.
                                 continue;
 		auto &player_info = obj.ctype.player_info;
                         // NOTE: We do not need to consider Granted Spawn Items here. These are replaced with shields and even if not, the repopulation function will take care of it.
@@ -6188,7 +6188,7 @@ void multi_object_to_object_rw(const object &obj, object_rw *obj_rw)
 	switch (rtype)
 	{
 		case render_type::RT_NONE:
-			if (obj.type != OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time.
+			if (obj.type != object_type::OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time.
 				break;
 			[[fallthrough]];
 		case render_type::RT_MORPH:
@@ -6225,7 +6225,7 @@ void multi_object_rw_to_object(const object_rw *const obj_rw, object &obj)
 	obj = {};
 	DXX_POISON_VAR(obj, 0xfd);
 	obj.type = build_valid_object_type_from_untrusted({obj_rw->type});
-	if (obj.type == OBJ_NONE)
+	if (obj.type == object_type::OBJ_NONE)
 		return;
 	obj.signature     = object_signature_t{static_cast<uint16_t>(INTEL_INT(obj_rw->signature))};
 	obj.id            = obj_rw->id;
@@ -6373,7 +6373,7 @@ void multi_object_rw_to_object(const object_rw *const obj_rw, object &obj)
 	switch (obj.render_type)
 	{
 		case render_type::RT_NONE:
-			if (obj.type != OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time.
+			if (obj.type != object_type::OBJ_GHOST) // HACK: when a player is dead or not connected yet, clients still expect to get polyobj data - even if render_type == RT_NONE at this time.
 				break;
 			[[fallthrough]];
 		case render_type::RT_MORPH:

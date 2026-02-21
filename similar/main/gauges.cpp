@@ -3246,7 +3246,7 @@ void show_reticle(grs_canvas &canvas, const player_info &player_info, enum retic
 	int gauge_index;
 
 #if DXX_BUILD_DESCENT == 2
-	if (Newdemo_state==ND_STATE_PLAYBACK && Viewer->type != OBJ_PLAYER)
+	if (Newdemo_state==ND_STATE_PLAYBACK && Viewer->type != object_type::OBJ_PLAYER)
 		 return;
 #endif
 
@@ -3635,7 +3635,7 @@ void show_HUD_names(const d_robot_info_array &Robot_info, grs_canvas &canvas, co
 			for (objnum=0;objnum<=Highest_object_index;objnum++)
 			{
 				auto &objp = *vcobjptr(objnum);
-				if (objp.type == OBJ_PLAYER && get_player_id(objp) == pnum)
+				if (objp.type == object_type::OBJ_PLAYER && get_player_id(objp) == pnum)
 					break;
 			}
 			if (objnum > Highest_object_index)	//not in list, thus not visible
@@ -3796,7 +3796,7 @@ void draw_hud(const d_robot_info_array &Robot_info, grs_canvas &canvas, const ob
 
 	// Cruise speed
 	if (const auto cruise_speed{Cruise_speed}; cruise_speed && PlayerCfg.CockpitMode[1] != cockpit_mode_t::rear_view)
-		if (auto &viewer{*Viewer}; viewer.type == OBJ_PLAYER && get_player_id(viewer) == Player_num)
+		if (auto &viewer{*Viewer}; viewer.type == object_type::OBJ_PLAYER && get_player_id(viewer) == Player_num)
 		{
 		gr_set_fontcolor(canvas, BM_XRGB(0, 31, 0), -1);
 			auto &game_font = *GAME_FONT;
@@ -4117,7 +4117,7 @@ void do_cockpit_window_view(grs_canvas &canvas, const gauge_inset_window_view wi
 		render_frame(window_canv, 0, window);
 
 	//	HACK! If guided missile, wake up robots as necessary.
-	if (viewer.type == OBJ_WEAPON) {
+	if (viewer.type == object_type::OBJ_WEAPON) {
 		// -- Used to require to be GUIDED -- if (viewer->id == GUIDEDMISS_ID)
 		wake_up_rendered_objects(viewer, window);
 	}

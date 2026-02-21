@@ -81,10 +81,10 @@ static int PlaceHostage()
 	auto &vcvertptr = Vertices.vcptr;
 	const auto cur_object_loc{compute_segment_center(vcvertptr, Cursegp)};
 
-	if (place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, OBJ_HOSTAGE, 0) == 0)
+	if (place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, object_type::OBJ_HOSTAGE, 0) == 0)
 	{
 		Int3();		// Debug below
-		place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, OBJ_HOSTAGE, 0);
+		place_object(LevelUniqueObjectState, LevelSharedPolygonModelState, LevelSharedRobotInfoState.Robot_info, LevelSharedSegmentState, LevelUniqueSegmentState, Cursegp, cur_object_loc, object_type::OBJ_HOSTAGE, 0);
 		return 1;
 	}
 	return 0;

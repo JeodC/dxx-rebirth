@@ -468,7 +468,7 @@ static void duplicate_group(per_vertex_array<uint8_t> &vertex_ids, group::segmen
 		new_segments.emplace_back(new_segment_id);
 		for (auto &obj : objects_in<object>(segp, vmobjptridx, vmsegptr))
 		{
-			if (obj.type != OBJ_PLAYER) {
+			if (obj.type != object_type::OBJ_PLAYER) {
 				const auto &&new_obj_id = obj_create_copy(obj, vmsegptridx(new_segment_id));
 				(void)new_obj_id; // FIXME!
 			}

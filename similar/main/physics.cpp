@@ -261,7 +261,7 @@ static void fix_illegal_wall_intersection(const vmobjptridx_t obj)
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &Vertices = LevelSharedVertexState.get_vertices();
 	auto &vmobjptr = Objects.vmptr;
-	if (!(obj->type == OBJ_PLAYER || obj->type == OBJ_ROBOT))
+	if (!(obj->type == object_type::OBJ_PLAYER || obj->type == object_type::OBJ_ROBOT))
 		return;
 
 	auto &vcvertptr = Vertices.vcptr;
@@ -407,7 +407,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 
 		const auto new_pos = vm_vec_build_add(obj->pos,frame_vec);
 		int flags{0};
-		if (obj->type == OBJ_WEAPON)
+		if (obj->type == object_type::OBJ_WEAPON)
 			flags |= FQ_TRANSPOINT;
 
 		if (phys_segs)
@@ -427,8 +427,8 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		{
 			auto &objp = *vcobjptr(hit_info.hit_object);
 
-			if ((objp.type == OBJ_WEAPON && is_proximity_bomb_or_player_smart_mine(get_weapon_id(objp))) ||
-				objp.type == OBJ_POWERUP) // do not increase count for powerups since they *should* not change our movement
+			if ((objp.type == object_type::OBJ_WEAPON && is_proximity_bomb_or_player_smart_mine(get_weapon_id(objp))) ||
+				objp.type == object_type::OBJ_POWERUP) // do not increase count for powerups since they *should* not change our movement
 				count--;
 		}
 
@@ -457,7 +457,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		const segnum_t WallHitSeg{hit_info.hit_side_seg};
 
 		if (iseg==segment_none) {		//some sort of horrible error
-			if (obj->type == OBJ_WEAPON)
+			if (obj->type == object_type::OBJ_WEAPON)
 				obj->flags |= OF_SHOULD_BE_DEAD;
 			break;
 		}
@@ -481,7 +481,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 			if (n == segment_none)
 			{
 				//Int3();
-				if (obj->type == OBJ_PLAYER && (n = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj_previous_position, obj_segp DXX_lighting_hack_pass_parameter)) != segment_none)
+				if (obj->type == object_type::OBJ_PLAYER && (n = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj_previous_position, obj_segp DXX_lighting_hack_pass_parameter)) != segment_none)
 				{
 					obj->pos = obj_previous_position;
 					obj_relink(vmobjptr, Segments.vmptr, obj, n);
@@ -490,7 +490,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 					obj->pos = compute_segment_center(vcvertptr, obj_segp);
 					obj->pos.x += obj;
 				}
-				if (obj->type == OBJ_WEAPON)
+				if (obj->type == object_type::OBJ_WEAPON)
 					obj->flags |= OF_SHOULD_BE_DEAD;
 			}
 			return window_event_result::ignored;
@@ -542,7 +542,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				const auto moved_v{vm_vec_build_sub(obj->pos, save_pos)};
 				auto wall_part{vm_vec_build_dot(moved_v,hit_info.hit_wallnorm)};
 
-				if ((wall_part != 0 && moved_time>0 && (hit_speed=-fixdiv(wall_part,moved_time))>0) || obj->type == OBJ_WEAPON || obj->type == OBJ_DEBRIS)
+				if ((wall_part != 0 && moved_time>0 && (hit_speed=-fixdiv(wall_part,moved_time))>0) || obj->type == object_type::OBJ_WEAPON || obj->type == object_type::OBJ_DEBRIS)
 					result = collide_object_with_wall(
 #if DXX_BUILD_DESCENT == 2
 						LevelSharedSegmentState.DestructibleLights,
@@ -554,7 +554,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				 * It's possible that other walls later in the loop would still be valid for scraping but due to the generalized outcome, this should be negligible (practical wall sliding is handled below).
 				 * NOTE: Remote players will return false and never receive damage. But since we handle only one object (remote or local) per loop, this is no problem. 
 				 */
-				if (obj->type == OBJ_PLAYER && Player_ScrapeFrame == false)
+				if (obj->type == object_type::OBJ_PLAYER && Player_ScrapeFrame == false)
 					Player_ScrapeFrame = scrape_player_on_wall(obj, Segments.vmptridx(WallHitSeg), WallHitSide, hit_info.hit_pnt);
 
 				Assert( WallHitSeg != segment_none );
@@ -604,7 +604,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 #if DXX_BUILD_DESCENT == 2
 							if (+forcefield_bounce) {
 								check_vel = 1;				//check for max velocity
-								if (obj->type == OBJ_PLAYER)
+								if (obj->type == object_type::OBJ_PLAYER)
 									wall_part *= 2;		//player bounce twice as much
 							}
 
@@ -629,7 +629,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 								vm_vec_scale(obj->mtype.phys_info.velocity,fixdiv(MAX_OBJECT_VEL,vel));
 						}
 
-						if (bounced && obj->type == OBJ_WEAPON)
+						if (bounced && obj->type == object_type::OBJ_WEAPON)
 						{
 							/* Copy `objp.orient.uvec` into a temporary and pass the temporary,
 							 * since it is undefined behavior to access `objp.orient` after the old
@@ -672,7 +672,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 
 					if ((obj->mtype.phys_info.flags & PF_PERSISTENT) || old_vel == obj->mtype.phys_info.velocity)
 					{
-						//if (Objects[hit_info.hit_object].type == OBJ_POWERUP)
+						//if (Objects[hit_info.hit_object].type == object_type::OBJ_POWERUP)
 						if (ignore_obj_list.push_back(hit_info.hit_object))
 						try_again = 1;
 					}
@@ -708,7 +708,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 #if DXX_BUILD_DESCENT == 2
 		&& !bounced 
 #endif
-		&& ((obj->type == OBJ_PLAYER) || (obj->type == OBJ_ROBOT) || (obj->type == OBJ_DEBRIS)) 
+		&& ((obj->type == object_type::OBJ_PLAYER) || (obj->type == object_type::OBJ_ROBOT) || (obj->type == object_type::OBJ_DEBRIS)) 
 		&& (fate == fvi_hit_type::Wall || fate == fvi_hit_type::Object || fate == fvi_hit_type::BadP0)
 		)
 	{	
@@ -725,7 +725,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		do_physics_align_object( obj );
 
 	//hack to keep player from going through closed doors
-	if (obj->type==OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) ) {
+	if (obj->type==object_type::OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) ) {
 
 		const cscusegment orig_segp{vcsegptr(orig_segnum)};
 		const auto &&sidenum = find_connect_side(vcsegptridx(obj->segnum), orig_segp);
@@ -758,7 +758,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 		{
 			segnum_t n;
 			const auto &&obj_segp = Segments.vmptridx(obj->segnum);
-			if (obj->type == OBJ_PLAYER && (n = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj_previous_position, obj_segp DXX_lighting_hack_pass_parameter)) != segment_none)
+			if (obj->type == object_type::OBJ_PLAYER && (n = find_point_seg(LevelSharedSegmentState, LevelUniqueSegmentState, obj_previous_position, obj_segp DXX_lighting_hack_pass_parameter)) != segment_none)
 			{
 				obj->pos = obj_previous_position;
 				obj_relink(vmobjptr, Segments.vmptr, obj, Segments.vmptridx(n));
@@ -767,7 +767,7 @@ window_event_result do_physics_sim(const d_robot_info_array &Robot_info, const v
 				obj->pos = compute_segment_center(vcvertptr, obj_segp);
 				obj->pos.x += obj;
 			}
-			if (obj->type == OBJ_WEAPON)
+			if (obj->type == object_type::OBJ_WEAPON)
 				obj->flags |= OF_SHOULD_BE_DEAD;
 		}
 	}
@@ -890,7 +890,7 @@ void phys_apply_rot(object &obj, const vms_vector &force_vec)
 		rate = 4*F1_0;
 	else {
 		rate = fixdiv(obj.mtype.phys_info.mass, vecmag / 8);
-		if (obj.type == OBJ_ROBOT) {
+		if (obj.type == object_type::OBJ_ROBOT) {
 			if (rate < F1_0/4)
 				rate = F1_0/4;
 #if DXX_BUILD_DESCENT == 1

@@ -633,7 +633,7 @@ static window_event_result HandleDemoKey(int key)
 		case KEY_F2:	do_options_menu();	break;
 		KEY_MAC(case KEY_COMMAND+KEY_3:)
 		case KEY_F3:
-			 if (Viewer->type == OBJ_PLAYER)
+			 if (Viewer->type == object_type::OBJ_PLAYER)
 				toggle_cockpit();
 			 break;
 		KEY_MAC(case KEY_COMMAND+KEY_4:)
@@ -873,7 +873,7 @@ static window_event_result HandleSystemKey(int key)
 		KEY_MAC(case KEY_COMMAND+KEY_3:)
 
 		case KEY_F3:
-			if (Player_dead_state == player_dead_state::no && Viewer->type == OBJ_PLAYER)
+			if (Player_dead_state == player_dead_state::no && Viewer->type == object_type::OBJ_PLAYER)
 			{
 				toggle_cockpit();
 			}
@@ -1187,7 +1187,7 @@ static void kill_all_robots(void)
 	// Kill all bots except for Buddy bot and boss.  However, if only boss and buddy left, kill buddy.
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 		{
 			auto &ri = Robot_info[get_robot_id(obj)];
 			if (!ri.companion && ri.boss_flag == boss_robot_id::None)
@@ -1209,7 +1209,7 @@ static void kill_all_robots(void)
 	if (dead_count == 0)
 		for (auto &obj : vmobjptr)
 		{
-			if (obj.type == OBJ_ROBOT)
+			if (obj.type == object_type::OBJ_ROBOT)
 				if (Robot_info[get_robot_id(obj)].companion) {
 					obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
 					HUD_init_message_literal(HM_DEFAULT, "Toasted the Buddy! *sniff*");
@@ -1238,10 +1238,10 @@ static void kill_and_so_forth(const d_robot_info_array &Robot_info, fvmobjptridx
 	range_for (const auto &&o, vmobjptridx)
 	{
 		switch (o->type) {
-			case OBJ_ROBOT:
+			case object_type::OBJ_ROBOT:
 				apply_damage_to_robot(Robot_info, o, o->shields + 1, get_local_player().objnum);
 				break;
-			case OBJ_POWERUP:
+			case object_type::OBJ_POWERUP:
 				do_powerup(o);
 				break;
 			default:
@@ -1285,7 +1285,7 @@ static void kill_all_snipers(void)
 	//	Kill all snipers.
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 			if (obj.ctype.ai_info.behavior == ai_behavior::AIB_SNIPE)
 			{
 				dead_count++;
@@ -1305,7 +1305,7 @@ static void kill_thief(void)
 	//	Kill thief.
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 			if (Robot_info[get_robot_id(obj)].thief)
 			{
 				obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;
@@ -1324,7 +1324,7 @@ static void kill_buddy(void)
 	//	Kill buddy.
 	for (auto &obj : vmobjptr)
 	{
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 			if (Robot_info[get_robot_id(obj)].companion)
 			{
 				obj.flags |= OF_EXPLODING | OF_SHOULD_BE_DEAD;

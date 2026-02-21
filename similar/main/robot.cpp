@@ -102,7 +102,7 @@ static void set_robot_state(object_base &obj, const robot_animation_state state)
 	auto &Robot_joints = LevelSharedRobotJointState.Robot_joints;
 	int j,jo;
 
-	assert(obj.type == OBJ_ROBOT);
+	assert(obj.type == object_type::OBJ_ROBOT);
 
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	auto &ri = Robot_info[get_robot_id(obj)];
@@ -207,7 +207,7 @@ namespace dsx {
 
 imobjptridx_t robot_create(const d_robot_info_array &Robot_info, const robot_id id, const vmsegptridx_t segnum, const vms_vector &pos, const vms_matrix *const orient, const fix size, const ai_behavior behavior, const imsegidx_t hide_segment)
 {
-	const auto &&objp = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_ROBOT, underlying_value(id), segnum, pos, orient, size, object::control_type::ai, object::movement_type::physics, render_type::RT_POLYOBJ);
+	const auto &&objp = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_ROBOT, underlying_value(id), segnum, pos, orient, size, object::control_type::ai, object::movement_type::physics, render_type::RT_POLYOBJ);
 	if (objp)
 		init_ai_object(Robot_info, objp, behavior, hide_segment);
 	return objp;

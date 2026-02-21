@@ -58,23 +58,23 @@ typedef const char ai_type_name[13];
 static object_type_name &get_object_type(int num)
 {
 	switch (num) {
-		case OBJ_NONE:
+		case object_type::OBJ_NONE:
 			return "OBJ_NONE    ";
-		case OBJ_WALL:
+		case object_type::OBJ_WALL:
 			return "OBJ_WALL    ";
-		case OBJ_FIREBALL:
+		case object_type::OBJ_FIREBALL:
 			return "OBJ_FIREBALL";
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 			return "OBJ_ROBOT   ";
-		case OBJ_HOSTAGE:
+		case object_type::OBJ_HOSTAGE:
 			return "OBJ_HOSTAGE ";
-		case OBJ_PLAYER:
+		case object_type::OBJ_PLAYER:
 			return "OBJ_PLAYER  ";
-		case OBJ_WEAPON:
+		case object_type::OBJ_WEAPON:
 			return "OBJ_WEAPON  ";
-		case OBJ_CAMERA:
+		case object_type::OBJ_CAMERA:
 			return "OBJ_CAMERA  ";
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 			return "OBJ_POWERUP ";
 		default:
 			return " (unknown)  ";

@@ -92,12 +92,12 @@ void draw_object_picture(grs_canvas &canvas, const unsigned id, const vms_angvec
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	switch (type) {
 
-		case OBJ_HOSTAGE:
+		case object_type::OBJ_HOSTAGE:
 			PIGGY_PAGE_IN(Vclip[Hostage_vclip_num[id]].frames[0]);
 			gr_bitmap(canvas, 0, 0, GameBitmaps[Vclip[Hostage_vclip_num[id]].frames[0]]);
 			break;
 
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 			if (const auto vclip_num = Powerup_info[static_cast<powerup_type_t>(id)].vclip_num; Vclip.valid_index(vclip_num))
 			{
 				auto &v = Vclip[vclip_num];
@@ -106,18 +106,18 @@ void draw_object_picture(grs_canvas &canvas, const unsigned id, const vms_angvec
 			}
 			break;
 
-		case OBJ_PLAYER:
+		case object_type::OBJ_PLAYER:
 			draw_model_picture(Polygon_models, canvas, Player_ship->model_num, orient_angles);		// Draw a poly model below
 			break;
 
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 			draw_model_picture(Polygon_models, canvas, Robot_info[static_cast<robot_id>(id)].model_num, orient_angles);	// Draw a poly model below
 			break;
 
-		case OBJ_CNTRLCEN:
+		case object_type::OBJ_CNTRLCEN:
 			draw_model_picture(Polygon_models, canvas, get_reactor_model_number(id), orient_angles);
 			break;
-		case OBJ_CLUTTER:
+		case object_type::OBJ_CLUTTER:
 			draw_model_picture(Polygon_models, canvas, static_cast<polygon_model_index>(id), orient_angles);
 			break;
 		default:
@@ -253,29 +253,29 @@ int objpage_goto_next_object()
 	// there should be a pop-up menu for this
 	switch (Cur_object_type)
 	{
-		case OBJ_ROBOT:
-			Cur_object_type = OBJ_HOSTAGE;
+		case object_type::OBJ_ROBOT:
+			Cur_object_type = object_type::OBJ_HOSTAGE;
 			Num_object_subtypes = 1;
 			break;
 
-		case OBJ_HOSTAGE:
-			Cur_object_type = OBJ_PLAYER;
+		case object_type::OBJ_HOSTAGE:
+			Cur_object_type = object_type::OBJ_PLAYER;
 			Num_object_subtypes = 1;	// can have anarchy/coop, but this is handled automatically
 			break;
 
-		case OBJ_PLAYER:
-			Cur_object_type = OBJ_POWERUP;
+		case object_type::OBJ_PLAYER:
+			Cur_object_type = object_type::OBJ_POWERUP;
 			Num_object_subtypes = N_powerup_types;
 			break;
 
-		case OBJ_POWERUP:
-			Cur_object_type = OBJ_CNTRLCEN;
+		case object_type::OBJ_POWERUP:
+			Cur_object_type = object_type::OBJ_CNTRLCEN;
 			Num_object_subtypes = Num_reactors;
 			break;
 
-		case OBJ_CNTRLCEN:
+		case object_type::OBJ_CNTRLCEN:
 		default:
-			Cur_object_type = OBJ_ROBOT;
+			Cur_object_type = object_type::OBJ_ROBOT;
 			Num_object_subtypes = LevelSharedRobotInfoState.N_robot_types;
 			break;
 	}

@@ -122,7 +122,7 @@ static int RobotNextType()
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	if (Cur_object_index != object_none )	{
 		const auto &&obj = vmobjptridx(Cur_object_index);
-		if (obj->type == OBJ_ROBOT)
+		if (obj->type == object_type::OBJ_ROBOT)
 		{
 			obj->id++;
 			if (obj->id >= LevelSharedRobotInfoState.N_robot_types)
@@ -154,7 +154,7 @@ static int RobotPrevType()
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	if (Cur_object_index != object_none )	{
 		const auto &&obj = vmobjptridx(Cur_object_index);
-		if (obj->type == OBJ_ROBOT)
+		if (obj->type == object_type::OBJ_ROBOT)
 		{
 			if (obj->id == 0 ) 
 				obj->id = LevelSharedRobotInfoState.N_robot_types - 1;
@@ -188,17 +188,17 @@ static int med_set_ai_path()
 	return 1;
 }
 
-// #define OBJ_NONE		255	//unused object
-// #define OBJ_WALL		0		//A wall... not really an object, but used for collisions
-// #define OBJ_FIREBALL	1		//a fireball, part of an explosion
-// #define OBJ_ROBOT		2		//an evil enemy
-// #define OBJ_HOSTAGE	3		//a hostage you need to rescue
-// #define OBJ_PLAYER	4		//the player on the console
-// #define OBJ_WEAPON	5		//a laser, missile, etc
-// #define OBJ_CAMERA	6		//a camera to slew around with
-// #define OBJ_POWERUP	7		//a powerup you can pick up
-// #define OBJ_DEBRIS	8		//a piece of robot
-// #define OBJ_CNTRLCEN	9		//the control center
+// #define object_type::OBJ_NONE		255	//unused object
+// #define object_type::OBJ_WALL		0		//A wall... not really an object, but used for collisions
+// #define object_type::OBJ_FIREBALL	1		//a fireball, part of an explosion
+// #define object_type::OBJ_ROBOT		2		//an evil enemy
+// #define object_type::OBJ_HOSTAGE	3		//a hostage you need to rescue
+// #define object_type::OBJ_PLAYER	4		//the player on the console
+// #define object_type::OBJ_WEAPON	5		//a laser, missile, etc
+// #define object_type::OBJ_CAMERA	6		//a camera to slew around with
+// #define object_type::OBJ_POWERUP	7		//a powerup you can pick up
+// #define object_type::OBJ_DEBRIS	8		//a piece of robot
+// #define object_type::OBJ_CNTRLCEN	9		//the control center
 // #define OBJ_FLARE		10		//the control center
 // #define MAX_OBJECT_TYPES	11
 
@@ -217,23 +217,23 @@ static void update_goody_info(void)
 	auto &vmobjptr = Objects.vmptr;
 	if (Cur_object_index != object_none )	{
 		auto &obj = *vmobjptr(Cur_object_index);
-		if (obj.type == OBJ_ROBOT)
+		if (obj.type == object_type::OBJ_ROBOT)
 		{
 			obj.contains = Cur_goody;
 		}
 	}
 }
 
-// #define OBJ_WALL		0		//A wall... not really an object, but used for collisions
-// #define OBJ_FIREBALL	1		//a fireball, part of an explosion
-// #define OBJ_ROBOT		2		//an evil enemy
-// #define OBJ_HOSTAGE	3		//a hostage you need to rescue
-// #define OBJ_PLAYER	4		//the player on the console
-// #define OBJ_WEAPON	5		//a laser, missile, etc
-// #define OBJ_CAMERA	6		//a camera to slew around with
-// #define OBJ_POWERUP	7		//a powerup you can pick up
-// #define OBJ_DEBRIS	8		//a piece of robot
-// #define OBJ_CNTRLCEN	9		//the control center
+// #define object_type::OBJ_WALL		0		//A wall... not really an object, but used for collisions
+// #define object_type::OBJ_FIREBALL	1		//a fireball, part of an explosion
+// #define object_type::OBJ_ROBOT		2		//an evil enemy
+// #define object_type::OBJ_HOSTAGE	3		//a hostage you need to rescue
+// #define object_type::OBJ_PLAYER	4		//the player on the console
+// #define object_type::OBJ_WEAPON	5		//a laser, missile, etc
+// #define object_type::OBJ_CAMERA	6		//a camera to slew around with
+// #define object_type::OBJ_POWERUP	7		//a powerup you can pick up
+// #define object_type::OBJ_DEBRIS	8		//a piece of robot
+// #define object_type::OBJ_CNTRLCEN	9		//the control center
 // #define OBJ_FLARE		10		//the control center
 // #define MAX_OBJECT_TYPES	11
 
@@ -313,7 +313,7 @@ static int GoodyPrevCount()
 
 static int is_legal_type(int the_type)
 {
-	return (the_type == OBJ_ROBOT) || (the_type == OBJ_CLUTTER);
+	return (the_type == object_type::OBJ_ROBOT) || (the_type == object_type::OBJ_CLUTTER);
 }
 
 static int is_legal_type_for_this_window(const imobjidx_t objnum)
@@ -456,9 +456,9 @@ static int LocalObjectPlaceObject(void)
 	auto &vmobjptr = Objects.vmptr;
 	int	rval;
 
-	if (Cur_object_type != OBJ_ROBOT)
+	if (Cur_object_type != object_type::OBJ_ROBOT)
 	{
-		Cur_object_type = OBJ_ROBOT;
+		Cur_object_type = object_type::OBJ_ROBOT;
 		Cur_object_id = 3;	// class 1 drone
 		Num_object_subtypes = LevelSharedRobotInfoState.N_robot_types;
 	}
@@ -797,7 +797,7 @@ int do_object_dialog()
 		Cur_object_index = object_first;
 
 	auto obj = vmobjptr(Cur_object_index);
-	if (obj->type == OBJ_ROBOT)		//don't do this for robots
+	if (obj->type == object_type::OBJ_ROBOT)		//don't do this for robots
 		return 0;
 
 	// Only open 1 instance of this window...

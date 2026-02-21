@@ -266,13 +266,13 @@ static void paging_touch_object(const d_robot_info_array &Robot_info, const Text
 	switch (obj.type) {	
 		default:
 			break;
-	case OBJ_PLAYER:	
+	case object_type::OBJ_PLAYER:	
 		paging_touch_vclip(Vclip, get_explosion_vclip(LevelSharedRobotInfoState.Robot_info, obj, explosion_vclip_stage::s0));
 		break;
-	case OBJ_ROBOT:
+	case object_type::OBJ_ROBOT:
 		paging_touch_robot(Robot_info, Vclip, Weapon_info, get_robot_id(obj));
 		break;
-	case OBJ_CNTRLCEN:
+	case object_type::OBJ_CNTRLCEN:
 		paging_touch_weapon(Vclip, Weapon_info, weapon_id_type::CONTROLCEN_WEAPON_NUM);
 		if (const auto m = Dead_modelnums[obj.rtype.pobj_info.model_num]; m != polygon_model_index::None)
 			paging_touch_model(m);

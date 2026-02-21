@@ -2359,11 +2359,11 @@ void net_udp_send_objects(const Network_player_added network_player_added)
 	for (i = Network_send_objnum; i <= Highest_object_index; i++)
 	{
 		const auto &&objp = vmobjptr(i);
-		if ((objp->type != OBJ_POWERUP) && (objp->type != OBJ_PLAYER) &&
-				(objp->type != OBJ_CNTRLCEN) && (objp->type != OBJ_GHOST) &&
-				(objp->type != OBJ_ROBOT) && (objp->type != OBJ_HOSTAGE)
+		if ((objp->type != object_type::OBJ_POWERUP) && (objp->type != object_type::OBJ_PLAYER) &&
+				(objp->type != object_type::OBJ_CNTRLCEN) && (objp->type != object_type::OBJ_GHOST) &&
+				(objp->type != object_type::OBJ_ROBOT) && (objp->type != object_type::OBJ_HOSTAGE)
 #if DXX_BUILD_DESCENT == 2
-				&& !(objp->type == OBJ_WEAPON && get_weapon_id(objp) == weapon_id_type::PMINE_ID)
+				&& !(objp->type == object_type::OBJ_WEAPON && get_weapon_id(objp) == weapon_id_type::PMINE_ID)
 #endif
 				)
 			continue;
@@ -2454,7 +2454,7 @@ static int net_udp_verify_objects(int remote, int local)
 
 	for (auto &obj : vcobjptr)
 	{
-		if (obj.type == OBJ_PLAYER || obj.type == OBJ_GHOST)
+		if (obj.type == object_type::OBJ_PLAYER || obj.type == object_type::OBJ_GHOST)
 			nplayers++;
 	}
 
@@ -2530,7 +2530,7 @@ static void net_udp_read_object_packet(const d_level_shared_robot_info_state &Le
 			}
 			if (objnum != object_none) {
 				auto obj = vmobjptridx(objnum);
-				if (obj->type != OBJ_NONE)
+				if (obj->type != object_type::OBJ_NONE)
 				{
 					obj_unlink(Objects.vmptr, Segments.vmptr, obj);
 					Assert(obj->segnum == segment_none);
@@ -4695,7 +4695,7 @@ void net_udp_read_sync_packet(const uint8_t *data, uint_fast32_t data_len, const
 		}
 	}
 
-	get_local_plrobj().type = OBJ_PLAYER;
+	get_local_plrobj().type = object_type::OBJ_PLAYER;
 
 	Network_status = network_state::playing;
 	multi_sort_kill_list();

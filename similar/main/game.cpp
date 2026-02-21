@@ -1912,7 +1912,7 @@ imobjptridx_t find_escort(fvmobjptridx &vmobjptridx, const d_robot_info_array &R
 {
 	range_for (const auto &&o, vmobjptridx)
 	{
-		if (o->type == OBJ_ROBOT && Robot_info[get_robot_id(o)].companion)
+		if (o->type == object_type::OBJ_ROBOT && Robot_info[get_robot_id(o)].companion)
 			return imobjptridx_t(o);
 	}
 	return object_none;
@@ -2412,7 +2412,7 @@ static void powerup_grab_cheat(object &player, const vmobjptridx_t powerup)
 	fix	powerup_size;
 	fix	player_size;
 
-	Assert(powerup->type == OBJ_POWERUP);
+	Assert(powerup->type == object_type::OBJ_POWERUP);
 
 	powerup_size = powerup->size;
 	player_size = player.size;
@@ -2441,7 +2441,7 @@ void powerup_grab_cheat_all(void)
 		return;
 	const auto &&console = vmobjptr(ConsoleObject);
 	range_for (const auto objnum, objects_in(vmsegptr(console->segnum), vmobjptridx, vmsegptr))
-		if (objnum->type == OBJ_POWERUP)
+		if (objnum->type == object_type::OBJ_POWERUP)
 			powerup_grab_cheat(console, objnum);
 }
 
@@ -2483,7 +2483,7 @@ static int mark_player_path_to_segment(const d_vclip_array &Vclip, fvmobjptridx 
 
 		seg_center = Point_segs[player_hide_index+i].point;
 
-		const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_POWERUP, underlying_value(powerup_type_t::POW_ENERGY), vmsegptridx(Point_segs[player_hide_index+i].segnum), seg_center, &vmd_identity_matrix, Powerup_info[powerup_type_t::POW_ENERGY].size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
+		const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_POWERUP, underlying_value(powerup_type_t::POW_ENERGY), vmsegptridx(Point_segs[player_hide_index+i].segnum), seg_center, &vmd_identity_matrix, Powerup_info[powerup_type_t::POW_ENERGY].size, object::control_type::powerup, object::movement_type::None, render_type::RT_POWERUP);
 		if (obj == object_none) {
 			Int3();		//	Unable to drop energy powerup for path
 			return 1;

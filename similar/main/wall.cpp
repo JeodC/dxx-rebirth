@@ -735,9 +735,9 @@ static unsigned is_door_side_obstructed(fvcobjptridx &vcobjptridx, fvcsegptr &vc
 	for (auto &obj : objects_in<const object_base>(seg, vcobjptridx, vcsegptr))
 	{
 #if DXX_BUILD_DESCENT == 2
-		if (obj.type == OBJ_WEAPON)
+		if (obj.type == object_type::OBJ_WEAPON)
 			continue;
-		if (obj.type == OBJ_FIREBALL)
+		if (obj.type == object_type::OBJ_FIREBALL)
 			continue;
 #endif
 		if (const auto obstructed = check_poke(vcvertptr, obj, seg, side))
@@ -1124,7 +1124,7 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 
 	if (w->type == WALL_BLASTABLE) {
 #if DXX_BUILD_DESCENT == 2
-		if (obj.ctype.laser_info.parent_type == OBJ_PLAYER)
+		if (obj.ctype.laser_info.parent_type == object_type::OBJ_PLAYER)
 #endif
 			wall_damage(seg, side, damage);
 		return wall_hit_process_t::WHP_BLASTABLE;
@@ -1135,12 +1135,12 @@ wall_hit_process_t wall_hit_process(const player_flags powerup_flags, const vmse
 
 	//	Determine whether player is moving forward.  If not, don't say negative
 	//	messages because he probably didn't intentionally hit the door.
-	if (obj.type == OBJ_PLAYER)
+	if (obj.type == object_type::OBJ_PLAYER)
 		show_message = (vm_vec_build_dot(obj.orient.fvec, obj.mtype.phys_info.velocity) > 0);
 #if DXX_BUILD_DESCENT == 2
-	else if (obj.type == OBJ_ROBOT)
+	else if (obj.type == object_type::OBJ_ROBOT)
 		show_message = 0;
-	else if (obj.type == OBJ_WEAPON && obj.ctype.laser_info.parent_type == OBJ_ROBOT)
+	else if (obj.type == object_type::OBJ_WEAPON && obj.ctype.laser_info.parent_type == object_type::OBJ_ROBOT)
 		show_message = 0;
 #endif
 	else
@@ -1516,7 +1516,7 @@ void d_level_unique_stuck_object_state::kill_stuck_objects(fvmobjptr &vmobjptr, 
 #elif DXX_BUILD_DESCENT == 2
 #define DXX_WEAPON_LIFELEFT	F1_0/8
 #endif
-		assert(obj.type == OBJ_WEAPON);
+		assert(obj.type == object_type::OBJ_WEAPON);
 		assert(obj.movement_source == object::movement_type::physics);
 		assert(obj.mtype.phys_info.flags & PF_STICK);
 		obj.lifeleft = DXX_WEAPON_LIFELEFT;
@@ -1621,7 +1621,7 @@ void blast_nearby_glass_context::process_segment(const vmsegptridx_t segp, const
 				 */
 				if (const auto dist{find_connected_distance(pnt, segp, objp.pos, segp.absolute_sibling(objp.segnum), MAX_BLAST_GLASS_DEPTH, wall_is_doorway_mask::rendpast)}; dist > 0 && dist < half_damage)
 				{
-						assert(objp.type == OBJ_WEAPON);
+						assert(objp.type == object_type::OBJ_WEAPON);
 						check_effect_blowup(LevelSharedSegmentState.DestructibleLights, Vclip, segp, sidenum, pnt, objp.ctype.laser_info, 1, 0);
 				}
 			}

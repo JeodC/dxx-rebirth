@@ -126,7 +126,7 @@ static void apply_light(fvmsegptridx &vmsegptridx, const g3s_lrgb obj_light_emis
 		fix obji_64 = ((obj_light_emission.r+obj_light_emission.g+obj_light_emission.b)/3)*64;
 		sbyte is_marker{0};
 #if DXX_BUILD_DESCENT == 2
-		if (objnum && objnum->type == OBJ_MARKER)
+		if (objnum && objnum->type == object_type::OBJ_MARKER)
 				is_marker = 1;
 #endif
 
@@ -158,7 +158,7 @@ static void apply_light(fvmsegptridx &vmsegptridx, const g3s_lrgb obj_light_emis
 			if (objnum)
 			{
 				const object &obj = *objnum;
-				if (obj.type == OBJ_PLAYER)
+				if (obj.type == object_type::OBJ_PLAYER)
 					if (obj.ctype.player_info.powerup_flags & PLAYER_FLAGS_HEADLIGHT_ON) {
 						headlight_shift = 3;
 						if (get_player_id(obj) != Player_num)
@@ -393,20 +393,20 @@ static g3s_lrgb compute_light_emission(const d_robot_info_array &Robot_info, d_l
 	const object &objp = obj;
 	switch (objp.type)
 	{
-		case OBJ_PLAYER:
+		case object_type::OBJ_PLAYER:
 			light_intensity = compute_player_light_emission_intensity(LevelUniqueHeadlightState, objp);
 			break;
-		case OBJ_FIREBALL:
+		case object_type::OBJ_FIREBALL:
 			light_intensity = compute_fireball_light_emission_intensity(Vclip, objp);
 			break;
-		case OBJ_ROBOT:
+		case object_type::OBJ_ROBOT:
 #if DXX_BUILD_DESCENT == 1
 			light_intensity = F1_0/2;	// F1_0*Robot_info[obj->id].lightcast;
 #elif DXX_BUILD_DESCENT == 2
 			light_intensity = F1_0*Robot_info[get_robot_id(objp)].lightcast;
 #endif
 			break;
-		case OBJ_WEAPON:
+		case object_type::OBJ_WEAPON:
 		{
 			const auto wid = get_weapon_id(objp);
 			const fix tval = Weapon_info[wid].light;
@@ -417,7 +417,7 @@ static g3s_lrgb compute_light_emission(const d_robot_info_array &Robot_info, d_l
 			break;
 		}
 #if DXX_BUILD_DESCENT == 2
-		case OBJ_MARKER:
+		case object_type::OBJ_MARKER:
 		{
 			fix lightval = objp.lifeleft;
 
@@ -428,13 +428,13 @@ static g3s_lrgb compute_light_emission(const d_robot_info_array &Robot_info, d_l
 			break;
 		}
 #endif
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 			light_intensity = Powerup_info[get_powerup_id(objp)].light;
 			break;
-		case OBJ_DEBRIS:
+		case object_type::OBJ_DEBRIS:
 			light_intensity = F1_0/4;
 			break;
-		case OBJ_LIGHT:
+		case object_type::OBJ_LIGHT:
 			light_intensity = objp.ctype.light_info.intensity;
 			break;
 		default:
@@ -453,14 +453,14 @@ static g3s_lrgb compute_light_emission(const d_robot_info_array &Robot_info, d_l
 	{
 		default:
 			break;
-		case OBJ_FIREBALL:
-		case OBJ_WEAPON:
+		case object_type::OBJ_FIREBALL:
+		case object_type::OBJ_WEAPON:
 #if DXX_BUILD_DESCENT == 2
-		case OBJ_MARKER:
+		case object_type::OBJ_MARKER:
 #endif
 			compute_color = 1;
 			break;
-		case OBJ_POWERUP:
+		case object_type::OBJ_POWERUP:
 		{
 			switch (get_powerup_id(objp))
 			{
@@ -555,7 +555,7 @@ void set_dynamic_light(const d_robot_info_array &Robot_info, render_state_t &rst
 	range_for (const auto &&obj, vcobjptridx)
 	{
 		const object &objp = obj;
-		if (objp.type == OBJ_NONE)
+		if (objp.type == object_type::OBJ_NONE)
 			continue;
 		const auto &&obj_light_emission = compute_light_emission(Robot_info, LevelUniqueLightState, Vclip, obj);
 
@@ -585,7 +585,7 @@ static fix compute_headlight_light_on_object(const d_level_unique_headlight_stat
 	fix	light;
 
 	//	Let's just illuminate players and robots for speed reasons, ok?
-	if (objp.type != OBJ_ROBOT && objp.type != OBJ_PLAYER)
+	if (objp.type != object_type::OBJ_ROBOT && objp.type != object_type::OBJ_PLAYER)
 		return 0;
 
 	light = 0;

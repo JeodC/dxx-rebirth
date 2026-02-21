@@ -241,7 +241,7 @@ void trigger_matcen(const vmsegptridx_t segp)
 	auto pos{compute_segment_center(vcvertptr, segp)};
 	const auto &&delta{vm_vec_build_sub(vcvertptr(segp->verts.front()), pos)};
 	vm_vec_scale_add2(pos, delta, F1_0/2);
-	const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, OBJ_LIGHT, 0, segp, pos, nullptr, 0, object::control_type::light, object::movement_type::None, render_type::RT_NONE);
+	const auto &&objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_LIGHT, 0, segp, pos, nullptr, 0, object::control_type::light, object::movement_type::None, render_type::RT_NONE);
 	if (objnum != object_none) {
 		objnum->lifeleft = MATCEN_LIFE;
 		objnum->ctype.light_info.intensity = i2f(8);	//	Light cast by a fuelcen.
@@ -448,7 +448,7 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 			//	Make sure this robotmaker hasn't put out its max without having any of them killed.
 			for (auto &obj : vcobjptr)
 			{
-				if (obj.type == OBJ_ROBOT)
+				if (obj.type == object_type::OBJ_ROBOT)
 					if (obj.matcen_creator == biased_matcen_creator)
 						count++;
 			}
@@ -469,11 +469,11 @@ static void robotmaker_proc(const d_robot_info_array &Robot_info, const d_vclip_
 					Int3();
 					return;
 				}
-				if (objp->type==OBJ_ROBOT) {
+				if (objp->type==object_type::OBJ_ROBOT) {
 					collide_robot_and_materialization_center(Robot_info, objp);
 					robotcen->Timer = top_time/2;
 					return;
-				} else if (objp->type==OBJ_PLAYER ) {
+				} else if (objp->type==object_type::OBJ_PLAYER ) {
 					collide_player_and_materialization_center(objp);
 					robotcen->Timer = top_time/2;
 					return;

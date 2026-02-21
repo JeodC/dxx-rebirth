@@ -383,7 +383,7 @@ int do_powerup(const vmobjptridx_t obj)
 	int special_used{0};		//for when hitting vulcan cannon gets vulcan ammo
 
 	if (Player_dead_state != player_dead_state::no ||
-		ConsoleObject->type == OBJ_GHOST ||
+		ConsoleObject->type == object_type::OBJ_GHOST ||
 		get_local_plrobj().shields < 0)
 		return 0;
 
@@ -407,7 +407,7 @@ int do_powerup(const vmobjptridx_t obj)
 			if (plr.connected != player_connection_status::playing)
 				continue;
 			auto &o = *vcobjptr(plr.objnum);
-			if (o.type == OBJ_GHOST)
+			if (o.type == object_type::OBJ_GHOST)
 				continue;
 			if (mydist > vm_vec_normalized_dir(tvec, obj->pos, o.pos))
 				return 0;
