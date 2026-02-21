@@ -5027,11 +5027,6 @@ class DXXProgram(DXXCommon):
 	LazyObjectState = DXXCommon.LazyObjectState
 	def _generate_kconfig_ui_table(program, env, StaticObject, target, source) -> 'StaticObject':
 			builddir = program.builddir.Dir(program.target)
-			# Bypass ccache, if any, since this is a preprocess only
-			# call.
-			CXXFLAGS = env['CXXFLAGS']
-			CXXFLAGS = CXXFLAGS.copy() if CXXFLAGS else []
-			CXXFLAGS.append('-E')
 			CPPDEFINES = env['CPPDEFINES']
 			CPPDEFINES = CPPDEFINES.copy() if CPPDEFINES else []
 			CPPDEFINES.extend((
@@ -5044,7 +5039,9 @@ class DXXProgram(DXXCommon):
 					# file.
 					('kc_item', 'kc_item'),
 					))
-			cpp_kconfig_udlr = env._rebirth_nopch_StaticObject(target=builddir.File('kconfig.ui-table.i'), source=source[:-3] + 'ui-table.cpp', CPPDEFINES=CPPDEFINES, CXXCOM=env._dxx_cxxcom_no_ccache_prefix, CXXFLAGS=CXXFLAGS)
+			# Bypass ccache, if any, since this is a preprocess only
+			# call.
+			cpp_kconfig_udlr = env._rebirth_nopch_StaticObject(target=builddir.File('kconfig.ui-table.i'), source=source[:-3] + 'ui-table.cpp', CPPDEFINES=CPPDEFINES, CXXCOM=env._dxx_cxxcom_no_ccache_prefix.replace(' -c ', ' -E '))
 			generated_udlr_header = builddir.File('kconfig.udlr.h')
 			generate_kconfig_udlr = env.File('similar/main/generate-kconfig-udlr.py')
 			env.Command(generated_udlr_header, [cpp_kconfig_udlr, generate_kconfig_udlr], [[sys.executable, generate_kconfig_udlr, '$SOURCE', '$TARGET']])
