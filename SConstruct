@@ -2641,7 +2641,11 @@ where the cast is useless.
 		'''
 <clang-5: untested
 >clang-8: untested
->=clang-5 && <=clang-8: when -Wunused is passed, clang will warn when a lambda captures by reference a local variable that is itself a reference, regardless of whether the lambda body uses the captured value.  The warning is:
+>=clang-5 && <=clang-8: when -Wunused is passed, clang will warn when a lambda captures by reference a local variable that is itself a reference, regardless of whether the lambda body uses the captured value.
+>=clang-9 && <=clang-19: untested
+=clang-20: exhibits this warning
+
+The warning is:
 
 ```
 similar/main/object.cpp:1060:13: error: lambda capture 'vmobjptr' is not required to be captured for this use [-Werror,-Wunused-lambda-capture]
@@ -2650,6 +2654,7 @@ similar/main/object.cpp:1060:13: error: lambda capture 'vmobjptr' is not require
 
 <gcc-8 require such variables to be captured and will fail the build if the capture is removed.
 >=gcc-8 permit the variable not to be captured, and will not warn regardless of whether it is captured.
+gcc-16 permits the variable to be captured, and in some cases, will crash with an Internal Compiler Error if the variable is not captured.
 
 Test whether the compiler warns for this case and, if it does, tell it
 not to warn.  Once support is removed for gcc versions which require the
