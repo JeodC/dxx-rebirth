@@ -71,9 +71,9 @@ static constexpr valptridx<object>::magic_constant<objnum_t{0xffff}> object_none
 static constexpr valptridx<object>::magic_constant<objnum_t{0}> object_first{};
 
 #if DXX_BUILD_DESCENT == 1
-constexpr std::integral_constant<unsigned, 15> MAX_OBJECT_TYPES{};
+constexpr uint8_t MAX_OBJECT_TYPES{15};
 #elif DXX_BUILD_DESCENT == 2
-constexpr std::integral_constant<unsigned, 16> MAX_OBJECT_TYPES{};
+constexpr uint8_t MAX_OBJECT_TYPES{16};
 struct d_level_unique_control_center_state;
 #endif
 
