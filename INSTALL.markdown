@@ -189,7 +189,7 @@ Profile addition can be stacked: **scons dxx=a+b,c+d,e+f** is equivalent to **sc
 
 If required functionality is missing, **SConstruct** will stop the build and print a diagnostic message.  A stop at this stage indicates an environment problem.  If any target fails to configure, no target will be built.
 
-Before reporting an issue, clear any applicable caches (**ccache -C**; **rm .sconsign.dblite**) and reproduce the failure.  The DXX-Rebirth maintainers may be able to help you resolve environment problems if you cannot solve them on your own.  If you need help, please post the full output of running **scons** and the contents of **sconf.log** from your build directory.
+Before reporting an issue, clear any applicable caches (**ccache -C**; **rm .sconsign.dblite**) and reproduce the failure.  The DXX-Rebirth maintainers may be able to help you resolve environment problems if you cannot solve them on your own.  If you need help, please post the full output of running **scons** and the contents of **config.log** from your build directory.
 
 #### Compiling
 After **SConstruct** finishes the configure tests, **scons** will compile and link the program.  Failures at this stage may indicate a bug that should be reported.  Broken environments are usually caught by **SConstruct** checks before the build began.  If the compilation succeeds, the output files will be found in game-specific directories.  If the profile specified editor features, then **-editor** is appended to the filename.

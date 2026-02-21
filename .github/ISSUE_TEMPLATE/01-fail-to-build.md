@@ -99,6 +99,6 @@ For build failures, provide:
 - The `scons` command executed.
 - The contents of `site-local.py`, if present.
 - All output from `scons`, starting at the prompt where the command was entered and ending at the first shell prompt after the error.
-- If sconf.log is mentioned in the output, attach it.  If it is mentioned, it will be in the last lines before SCons exits.  You do not need to read the full output searching for references to it.  If in doubt, attach it.
+- If config.log is mentioned in the output, attach it.  If it is mentioned, it will be in the last lines before SCons exits.  You do not need to read the full output searching for references to it.  If in doubt, attach it.
 - If `dxxsconf.h` is generated, attach it.  It will be in the root of the build directory.  If you did not set a build directory, it will be in the same directory as `SConstruct`.
 -->

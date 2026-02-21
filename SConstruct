@@ -341,7 +341,7 @@ class ConfigureTests:
 			return self.flags.__getitem__(name)
 	class ForceVerboseLog(PreservedEnvironment):
 		def __init__(self, env: SCons.Environment):
-			# Force verbose output to sconf.log
+			# Force verbose output to config.log
 			self.flags = {}
 			for k in (
 				'CXXCOMSTR',
@@ -4953,7 +4953,7 @@ class DXXArchive(DXXCommon):
 		except TypeError as e:
 			raise SCons.Errors.StopError(e.args[0])
 		tests = ConfigureTests(self.program_message_prefix, user_settings, self.platform_settings)
-		log_file = builddir.File('sconf.log')
+		log_file = builddir.File('config.log')
 		conf = env.Configure(custom_tests = {
 				k.name:getattr(tests, k.name) for k in tests.custom_tests
 			},
