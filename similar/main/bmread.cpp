@@ -555,7 +555,7 @@ int gamedata_read_tbl(d_level_shared_robot_info_state &LevelSharedRobotInfoState
 	{
 		//Effects[i].bm_ptr = (grs_bitmap **) -1;
 		ec.changing_wall_texture = texture_index{UINT16_MAX};
-		ec.changing_object_texture = object_bitmap_index::None;
+		ec.changing_object_texture.dsx = object_bitmap_index::None;
 		ec.segnum = segment_none;
 		ec.vc.num_frames = -1;		//another mark of being unused
 	}
@@ -839,7 +839,7 @@ int gamedata_read_tbl(d_level_shared_robot_info_state &LevelSharedRobotInfoState
 	//check for refereced but unused clip count
 	for (auto &&[idx, e] : enumerate(Effects))
 	{
-		if ((e.changing_wall_texture != texture_index{UINT16_MAX} || e.changing_object_texture != object_bitmap_index::None) && e.vc.num_frames == ~0u)
+		if ((e.changing_wall_texture != texture_index{UINT16_MAX} || e.changing_object_texture.dsx != object_bitmap_index::None) && e.vc.num_frames == ~0u)
 			Error("EClip %" DXX_PRI_size_type " referenced (by polygon object?), but not defined", idx);
 	}
 
@@ -885,7 +885,7 @@ void verify_textures()
 
 #if DXX_BUILD_DESCENT == 2
 	for (uint_fast32_t i = 0; i < Num_effects; ++i)
-		if (const auto changing_object_texture = Effects[i].changing_object_texture; changing_object_texture != object_bitmap_index::None)
+		if (const auto changing_object_texture{Effects[i].changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 		{
 			const auto o = ObjBitmaps[changing_object_texture];
 			auto &gbo = GameBitmaps[o];
@@ -1023,14 +1023,14 @@ static std::size_t bm_read_eclip(std::size_t texture_count, int skip)
 		}
 
 		if (obj_eclip) {
-
-			if (Effects[clip_num].changing_object_texture == object_bitmap_index::None)
+			auto &changing_object_texture{Effects[clip_num].changing_object_texture.dsx};
+			if (changing_object_texture == object_bitmap_index::None)
 			{		//first time referenced
-				Effects[clip_num].changing_object_texture = static_cast<object_bitmap_index>(N_ObjBitmaps);		// XChange ObjectBitmaps
+				changing_object_texture = static_cast<object_bitmap_index>(N_ObjBitmaps);		// XChange ObjectBitmaps
 				N_ObjBitmaps++;
 			}
 
-			ObjBitmaps[Effects[clip_num].changing_object_texture] = Effects[clip_num].vc.frames[0];
+			ObjBitmaps[changing_object_texture] = Effects[clip_num].vc.frames[0];
 		}
 
 		//if for an object, Effects_bm_ptrs set in object load
@@ -1445,7 +1445,7 @@ static grs_bitmap *load_polymodel_bitmap(int skip, const char *name)
 	if (name[0] == '%') {		//an animating bitmap!
 		const unsigned eclip_num = atoi(name+1);
 
-		auto &changing_object_texture = Effects[eclip_num].changing_object_texture;
+		auto &changing_object_texture{Effects[eclip_num].changing_object_texture.dsx};
 		// On first reference, changing_object_texture will be None.
 		// Assign it a value.
 		if (changing_object_texture == object_bitmap_index::None)

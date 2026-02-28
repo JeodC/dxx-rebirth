@@ -133,7 +133,7 @@ static void paging_touch_object_effects(const d_eclip_array &Effects, const obje
 {
 	range_for (auto &i, partial_const_range(Effects, Num_effects))
 	{
-		if ( i.changing_object_texture == tmap_num )	{
+		if (i.changing_object_texture.dsx == tmap_num) {
 			paging_touch_vclip(i.vc);
 			break;
 		}

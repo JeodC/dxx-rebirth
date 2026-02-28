@@ -70,6 +70,24 @@ inline constexpr bool enable_bit_enum_boolnot<tmapinfo_flags>{true};
 
 }
 
+namespace d1x {
+
+enum class object_bitmap_index : uint16_t
+{
+	None = UINT16_MAX
+};
+
+}
+
+namespace d2x {
+
+enum class object_bitmap_index : uint16_t
+{
+	None = UINT16_MAX
+};
+
+}
+
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
@@ -168,10 +186,6 @@ constexpr std::integral_constant<unsigned, 610> MAX_OBJ_BITMAPS{};
 extern unsigned N_ObjBitmaps;
 #endif
 
-enum class object_bitmap_index : uint16_t
-{
-	None = UINT16_MAX
-};
 extern enumerated_array<bitmap_index, MAX_OBJ_BITMAPS, object_bitmap_index> ObjBitmaps;
 extern std::array<object_bitmap_index, MAX_OBJ_BITMAPS> ObjBitmapPtrs;
 

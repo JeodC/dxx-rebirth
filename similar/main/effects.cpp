@@ -67,7 +67,7 @@ void reset_special_effects()
 		if (ec.changing_wall_texture < Textures.size())
 			Textures[ec.changing_wall_texture] = ec.vc.frames[ec.frame_count];
 
-		if (const auto changing_object_texture = ec.changing_object_texture; changing_object_texture != object_bitmap_index::None)
+		if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 			ObjBitmaps[changing_object_texture] = ec.vc.frames[ec.frame_count];
 
 	}
@@ -82,7 +82,7 @@ void do_special_effects()
 		const auto vc_frame_time = ec.vc.frame_time;
 		if (!vc_frame_time)
 			continue;
-		if (ec.changing_wall_texture >= Textures.size() && ec.changing_object_texture == object_bitmap_index::None)
+		if (ec.changing_wall_texture >= Textures.size() && ec.changing_object_texture.dsx == object_bitmap_index::None)
 			continue;
 
 		if (ec.flags & EF_STOPPED)
@@ -120,7 +120,7 @@ void do_special_effects()
 			if (ec.changing_wall_texture < Textures.size())
 				Textures[ec.changing_wall_texture] = Effects[n].vc.frames[Effects[n].frame_count];
 
-			if (const auto changing_object_texture = ec.changing_object_texture; changing_object_texture != object_bitmap_index::None)
+			if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 				ObjBitmaps[changing_object_texture] = Effects[n].vc.frames[Effects[n].frame_count];
 
 		}
@@ -128,7 +128,7 @@ void do_special_effects()
 			if (ec.changing_wall_texture < Textures.size())
 				Textures[ec.changing_wall_texture] = ec.vc.frames[ec.frame_count];
 	
-			if (const auto changing_object_texture = ec.changing_object_texture; changing_object_texture != object_bitmap_index::None)
+			if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 				ObjBitmaps[changing_object_texture] = ec.vc.frames[ec.frame_count];
 		}
 
@@ -144,7 +144,7 @@ void restore_effect_bitmap_icons()
 			if (ec.changing_wall_texture < Textures.size())
 				Textures[ec.changing_wall_texture] = ec.vc.frames[0];
 	
-			if (const auto changing_object_texture = ec.changing_object_texture; changing_object_texture != object_bitmap_index::None)
+			if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 				ObjBitmaps[changing_object_texture] = ec.vc.frames[0];
 		}
 	}
@@ -166,7 +166,7 @@ void stop_effect(int effect_num)
 	if (ec->changing_wall_texture < Textures.size())
 		Textures[ec->changing_wall_texture] = ec->vc.frames[0];
 	
-	if (const auto changing_object_texture = ec->changing_object_texture; changing_object_texture != object_bitmap_index::None)
+	if (const auto changing_object_texture{ec->changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 		ObjBitmaps[changing_object_texture] = ec->vc.frames[0];
 }
 
@@ -180,7 +180,7 @@ void restart_effect(int effect_num)
 }
 
 DEFINE_VCLIP_SERIAL_UDT();
-DEFINE_SERIAL_UDT_TO_MESSAGE(eclip, ec, (ec.vc, ec.time_left, ec.frame_count, ec.changing_wall_texture, ec.changing_object_texture, ec.flags, ec.crit_clip, ec.dest_bm_num, serial::pad<2>(), ec.dest_vclip, serial::pad<3>(), ec.dest_eclip, ec.dest_size, ec.sound_num, serial::pad<3>(), ec.segnum, serial::pad<2>(), ec.sidenum, serial::pad<3>()));
+DEFINE_SERIAL_UDT_TO_MESSAGE(eclip, ec, (ec.vc, ec.time_left, ec.frame_count, ec.changing_wall_texture, ec.changing_object_texture.dsx, ec.flags, ec.crit_clip, ec.dest_bm_num, serial::pad<2>(), ec.dest_vclip, serial::pad<3>(), ec.dest_eclip, ec.dest_size, ec.sound_num, serial::pad<3>(), ec.segnum, serial::pad<2>(), ec.sidenum, serial::pad<3>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(eclip, 130);
 
 /*

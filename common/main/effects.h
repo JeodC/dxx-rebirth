@@ -61,7 +61,10 @@ struct eclip : public prohibit_void_ptr<eclip>
 	fix     time_left;      //for sequencing
 	uint32_t frame_count;    //for sequencing
 	texture_index changing_wall_texture;      //Which element of Textures array to replace.
-	object_bitmap_index changing_object_texture;    //Which element of ObjBitmapPtrs array to replace.
+	union {
+		::d1x::object_bitmap_index d1x;    //Which element of d1x::ObjBitmapPtrs array to replace.
+		::d2x::object_bitmap_index d2x;    //Which element of d2x::ObjBitmapPtrs array to replace.
+	} changing_object_texture;
 	int     flags;          //see above
 	int     crit_clip;      //use this clip instead of above one when mine critical
 	texture_index dest_bm_num;    //use this bitmap when monitor destroyed
