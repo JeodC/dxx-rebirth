@@ -501,7 +501,7 @@ void ogl_cache_level_textures(void)
 		ogl_cache_weapon_textures(Vclip, Weapon_info, weapon_id_type::FLARE_ID);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::player_appearance);
 		ogl_cache_vclipn_textures(Vclip, vclip_index::powerup_disappearance);
-		ogl_cache_polymodel_textures(Player_ship->model_num);
+		ogl_cache_polymodel_textures(Player_ship->model_num.dsx);
 		ogl_cache_vclipn_textures(Vclip, Player_ship->expl_vclip_num);
 
 		range_for (const auto &&objp, vcobjptridx)

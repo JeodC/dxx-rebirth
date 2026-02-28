@@ -2089,14 +2089,14 @@ void bm_read_player_ship(void)
 		const auto model_num = load_polygon_model(model_name[i], n_textures, first_bitmap_num[i], (i == 0) ? &ri : nullptr);
 
 		if (i==0)
-			Player_ship->model_num = model_num;
+			Player_ship->model_num.dsx = model_num;
 		else
 			Polygon_models.front().simpler_model = build_polygon_simpler_model_index_from_polygon_model_index(model_num);
 	}
 
 	if ( model_name_dying ) {
 		Assert(n_models);
-		Dying_modelnums[Player_ship->model_num]  = load_polygon_model(model_name_dying,first_bitmap_num[1]-first_bitmap_num[0],first_bitmap_num[0],NULL);
+		Dying_modelnums[Player_ship->model_num.dsx]  = load_polygon_model(model_name_dying,first_bitmap_num[1]-first_bitmap_num[0],first_bitmap_num[0],NULL);
 	}
 
 	assert(ri.n_guns == MAX_GUNS);
@@ -2105,7 +2105,7 @@ void bm_read_player_ship(void)
 
 	{
 		const auto &r = ri;
-		const auto &pm = Polygon_models[Player_ship->model_num];
+		const auto &pm = Polygon_models[Player_ship->model_num.dsx];
 
 		/* Binding to the zip iterator produces references.  For r.gun_points
 		 * and r.gun_submodels, a mutable local is desired instead.

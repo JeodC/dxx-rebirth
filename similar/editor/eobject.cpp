@@ -224,7 +224,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 		}
 		case object_type::OBJ_PLAYER:	{
 			objnum = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_PLAYER, object_id, segp, object_pos,
-				&seg_matrix, Polygon_models[Player_ship->model_num].rad,
+				&seg_matrix, Polygon_models[Player_ship->model_num.dsx].rad,
 				object::control_type::None, object::movement_type::physics, render_type::RT_POLYOBJ);
 
 			if ( objnum == object_none)
@@ -234,7 +234,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 
 			//Set polygon-object-specific data 
 
-			obj->rtype.pobj_info.model_num.dsx = Player_ship->model_num;
+			obj->rtype.pobj_info.model_num.dsx = Player_ship->model_num.dsx;
 			obj->rtype.pobj_info.subobj_flags = 0;
 			//for (i=0;i<MAX_SUBMODELS;i++)
 			//	vm_angvec_zero(&obj->rtype.pobj_info.anim_angles[i]);

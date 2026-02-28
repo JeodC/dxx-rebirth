@@ -107,7 +107,7 @@ void draw_object_picture(grs_canvas &canvas, const unsigned id, const vms_angvec
 			break;
 
 		case object_type::OBJ_PLAYER:
-			draw_model_picture(Polygon_models, canvas, Player_ship->model_num, orient_angles);		// Draw a poly model below
+			draw_model_picture(Polygon_models, canvas, Player_ship->model_num.dsx, orient_angles);		// Draw a poly model below
 			break;
 
 		case object_type::OBJ_ROBOT:

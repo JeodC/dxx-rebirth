@@ -968,7 +968,7 @@ void reset_player_object(object_base &ConsoleObject)
 	//Init render info
 
 	ConsoleObject.render_type = render_type::RT_POLYOBJ;
-	ConsoleObject.rtype.pobj_info.model_num.dsx = Player_ship->model_num;		//what model is this?
+	ConsoleObject.rtype.pobj_info.model_num.dsx = Player_ship->model_num.dsx;		//what model is this?
 	ConsoleObject.rtype.pobj_info.subobj_flags = 0;		//zero the flags
 	ConsoleObject.rtype.pobj_info.tmap_override = texture_index{UINT16_MAX};		//no tmap override!
 	ConsoleObject.rtype.pobj_info.anim_angles = {};
@@ -985,7 +985,7 @@ void init_player_object(const d_level_shared_polygon_model_state &LevelSharedPol
 	set_player_id(console, 0);					//no sub-types for player
 	console.signature = object_signature_t{0};
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-	console.size = Polygon_models[Player_ship->model_num].rad;
+	console.size = Polygon_models[Player_ship->model_num.dsx].rad;
 	console.control_source = object::control_type::slew;			//default is player slewing
 	console.movement_source = object::movement_type::physics;		//change this sometime
 	console.lifeleft = IMMORTAL_TIME;

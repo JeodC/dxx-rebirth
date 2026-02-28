@@ -655,8 +655,8 @@ static void nd_read_object(const vmobjptridx_t obj)
 	case object_type::OBJ_PLAYER:
 		obj->control_source = object::control_type::None;
 		obj->movement_source = object::movement_type::physics;
-		obj->size = Polygon_models[Player_ship->model_num].rad;
-		obj->rtype.pobj_info.model_num.dsx = Player_ship->model_num;
+		obj->size = Polygon_models[Player_ship->model_num.dsx].rad;
+		obj->rtype.pobj_info.model_num.dsx = Player_ship->model_num.dsx;
 		obj->rtype.pobj_info.subobj_flags = 0;
 		break;
 

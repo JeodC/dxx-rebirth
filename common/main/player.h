@@ -199,7 +199,10 @@ namespace dcx {
 
 struct player_ship
 {
-	polygon_model_index model_num;
+	union {
+		::d1x::polygon_model_index d1x;
+		::d2x::polygon_model_index d2x;
+	} model_num;
 	vclip_index expl_vclip_num;
 	fix     mass,drag;
 	fix     max_thrust,reverse_thrust,brakes;       //low_thrust

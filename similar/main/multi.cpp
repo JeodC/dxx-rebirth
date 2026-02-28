@@ -2451,7 +2451,7 @@ void multi_reset_player_object(object &objp)
 	//Init render info
 
 	objp.render_type = render_type::RT_POLYOBJ;
-	objp.rtype.pobj_info.model_num.dsx = Player_ship->model_num;               //what model is this?
+	objp.rtype.pobj_info.model_num.dsx = Player_ship->model_num.dsx;               //what model is this?
 	objp.rtype.pobj_info.subobj_flags = 0;         //zero the flags
 	objp.rtype.pobj_info.anim_angles = {};
 

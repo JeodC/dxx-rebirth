@@ -316,7 +316,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 			init_player_object(LevelSharedPolygonModelState, obj);
 		else
 			if (obj.render_type == render_type::RT_POLYOBJ)	//recover from Matt's pof file matchup bug
-				obj.rtype.pobj_info.model_num.dsx = Player_ship->model_num;
+				obj.rtype.pobj_info.model_num.dsx = Player_ship->model_num.dsx;
 
 		//Make sure orient matrix is orthogonal
 		check_and_fix_matrix(obj.orient);
