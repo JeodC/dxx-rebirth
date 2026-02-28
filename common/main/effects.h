@@ -55,6 +55,8 @@ constexpr uint16_t eclip_none{UINT16_MAX};
 #define ECLIP_NUM_FORCE_FIELD2 93 // straight force field texture
 #endif
 
+namespace dcx {
+
 struct eclip : public prohibit_void_ptr<eclip>
 {
 	vclip   vc;             //imbedded vclip
@@ -75,6 +77,8 @@ struct eclip : public prohibit_void_ptr<eclip>
 	segnum_t     segnum;
 	sidenum_t sidenum; //what seg & side, for one-shot clips
 };
+
+}
 
 extern unsigned Num_effects;
 
