@@ -353,7 +353,7 @@ static g3s_lrgb build_object_color(GameBitmaps_array &GameBitmaps, const object_
 		case render_type::RT_POLYOBJ:
 		{
 			auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-			const polymodel *const po = &Polygon_models[objp.rtype.pobj_info.model_num];
+			const polymodel *const po = &Polygon_models[objp.rtype.pobj_info.model_num.dsx];
 			if (const auto n_textures = po->n_textures; n_textures > 0)
 			{
 				const bitmap_index t_idx_s = ObjBitmaps[ObjBitmapPtrs[po->first_texture]];

@@ -243,7 +243,7 @@ static void paging_touch_object(const d_robot_info_array &Robot_info, const Text
 					PIGGY_PAGE_IN(Textures[tmap_override]);
 			}
 			else
-				paging_touch_model(obj.rtype.pobj_info.model_num);
+				paging_touch_model(obj.rtype.pobj_info.model_num.dsx);
 			break;
 
 		case render_type::RT_POWERUP:
@@ -274,7 +274,7 @@ static void paging_touch_object(const d_robot_info_array &Robot_info, const Text
 		break;
 	case object_type::OBJ_CNTRLCEN:
 		paging_touch_weapon(Vclip, Weapon_info, weapon_id_type::CONTROLCEN_WEAPON_NUM);
-		if (const auto m = Dead_modelnums[obj.rtype.pobj_info.model_num]; m != polygon_model_index::None)
+		if (const auto m = Dead_modelnums[obj.rtype.pobj_info.model_num.dsx]; m != polygon_model_index::None)
 			paging_touch_model(m);
 		break;
 	}

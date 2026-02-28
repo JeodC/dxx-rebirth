@@ -410,7 +410,7 @@ static void draw_cloaked_object(grs_canvas &canvas, const object_base &obj, cons
 		draw_polygon_model(Polygon_models, canvas, draw_tmap, obj.pos,
 				   obj.orient,
 				   obj.rtype.pobj_info.anim_angles,
-				   obj.rtype.pobj_info.model_num, obj.rtype.pobj_info.subobj_flags,
+				   obj.rtype.pobj_info.model_num.dsx, obj.rtype.pobj_info.subobj_flags,
 				   g3s_lrgb{
 						.r = fixmul(light.r, light_scale),
 						.g = fixmul(light.g, light_scale),
@@ -425,7 +425,7 @@ static void draw_cloaked_object(grs_canvas &canvas, const object_base &obj, cons
 		draw_polygon_model(Polygon_models, canvas, draw_tmap_flat, obj.pos,
 				   obj.orient,
 				   obj.rtype.pobj_info.anim_angles,
-				   obj.rtype.pobj_info.model_num, obj.rtype.pobj_info.subobj_flags,
+				   obj.rtype.pobj_info.model_num.dsx, obj.rtype.pobj_info.subobj_flags,
 				   light,
 				   &glow,
 				   alt_textures );
@@ -526,7 +526,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 		draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 				   obj->orient,
 				   obj->rtype.pobj_info.anim_angles,
-				   obj->rtype.pobj_info.model_num,
+				   obj->rtype.pobj_info.model_num.dsx,
 				   obj->rtype.pobj_info.subobj_flags,
 				   light,
 				   &engine_glow_value,
@@ -605,7 +605,7 @@ static void draw_polygon_object(grs_canvas &canvas, const d_level_unique_light_s
 			}
 			draw_polygon_model(Polygon_models, canvas, draw_tmap, obj->pos,
 					   obj->orient,
-					   obj->rtype.pobj_info.anim_angles,obj->rtype.pobj_info.model_num,
+					   obj->rtype.pobj_info.anim_angles,obj->rtype.pobj_info.model_num.dsx,
 					   obj->rtype.pobj_info.subobj_flags,
 					   light,
 					   &engine_glow_value,
@@ -968,7 +968,7 @@ void reset_player_object(object_base &ConsoleObject)
 	//Init render info
 
 	ConsoleObject.render_type = render_type::RT_POLYOBJ;
-	ConsoleObject.rtype.pobj_info.model_num = Player_ship->model_num;		//what model is this?
+	ConsoleObject.rtype.pobj_info.model_num.dsx = Player_ship->model_num;		//what model is this?
 	ConsoleObject.rtype.pobj_info.subobj_flags = 0;		//zero the flags
 	ConsoleObject.rtype.pobj_info.tmap_override = texture_index{UINT16_MAX};		//no tmap override!
 	ConsoleObject.rtype.pobj_info.anim_angles = {};
@@ -2616,7 +2616,7 @@ imobjptridx_t drop_marker_object(const vms_vector &pos, const vmsegptridx_t segn
 	const auto &&obj = obj_create(LevelUniqueObjectState, LevelSharedSegmentState, LevelUniqueSegmentState, object_type::OBJ_MARKER, underlying_value(marker_num), segnum, pos, &orient, Polygon_models[Marker_model_num].rad, object::control_type::None, movement_type, render_type::RT_POLYOBJ);
 	if (obj != object_none) {
 		auto &o = *obj;
-		o.rtype.pobj_info.model_num = Marker_model_num;
+		o.rtype.pobj_info.model_num.dsx = Marker_model_num;
 
 		if (movement_type == object::movement_type::spinning)
 		{

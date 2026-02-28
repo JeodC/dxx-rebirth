@@ -344,8 +344,8 @@ static imobjptridx_t create_weapon_object(weapon_id_type weapon_type, const vmse
 
 	if (wi.render == weapon_info::render_type::polymodel) {
 		auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-		obj->rtype.pobj_info.model_num = wi.model_num;
-		obj->size = fixdiv(Polygon_models[obj->rtype.pobj_info.model_num].rad,wi.po_len_to_width_ratio);
+		obj->rtype.pobj_info.model_num.dsx = wi.model_num;
+		obj->size = fixdiv(Polygon_models[obj->rtype.pobj_info.model_num.dsx].rad,wi.po_len_to_width_ratio);
 	}
 
 	obj->mtype.phys_info.mass = wi.mass;
@@ -795,7 +795,7 @@ imobjptridx_t Laser_create_new(const vms_vector &direction, const vms_vector &po
 
 	const fix laser_length{
 		(weapon_info.render == weapon_info::render_type::polymodel)
-		? (LevelSharedPolygonModelState.Polygon_models[obj->rtype.pobj_info.model_num].rad * 2)
+		? (LevelSharedPolygonModelState.Polygon_models[obj->rtype.pobj_info.model_num.dsx].rad * 2)
 		: 0
 	};
 

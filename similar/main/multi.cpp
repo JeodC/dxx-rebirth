@@ -2451,7 +2451,7 @@ void multi_reset_player_object(object &objp)
 	//Init render info
 
 	objp.render_type = render_type::RT_POLYOBJ;
-	objp.rtype.pobj_info.model_num = Player_ship->model_num;               //what model is this?
+	objp.rtype.pobj_info.model_num.dsx = Player_ship->model_num;               //what model is this?
 	objp.rtype.pobj_info.subobj_flags = 0;         //zero the flags
 	objp.rtype.pobj_info.anim_angles = {};
 
@@ -2482,7 +2482,7 @@ static void multi_reset_object_texture(object_base &objp)
 	if (id)
 	{
 		auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-		auto &model = Polygon_models[pobj_info.model_num];
+		auto &model = Polygon_models[pobj_info.model_num.dsx];
 		const unsigned n_textures = model.n_textures;
 		if (N_PLAYER_SHIP_TEXTURES < n_textures)
 			Error("Too many player ship textures!\n");
@@ -6195,7 +6195,7 @@ void multi_object_to_object_rw(const object &obj, object_rw *obj_rw)
 		case render_type::RT_POLYOBJ:
 		{
 			int i;
-			obj_rw->rtype.pobj_info.model_num = INTEL_INT(underlying_value(obj.rtype.pobj_info.model_num));
+			obj_rw->rtype.pobj_info.model_num = INTEL_INT(underlying_value(obj.rtype.pobj_info.model_num.dsx));
 			for (i=0;i<MAX_SUBMODELS;i++)
 				obj_rw->rtype.pobj_info.anim_angles[i] = build_little_endian_angvec_from_native_endian(obj.rtype.pobj_info.anim_angles[i]);
 			obj_rw->rtype.pobj_info.subobj_flags             = INTEL_INT(obj.rtype.pobj_info.subobj_flags);
@@ -6380,7 +6380,7 @@ void multi_object_rw_to_object(const object_rw *const obj_rw, object &obj)
 		case render_type::RT_POLYOBJ:
 		{
 			int i;
-			obj.rtype.pobj_info.model_num                = build_polygon_model_index_from_untrusted(INTEL_INT(obj_rw->rtype.pobj_info.model_num));
+			obj.rtype.pobj_info.model_num.dsx                = build_polygon_model_index_from_untrusted(INTEL_INT(obj_rw->rtype.pobj_info.model_num));
 			for (i=0;i<MAX_SUBMODELS;i++)
 			{
 				obj.rtype.pobj_info.anim_angles[i] = build_native_endian_angvec_from_little_endian(obj_rw->rtype.pobj_info.anim_angles[i]);

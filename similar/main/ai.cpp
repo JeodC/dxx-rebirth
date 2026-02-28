@@ -925,7 +925,7 @@ static int do_silly_animation(const d_robot_info_array &Robot_info, object &objp
 			auto &jp = jr.angles;
 			vms_angvec	*pobjp = &pobj_info->anim_angles[jointnum];
 
-			if (jointnum >= Polygon_models[objp.rtype.pobj_info.model_num].n_models) {
+			if (jointnum >= Polygon_models[objp.rtype.pobj_info.model_num.dsx].n_models) {
 				Int3();		// Contact Mike: incompatible data, illegal jointnum, problem in pof file?
 				continue;
 			}
@@ -969,7 +969,7 @@ static void ai_frame_animation(object &objp)
 	int	joint;
 	auto &pobj_info = objp.rtype.pobj_info;
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
-	const auto num_joints = Polygon_models[pobj_info.model_num].n_models;
+	const auto num_joints = Polygon_models[pobj_info.model_num.dsx].n_models;
 	const auto &ail = objp.ctype.ai_info.ail;
 	for (joint=1; joint<num_joints; joint++) {
 		auto &curang = pobj_info.anim_angles[joint];
@@ -2186,7 +2186,7 @@ static imobjptridx_t create_gated_robot(const d_robot_info_array &Robot_info, co
 
 	//Set polygon-object-specific data
 
-	objp->rtype.pobj_info.model_num = robptr.model_num;
+	objp->rtype.pobj_info.model_num.dsx = robptr.model_num;
 	objp->rtype.pobj_info.subobj_flags = 0;
 
 	//set Physics info

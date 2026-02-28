@@ -46,12 +46,25 @@ enum class polygon_simpler_model_index : uint8_t
 }
 
 #ifdef DXX_BUILD_DESCENT
-namespace dsx {
+namespace d1x {
 
 enum class polygon_model_index : uint8_t
 {
 	None = UINT8_MAX
 };
+
+}
+
+namespace d2x {
+
+enum class polygon_model_index : uint8_t
+{
+	None = UINT8_MAX
+};
+
+}
+
+namespace dsx {
 
 constexpr std::size_t MAX_POLYGON_MODELS{+
 #if DXX_BUILD_DESCENT == 1

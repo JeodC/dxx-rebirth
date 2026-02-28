@@ -337,7 +337,7 @@ imobjptridx_t create_morph_robot(const d_robot_info_array &Robot_info, const vms
 	++GameUniqueState.accumulated_robots;
 	//Set polygon-object-specific data
 
-	obj->rtype.pobj_info.model_num = robptr.model_num;
+	obj->rtype.pobj_info.model_num.dsx = robptr.model_num;
 	obj->rtype.pobj_info.subobj_flags = 0;
 
 	//set Physics info

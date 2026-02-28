@@ -819,7 +819,7 @@ static void determine_used_textures_level(int load_level_flag, int shareware_fla
 	{
 		if (obj.render_type == render_type::RT_POLYOBJ)
 		{
-			const polymodel *const po{&Polygon_models[obj.rtype.pobj_info.model_num]};
+			const polymodel *const po{&Polygon_models[obj.rtype.pobj_info.model_num.dsx]};
 
 			for (unsigned i = 0; i < po->n_textures; ++i)
 			{

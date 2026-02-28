@@ -421,7 +421,7 @@ void do_morph_frame(object &obj)
 	assert(md->obj == &obj);
 
 	auto &Polygon_models{LevelSharedPolygonModelState.Polygon_models};
-	const polymodel &pm{Polygon_models[obj.rtype.pobj_info.model_num]};
+	const polymodel &pm{Polygon_models[obj.rtype.pobj_info.model_num.dsx]};
 
 	const auto n_models{pm.n_models};
 	for (auto &&[i, submodel_active, n_morphing_points] : enumerate(zip(unchecked_partial_range(md->submodel_active, n_models), md->n_morphing_points)))
@@ -479,7 +479,7 @@ void morph_start(d_level_unique_morph_object_state &LevelUniqueMorphObjectState,
 		return;
 
 	auto &Polygon_models{LevelSharedPolygonModelState.Polygon_models};
-	const auto pmi{obj.rtype.pobj_info.model_num};
+	const auto pmi{obj.rtype.pobj_info.model_num.dsx};
 	auto &pm{Polygon_models[pmi]};
 
 	*moi = morph_data::create(obj, pm, pmi);
@@ -584,7 +584,7 @@ void draw_morph_object(grs_canvas &canvas, const d_level_unique_light_state &Lev
 	const auto md{umd->get()};
 
 	auto &Polygon_models{LevelSharedPolygonModelState.Polygon_models};
-	polymodel *const po{&Polygon_models[obj->rtype.pobj_info.model_num]};
+	polymodel *const po{&Polygon_models[obj->rtype.pobj_info.model_num.dsx]};
 
 	const auto light{compute_object_light(LevelUniqueLightState, obj)};
 

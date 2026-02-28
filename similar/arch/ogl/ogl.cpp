@@ -553,7 +553,7 @@ void ogl_cache_level_textures(void)
 					ogl_loadbmtexture(GameBitmaps[t], 1);
 				}
 				else if (tmap_override == texture_index{UINT16_MAX}) [[likely]]
-					ogl_cache_polymodel_textures(objp->rtype.pobj_info.model_num);
+					ogl_cache_polymodel_textures(objp->rtype.pobj_info.model_num.dsx);
 			}
 		}
 	}

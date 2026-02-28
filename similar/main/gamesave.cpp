@@ -212,8 +212,8 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 				//print obj.id.
 #endif
 
-			obj.rtype.pobj_info.model_num = ri.model_num;
-			obj.size = Polygon_models[obj.rtype.pobj_info.model_num].rad;
+			obj.rtype.pobj_info.model_num.dsx = ri.model_num;
+			obj.size = Polygon_models[obj.rtype.pobj_info.model_num.dsx].rad;
 
 			//@@if (obj.control_source==CT_AI && Robot_info[obj.id].attack_type)
 			//@@	obj.size = obj.size*3/4;
@@ -234,12 +234,12 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 	else {		//Robots taken care of above
 		if (obj.render_type == render_type::RT_POLYOBJ)
 		{
-			if (const auto model_num{underlying_value(obj.rtype.pobj_info.model_num)}; model_num < Save_pof_names.size())
+			if (const auto model_num{underlying_value(obj.rtype.pobj_info.model_num.dsx)}; model_num < Save_pof_names.size())
 			{
 				const auto name{Save_pof_names[model_num]};
 			for (auto &&[i, candidate_name] : enumerate(partial_range(LevelSharedPolygonModelState.Pof_names, LevelSharedPolygonModelState.N_polygon_models)))
 				if (!d_stricmp(candidate_name, name)) {		//found it!	
-					obj.rtype.pobj_info.model_num = i;
+					obj.rtype.pobj_info.model_num.dsx = i;
 					break;
 				}
 			}
@@ -276,8 +276,8 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 			// Make sure model number & size are correct...		
 			assert(obj.render_type == render_type::RT_POLYOBJ);
 
-			obj.rtype.pobj_info.model_num = Weapon_info[weapon_id].model_num;
-			obj.size = Polygon_models[obj.rtype.pobj_info.model_num].rad;
+			obj.rtype.pobj_info.model_num.dsx = Weapon_info[weapon_id].model_num;
+			obj.size = Polygon_models[obj.rtype.pobj_info.model_num.dsx].rad;
 		}
 #endif
 	}
@@ -291,18 +291,18 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 		// Make model number is correct...	
 		for (int i=0; i<Num_total_object_types; i++ )	
 			if ( ObjType[i] == OL_CONTROL_CENTER )		{
-				obj.rtype.pobj_info.model_num = ObjId[i];
+				obj.rtype.pobj_info.model_num.dsx = ObjId[i];
 				obj.shields = ObjStrength[i];
 				break;		
 			}
 #elif DXX_BUILD_DESCENT == 2
 		if (Gamesave_current_version <= 1) { // descent 1 reactor
 			set_reactor_id(obj, 0);                         // used to be only one kind of reactor
-			obj.rtype.pobj_info.model_num = Reactors[0].model_num;// descent 1 reactor
+			obj.rtype.pobj_info.model_num.dsx = Reactors[0].model_num;// descent 1 reactor
 		}
 
 		// Make sure model number is correct...
-		//obj.rtype.pobj_info.model_num = Reactors[obj.id].model_num;
+		//obj.rtype.pobj_info.model_num.dsx = Reactors[obj.id].model_num;
 #endif
 	}
 
@@ -316,7 +316,7 @@ static void verify_object(const d_level_shared_robot_info_state &LevelSharedRobo
 			init_player_object(LevelSharedPolygonModelState, obj);
 		else
 			if (obj.render_type == render_type::RT_POLYOBJ)	//recover from Matt's pof file matchup bug
-				obj.rtype.pobj_info.model_num = Player_ship->model_num;
+				obj.rtype.pobj_info.model_num.dsx = Player_ship->model_num;
 
 		//Make sure orient matrix is orthogonal
 		check_and_fix_matrix(obj.orient);
@@ -571,7 +571,7 @@ static void read_object(const vmobjptr_t obj, const NamedPHYSFS_File f, int vers
 
 		case render_type::RT_MORPH:
 		case render_type::RT_POLYOBJ: {
-			obj->rtype.pobj_info.model_num = build_polygon_model_index_from_untrusted(
+			obj->rtype.pobj_info.model_num.dsx = build_polygon_model_index_from_untrusted(
 #if DXX_BUILD_DESCENT == 1
 				convert_polymod(LevelSharedPolygonModelState.N_polygon_models, PHYSFSX_readInt(f))
 #elif DXX_BUILD_DESCENT == 2
@@ -831,7 +831,7 @@ static void write_object(const object &obj, short version, PHYSFS_File *f)
 
 		case render_type::RT_MORPH:
 		case render_type::RT_POLYOBJ: {
-			PHYSFS_writeSLE32(f, obj.rtype.pobj_info.model_num == polygon_model_index::None ? -1 : underlying_value(obj.rtype.pobj_info.model_num));
+			PHYSFS_writeSLE32(f, obj.rtype.pobj_info.model_num.dsx == polygon_model_index::None ? -1 : underlying_value(obj.rtype.pobj_info.model_num.dsx));
 
 			range_for (auto &i, obj.rtype.pobj_info.anim_angles)
 				PHYSFSX_writeAngleVec(f, i);

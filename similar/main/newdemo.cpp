@@ -637,7 +637,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 #endif
 			obj->movement_source = object::movement_type::physics;
 		obj->size = Polygon_models[Robot_info[get_robot_id(obj)].model_num].rad;
-		obj->rtype.pobj_info.model_num = Robot_info[get_robot_id(obj)].model_num;
+		obj->rtype.pobj_info.model_num.dsx = Robot_info[get_robot_id(obj)].model_num;
 		obj->rtype.pobj_info.subobj_flags = 0;
 		obj->ctype.ai_info.CLOAKED = (Robot_info[get_robot_id(obj)].cloak_type?1:0);
 		break;
@@ -656,7 +656,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		obj->control_source = object::control_type::None;
 		obj->movement_source = object::movement_type::physics;
 		obj->size = Polygon_models[Player_ship->model_num].rad;
-		obj->rtype.pobj_info.model_num = Player_ship->model_num;
+		obj->rtype.pobj_info.model_num.dsx = Player_ship->model_num;
 		obj->rtype.pobj_info.subobj_flags = 0;
 		break;
 
@@ -666,7 +666,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		{
 			const polygon_model_index pmi{obj->id};
 			obj->size = Polygon_models[pmi].rad;
-			obj->rtype.pobj_info.model_num = pmi;
+			obj->rtype.pobj_info.model_num.dsx = pmi;
 		}
 		obj->rtype.pobj_info.subobj_flags = 0;
 		break;
@@ -793,7 +793,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 		if ((obj->type != object_type::OBJ_ROBOT) && (obj->type != object_type::OBJ_PLAYER) && (obj->type != object_type::OBJ_CLUTTER)) {
 			int i;
 			nd_read_int(&i);
-			obj->rtype.pobj_info.model_num = static_cast<polygon_model_index>(i);
+			obj->rtype.pobj_info.model_num.dsx = static_cast<polygon_model_index>(i);
 			nd_read_int(&i);
 			obj->rtype.pobj_info.subobj_flags = i;
 		}
@@ -803,7 +803,7 @@ static void nd_read_object(const vmobjptridx_t obj)
 			range_for (auto &i, obj->pobj_info.anim_angles)
 				nd_read_angvec(&(i));
 #endif
-		range_for (auto &i, partial_range(obj->rtype.pobj_info.anim_angles, Polygon_models[obj->rtype.pobj_info.model_num].n_models))
+		range_for (auto &i, partial_range(obj->rtype.pobj_info.anim_angles, Polygon_models[obj->rtype.pobj_info.model_num.dsx].n_models))
 			nd_read_angvec(i);
 
 		nd_read_int(&tmo);
@@ -976,12 +976,12 @@ static void nd_write_object(const vcobjptridx_t objp)
 		case render_type::RT_MORPH:
 		case render_type::RT_POLYOBJ: {
 		if ((obj.type != object_type::OBJ_ROBOT) && (obj.type != object_type::OBJ_PLAYER) && (obj.type != object_type::OBJ_CLUTTER)) {
-			nd_write_int(underlying_value(obj.rtype.pobj_info.model_num));
+			nd_write_int(underlying_value(obj.rtype.pobj_info.model_num.dsx));
 			nd_write_int(obj.rtype.pobj_info.subobj_flags);
 		}
 
 		if ((obj.type != object_type::OBJ_PLAYER) && (obj.type != object_type::OBJ_DEBRIS))
-			range_for (auto &i, partial_const_range(obj.rtype.pobj_info.anim_angles, Polygon_models[obj.rtype.pobj_info.model_num].n_models))
+			range_for (auto &i, partial_const_range(obj.rtype.pobj_info.anim_angles, Polygon_models[obj.rtype.pobj_info.model_num.dsx].n_models))
 			nd_write_angvec(i);
 
 		nd_write_int(obj.rtype.pobj_info.tmap_override);
@@ -2224,8 +2224,8 @@ static int newdemo_read_frame_information(int rewrite)
 						break;
 					player--;
 
-					for (int i=0;i<Polygon_models[obj->rtype.pobj_info.model_num].n_textures;i++)
-						multi_player_textures[player][i] = ObjBitmaps[ObjBitmapPtrs[Polygon_models[obj->rtype.pobj_info.model_num].first_texture+i]];
+					for (int i=0;i<Polygon_models[obj->rtype.pobj_info.model_num.dsx].n_textures;i++)
+						multi_player_textures[player][i] = ObjBitmaps[ObjBitmapPtrs[Polygon_models[obj->rtype.pobj_info.model_num.dsx].first_texture+i]];
 
 					multi_player_textures[player][4] = ObjBitmaps[ObjBitmapPtrs[First_multi_bitmap_num+(player)*2]];
 					multi_player_textures[player][5] = ObjBitmaps[ObjBitmapPtrs[First_multi_bitmap_num+(player)*2+1]];

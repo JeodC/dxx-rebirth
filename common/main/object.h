@@ -373,7 +373,10 @@ struct vclip_info_rw
 
 struct polyobj_info : prohibit_void_ptr<polyobj_info>
 {
-	polygon_model_index model_num{};// which polygon model
+	union {
+		::d1x::polygon_model_index d1x;// which polygon model
+		::d2x::polygon_model_index d2x{};// which polygon model
+	} model_num;
 	/* If `alt_textures - 1` is a valid index into `multi_player_textures`,
 	 * then it is used to obtain an alternate texture.  Otherwise, the standard
 	 * texture is used.

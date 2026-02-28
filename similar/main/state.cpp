@@ -488,7 +488,7 @@ static void state_object_to_object_rw(const object &obj, object_rw *const obj_rw
 		case render_type::RT_POLYOBJ:
 		{
 			int i;
-			obj_rw->rtype.pobj_info.model_num                = underlying_value(obj.rtype.pobj_info.model_num);
+			obj_rw->rtype.pobj_info.model_num                = underlying_value(obj.rtype.pobj_info.model_num.dsx);
 			for (i=0;i<MAX_SUBMODELS;i++)
 			{
 				obj_rw->rtype.pobj_info.anim_angles[i].p = obj.rtype.pobj_info.anim_angles[i].p;
@@ -723,7 +723,7 @@ static void state_object_rw_to_object(const object_rw *const obj_rw, object &obj
 		case render_type::RT_POLYOBJ:
 		{
 			int i;
-			obj.rtype.pobj_info.model_num                = build_polygon_model_index_from_untrusted(obj_rw->rtype.pobj_info.model_num);
+			obj.rtype.pobj_info.model_num.dsx            = build_polygon_model_index_from_untrusted(obj_rw->rtype.pobj_info.model_num);
 			for (i=0;i<MAX_SUBMODELS;i++)
 			{
 				obj.rtype.pobj_info.anim_angles[i].p = obj_rw->rtype.pobj_info.anim_angles[i].p;

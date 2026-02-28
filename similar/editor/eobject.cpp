@@ -162,7 +162,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 
 			//Set polygon-object-specific data 
 
-			obj->rtype.pobj_info.model_num = ri.model_num;
+			obj->rtype.pobj_info.model_num.dsx = ri.model_num;
 			obj->rtype.pobj_info.subobj_flags = 0;
 
 			//set Physics info
@@ -217,7 +217,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 
 			//Set polygon-object-specific data 
 			obj->shields = 0;	// stored in Reactor_strength or calculated
-			obj->rtype.pobj_info.model_num = model_num;
+			obj->rtype.pobj_info.model_num.dsx = model_num;
 			obj->rtype.pobj_info.subobj_flags = 0;
 
 			break;
@@ -234,7 +234,7 @@ int place_object(d_level_unique_object_state &LevelUniqueObjectState, const d_le
 
 			//Set polygon-object-specific data 
 
-			obj->rtype.pobj_info.model_num = Player_ship->model_num;
+			obj->rtype.pobj_info.model_num.dsx = Player_ship->model_num;
 			obj->rtype.pobj_info.subobj_flags = 0;
 			//for (i=0;i<MAX_SUBMODELS;i++)
 			//	vm_angvec_zero(&obj->rtype.pobj_info.anim_angles[i]);

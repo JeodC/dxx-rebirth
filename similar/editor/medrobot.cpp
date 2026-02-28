@@ -129,7 +129,7 @@ static int RobotNextType()
 				obj->id = 0;
 
 			//Set polygon-object-specific data
-			obj->rtype.pobj_info.model_num = Robot_info[get_robot_id(obj)].model_num;
+			obj->rtype.pobj_info.model_num.dsx = Robot_info[get_robot_id(obj)].model_num;
 			obj->rtype.pobj_info.subobj_flags = 0;
 			//set Physics info
 			obj->mtype.phys_info.flags |= (PF_LEVELLING);
@@ -162,7 +162,7 @@ static int RobotPrevType()
 				obj->id--;
 
 			//Set polygon-object-specific data
-			obj->rtype.pobj_info.model_num = Robot_info[get_robot_id(obj)].model_num;
+			obj->rtype.pobj_info.model_num.dsx = Robot_info[get_robot_id(obj)].model_num;
 			obj->rtype.pobj_info.subobj_flags = 0;
 			//set Physics info
 			obj->mtype.phys_info.flags |= (PF_LEVELLING);

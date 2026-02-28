@@ -198,7 +198,7 @@ struct connected_segment_raw_distances
 static void init_debris_object(object_base &debris, const object_base &parent, const submodel_index subobj_num)
 {
 	//Set polygon-object-specific data
-	debris.rtype.pobj_info.model_num = parent.rtype.pobj_info.model_num;
+	debris.rtype.pobj_info.model_num.dsx = parent.rtype.pobj_info.model_num.dsx;
 	debris.rtype.pobj_info.subobj_flags = 1 << underlying_value(subobj_num);
 	debris.rtype.pobj_info.tmap_override = parent.rtype.pobj_info.tmap_override;
 
@@ -1228,7 +1228,7 @@ static bool drop_robot_egg(const d_robot_info_array &Robot_info, const contained
 				}
 				//Set polygon-object-specific data
 
-				obj.rtype.pobj_info.model_num = robptr.model_num;
+				obj.rtype.pobj_info.model_num.dsx = robptr.model_num;
 				obj.rtype.pobj_info.subobj_flags = 0;
 
 				//set Physics info
@@ -1360,10 +1360,10 @@ static void explode_model(object_base &obj)
 {
 	assert(obj.render_type == render_type::RT_POLYOBJ);
 
-	const auto poly_model_num{obj.rtype.pobj_info.model_num};
+	const auto poly_model_num{obj.rtype.pobj_info.model_num.dsx};
 	const auto dying_model_num{Dying_modelnums[poly_model_num]};
 	const auto model_num{(dying_model_num != polygon_model_index::None)
-		? (obj.rtype.pobj_info.model_num = dying_model_num)
+		? (obj.rtype.pobj_info.model_num.dsx = dying_model_num)
 		: poly_model_num
 	};
 	auto &pm{LevelSharedPolygonModelState.Polygon_models[model_num]};
@@ -1391,10 +1391,10 @@ static void explode_model(object_base &obj)
 //if the object has a destroyed model, switch to it.  Otherwise, delete it.
 static void maybe_delete_object(object_base &del_obj)
 {
-	const auto dead_modelnum{Dead_modelnums[del_obj.rtype.pobj_info.model_num]};
+	const auto dead_modelnum{Dead_modelnums[del_obj.rtype.pobj_info.model_num.dsx]};
 	if (dead_modelnum != polygon_model_index::None)
 	{
-		del_obj.rtype.pobj_info.model_num = dead_modelnum;
+		del_obj.rtype.pobj_info.model_num.dsx = dead_modelnum;
 		del_obj.flags |= OF_DESTROYED;
 	}
 	else {		//normal, multi-stage explosion
