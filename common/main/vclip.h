@@ -61,10 +61,10 @@ struct vclip : public prohibit_void_ptr<vclip>
 	fix             play_time;          // total time (in seconds) of clip
 	unsigned        num_frames;
 	fix             frame_time;         // time (in seconds) of each frame
+	fix             light_value;
 	uint8_t         flags;
 	sound_effect    sound_num;
 	std::array<bitmap_index, 30>    frames;
-	fix             light_value;
 };
 
 }
