@@ -66,9 +66,9 @@ struct eclip : public prohibit_void_ptr<eclip>
 	int     crit_clip;      //use this clip instead of above one when mine critical
 	texture_index dest_bm_num;    //use this bitmap when monitor destroyed
 	vclip_index dest_vclip;     //what vclip to play when exploding
+	sound_effect sound_num;      //what sound this makes
 	int     dest_eclip;     //what eclip to play when exploding
 	fix     dest_size;      //3d size of explosion
-	sound_effect sound_num;      //what sound this makes
 	segnum_t     segnum;
 	sidenum_t sidenum; //what seg & side, for one-shot clips
 };
