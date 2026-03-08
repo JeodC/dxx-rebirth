@@ -119,11 +119,13 @@ PHYSFS_ErrorCode PHYSFSX_addRelToSearchPath(char *const relname2, std::array<cha
 	if (PHYSFSEXT_locateCorrectCase(relname2) != PHYSFSX_case_search_result::success ||
 		!PHYSFSX_getRealPath(relname2, pathname))
 	{
-		/* This failure is not reported as an error, because callers
-		 * probe for files that users may not have, and do not need.
+		/* This failure is not reported as an error to the user, because
+		 * callers probe for files that users may not have, and do not need.
+		 * However, it needs to return a failure code, because some callers
+		 * will stop searching on the first call that returns PHYSFS_ERR_OK.
 		 */
 		con_printf(CON_DEBUG, "PHYSFS: ignoring map request: no canonical path for relative name \"%s\"", relname2);
-		return PHYSFS_ERR_OK;
+		return PHYSFS_ERR_NOT_FOUND;
 	}
 
 	auto r = PHYSFS_mount(pathname.data(), nullptr, static_cast<int>(add_to_end));
