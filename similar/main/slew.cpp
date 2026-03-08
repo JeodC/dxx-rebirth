@@ -153,11 +153,11 @@ static int do_slew_movement(const vmobjptridx_t obj, int check_keys, const contr
 }
 
 //do slew for this frame
-int slew_frame(int check_keys)
+int slew_frame()
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
 	auto &vmobjptridx = Objects.vmptridx;
-	return do_slew_movement(vmobjptridx(slew_obj), !check_keys, Controls);
+	return do_slew_movement(vmobjptridx(slew_obj), !0, Controls);
 }
 
 }

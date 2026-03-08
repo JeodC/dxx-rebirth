@@ -2000,7 +2000,7 @@ static window_event_result object_move_one(const d_level_shared_robot_info_state
 			if ( keyd_pressed[KEY_NUMLOCK] ) 		{
 				slew_reset_orient();
 			}
-			slew_frame(0 );		// Does velocity addition for us.
+			slew_frame();		// Does velocity addition for us.
 #endif
 			break;
 

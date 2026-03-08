@@ -1081,7 +1081,7 @@ window_event_result editor_dialog::callback_handler(const d_event &event)
 			case event_type::idle:
 				kconfig_read_controls(Controls, event, 1);
 
-				if (slew_frame(0))
+				if (slew_frame())
 				{		//do movement and check keys
 					Update_flags |= UF_GAME_VIEW_CHANGED;
 					if (Gameview_lockstep)
