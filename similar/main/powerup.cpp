@@ -725,9 +725,4 @@ void powerup_type_info_read(const NamedPHYSFS_File fp, powerup_type_info &pti)
 	PHYSFSX_serialize_read(fp, pti);
 }
 
-void powerup_type_info_write(PHYSFS_File *fp, const powerup_type_info &pti)
-{
-	PHYSFSX_serialize_write(fp, pti);
-}
-
 }
