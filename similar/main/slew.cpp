@@ -80,6 +80,7 @@ namespace dsx {
 
 namespace {
 
+#if !defined(RELEASE) || DXX_USE_EDITOR
 static int do_slew_movement(const vmobjptridx_t obj, int check_keys, const control_info &Controls)
 {
 	auto &Objects = LevelUniqueObjectState.Objects;
@@ -149,9 +150,11 @@ static int do_slew_movement(const vmobjptridx_t obj, int check_keys, const contr
 
 	return moved;
 }
+#endif
 
 }
 
+#if !defined(RELEASE) || DXX_USE_EDITOR
 //do slew for this frame
 int slew_frame()
 {
@@ -159,5 +162,6 @@ int slew_frame()
 	auto &vmobjptridx = Objects.vmptridx;
 	return do_slew_movement(vmobjptridx(slew_obj), !0, Controls);
 }
+#endif
 
 }
