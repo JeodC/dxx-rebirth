@@ -2041,7 +2041,12 @@ void bm_read_player_ship(void)
 			else if (!d_stricmp( arg, "reverse_thrust" ))
 				Player_ship->reverse_thrust = fl2f(atof(equal_ptr));
 			else if (!d_stricmp( arg, "brakes" ))
-				Player_ship->brakes = fl2f(atof(equal_ptr));
+			{
+				/* Discard this line.  This field is no longer used, but it
+				 * needs to be recognized so that the line is not reported as
+				 * an error.
+				 */
+			}
 			else if (!d_stricmp( arg, "wiggle" ))
 				Player_ship->wiggle = fl2f(atof(equal_ptr));
 			else if (!d_stricmp( arg, "max_rotthrust" ))

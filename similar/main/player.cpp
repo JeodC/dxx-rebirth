@@ -79,7 +79,7 @@ void player_ship_read(player_ship *ps, const NamedPHYSFS_File fp)
 	ps->drag = PHYSFSX_readFix(fp);
 	ps->max_thrust = PHYSFSX_readFix(fp);
 	ps->reverse_thrust = PHYSFSX_readFix(fp);
-	ps->brakes = PHYSFSX_readFix(fp);
+	PHYSFSX_skipBytes<4>(fp);	/* brakes */
 	ps->wiggle = PHYSFSX_readFix(fp);
 	ps->max_rotthrust = PHYSFSX_readFix(fp);
 	range_for (auto &i, ps->gun_points)
