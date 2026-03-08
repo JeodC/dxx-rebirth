@@ -133,6 +133,31 @@ static int check_collision_delayfunc_exec()
 static fix64 Last_volatile_scrape_time;
 static fix64 Last_volatile_scrape_sound_time;
 
+template <typename T, std::size_t V>
+concept require_no_truncation = requires { T{V}; };
+
+constexpr uint8_t COLLISION_OF(const object_type a, const object_type b)
+{
+	using underlying_object_type = std::underlying_type_t<object_type>;
+	/* `max_used_object_type` is the highest valid value for `object_type`.
+	 * Any object with a type higher than this is invalid, cannot exist in a
+	 * normal game, and would have undefined behavior.  As of this writing,
+	 * `collide_two_objects` will `return` without a collision if an input
+	 * object has an invalid type.
+	 */
+	constexpr object_type max_used_object_type{MAX_OBJECT_TYPES - 1};
+	/* `collision_of_max_used_type_with_self` is the collision lookup entry for
+	 * colliding two hypothetical objects that are both of type
+	 * `max_used_object_type`.
+	 */
+	constexpr object_type collision_of_max_used_type_with_self{(static_cast<underlying_object_type>(max_used_object_type) << 4) | static_cast<underlying_object_type>(max_used_object_type)};
+	/* Use static_assert to check that such a hypothetical collision would not
+	 * index beyond the end of `CollisionResult`.
+	 */
+	static_assert(requires { requires (collision_of_max_used_type_with_self < CollisionResult.size()); });
+	return (static_cast<underlying_object_type>(a) << 4) | static_cast<underlying_object_type>(b);
+}
+
 }
 
 }
@@ -2577,10 +2602,6 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 	DO##_COLLISION(object_type::OBJ_ROBOT, object_type::OBJ_CNTRLCEN, collide_robot_and_controlcen);	\
 	DO##_COLLISION(object_type::OBJ_WEAPON, object_type::OBJ_CLUTTER, collide_weapon_and_clutter)	\
 
-
-/* DPH: Put these macros on one long line to avoid CR/LF problems on linux */
-#define COLLISION_OF(a,b) (((a)<<4) + (b))
-
 #define DO_COLLISION(type1,type2,collision_function)	\
 	case COLLISION_OF( (type1), (type2) ):	\
 		static_assert(type1 < type2, "do " #type1 " < " #type2);	\
@@ -2601,9 +2622,6 @@ static void collide_weapon_and_debris(const d_robot_info_array &Robot_info, cons
 	case COLLISION_OF( (type1), (type1) ):	\
 		break
 
-template <typename T, std::size_t V>
-concept require_no_truncation = requires { T{V}; };
-
 }
 
 void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, vmobjptridx_t B, vms_vector &collision_point)
@@ -2613,16 +2631,14 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 		using std::swap;
 		swap(A, B);
 	}
-	const auto u_a_type{underlying_value(A->type)}, u_b_type{underlying_value(B->type)};
-	static_assert(require_no_truncation<decltype(u_a_type), MAX_OBJECT_TYPES>);
+	const auto a_type{A->type}, b_type{B->type};
+	const auto u_a_type{underlying_value(a_type)}, u_b_type{underlying_value(b_type)};
 	if (u_a_type >= MAX_OBJECT_TYPES ||
 		u_b_type >= MAX_OBJECT_TYPES) [[unlikely]]
 		/* No object should have a type that triggers this return. */
 		return;
-	const auto collision_type{COLLISION_OF(u_a_type, u_b_type)};
-	static_assert(require_no_truncation<decltype(collision_type), COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1)>);
-	static_assert(requires { requires (COLLISION_OF(MAX_OBJECT_TYPES - 1, MAX_OBJECT_TYPES - 1) < CollisionResult.size()); });
-	switch( collision_type )	{
+	switch (COLLISION_OF(a_type, b_type))
+	{
 		COLLISION_TABLE(NO,DO);
 #if DXX_BUILD_DESCENT == 2
 		/* Only Descent 2 defines the function that is called in case of a
