@@ -2230,6 +2230,8 @@ grs_bitmap *read_extra_bitmap_d1_pig(const std::span<const char> name, grs_bitma
 }
 #endif
 
+namespace little_endian {
+
 /*
  * reads a bitmap_index structure from a PHYSFS_File
  */
@@ -2249,6 +2251,8 @@ void bitmap_index_read_n(const NamedPHYSFS_File fp, const std::ranges::subrange<
 		const auto i = GameBitmaps.valid_index(PHYSFSX_readSLE16(fp));
 		bi = i ? *i : bitmap_index::None;
 	}
+}
+
 }
 
 }

@@ -215,6 +215,8 @@ static inline int trigger_is_matcen(const trigger &t)
 #endif
 }
 
+namespace little_endian {
+
 #if DXX_BUILD_DESCENT == 1
 void v25_trigger_read(NamedPHYSFS_File fp, trigger *);
 void v26_trigger_read(NamedPHYSFS_File fp, trigger &);
@@ -244,5 +246,7 @@ void trigger_write(PHYSFS_File *fp, const trigger &t);
 void v29_trigger_write(PHYSFS_File *fp, const trigger &t);
 void v30_trigger_write(PHYSFS_File *fp, const trigger &t);
 void v31_trigger_write(PHYSFS_File *fp, const trigger &t);
+}
+
 }
 #endif

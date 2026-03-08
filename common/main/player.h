@@ -213,10 +213,18 @@ struct player_ship
 
 }
 
+namespace dsx {
+
+namespace little_endian {
+
 /*
  * reads a player_ship structure from a PHYSFS_File
  */
 void player_ship_read(player_ship *ps, NamedPHYSFS_File fp);
+
+}
+
+}
 
 #endif
 

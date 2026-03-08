@@ -65,7 +65,8 @@ void player_rw_swap(player_rw *p, const physfsx_endian swap)
 	p->hostages_total = SWAPSHORT(p->hostages_total);
 	p->homing_object_dist = SWAPINT(p->homing_object_dist);
 }
-}
+
+namespace little_endian {
 
 /*
  * reads a player_ship structure from a PHYSFS_File
@@ -83,4 +84,8 @@ void player_ship_read(player_ship *ps, const NamedPHYSFS_File fp)
 	ps->max_rotthrust = PHYSFSX_readFix(fp);
 	range_for (auto &i, ps->gun_points)
 		PHYSFSX_readVector(fp, i);
+}
+
+}
+
 }

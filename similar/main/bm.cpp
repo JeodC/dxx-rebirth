@@ -135,6 +135,8 @@ void gamedata_close()
  * reads n tmap_info structs from a PHYSFS_File
  */
 #if DXX_BUILD_DESCENT == 1
+namespace little_endian {
+
 namespace {
 
 static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
@@ -147,6 +149,9 @@ static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
 	ti.damage = PHYSFSX_readFix(fp);
 	ti.eclip_num = PHYSFSX_readInt(fp);
 }
+
+}
+
 }
 
 //-----------------------------------------------------------------
@@ -173,60 +178,60 @@ void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoSt
 	//  bitmap_index is a short
 	
 	NumTextures = PHYSFSX_readInt(fp);
-	bitmap_index_read_n(fp, Textures);
+	little_endian::bitmap_index_read_n(fp, Textures);
 	range_for (tmap_info &ti, TmapInfo)
-		tmap_info_read(ti, fp);
+		little_endian::tmap_info_read(ti, fp);
 
 	PHYSFSX_readBytes(fp, Sounds, MAX_SOUNDS);
 	PHYSFSX_readBytes(fp, AltSounds, MAX_SOUNDS);
 	
 	Num_vclips = PHYSFSX_readInt(fp);
 	range_for (vclip &vc, Vclip)
-		vclip_read(fp, vc);
+		::dcx::little_endian::vclip_read(fp, vc);
 
 	Num_effects = PHYSFSX_readInt(fp);
 	range_for (eclip &ec, Effects)
-		eclip_read(fp, ec);
+		little_endian::eclip_read(fp, ec);
 
 	Num_wall_anims = PHYSFSX_readInt(fp);
 	range_for (auto &w, WallAnims)
-		wclip_read(fp, w);
+		little_endian::wclip_read(fp, w);
 
 	LevelSharedRobotInfoState.N_robot_types = PHYSFSX_readInt(fp);
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	range_for (auto &r, Robot_info)
-		robot_info_read(fp, r);
+		little_endian::robot_info_read(fp, r);
 
 	LevelSharedRobotJointState.N_robot_joints = PHYSFSX_readInt(fp);
 	range_for (auto &r, Robot_joints)
-		jointpos_read(fp, r);
+		::dcx::little_endian::jointpos_read(fp, r);
 
 	N_weapon_types = PHYSFSX_readInt(fp);
 	weapon_info_read_current_version(Weapon_info, 0u, MAX_WEAPON_TYPES, fp);
 
 	N_powerup_types = PHYSFSX_readInt(fp);
 	range_for (auto &p, Powerup_info)
-		powerup_type_info_read(fp, p);
+		::dcx::little_endian::powerup_type_info_read(fp, p);
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	const auto N_polygon_models = LevelSharedPolygonModelState.N_polygon_models = PHYSFSX_readInt(fp);
 	{
 		const auto &&r = partial_range(Polygon_models, N_polygon_models);
 	range_for (auto &p, r)
-		polymodel_read(p, fp);
+		::dcx::little_endian::polymodel_read(p, fp);
 
 	range_for (auto &p, r)
 		polygon_model_data_read(&p, fp);
 	}
 
-	bitmap_index_read_n(fp, partial_range(Gauges, MAX_GAUGE_BMS));
+	little_endian::bitmap_index_read_n(fp, partial_range(Gauges, MAX_GAUGE_BMS));
 	
 	range_for (auto &i, Dying_modelnums)
 		i = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
 	range_for (auto &i, Dead_modelnums)
 		i = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
 
-	bitmap_index_read_n(fp, ObjBitmaps);
+	little_endian::bitmap_index_read_n(fp, ObjBitmaps);
 	range_for (auto &i, ObjBitmapPtrs)
 	{
 		if (const auto oi = ObjBitmaps.valid_index(PHYSFSX_readSLE16(fp)))
@@ -235,10 +240,10 @@ void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoSt
 			i = {};
 	}
 
-	player_ship_read(&only_player_ship, fp);
+	little_endian::player_ship_read(&only_player_ship, fp);
 
 	Num_cockpits = PHYSFSX_readInt(fp);
-	bitmap_index_read_n(fp, cockpit_bitmap);
+	little_endian::bitmap_index_read_n(fp, cockpit_bitmap);
 
 	PHYSFSX_readBytes(fp, Sounds, MAX_SOUNDS);
 	PHYSFSX_readBytes(fp, AltSounds, MAX_SOUNDS);
@@ -271,7 +276,10 @@ void properties_read_cmp(d_level_shared_robot_info_state &LevelSharedRobotInfoSt
         #endif
 }
 #elif DXX_BUILD_DESCENT == 2
+namespace little_endian {
+
 namespace {
+
 static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
 {
 	uint8_t flags;
@@ -286,6 +294,9 @@ static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
 	ti.slide_u = PHYSFSX_readSLE16(fp);
 	ti.slide_v = PHYSFSX_readSLE16(fp);
 }
+
+}
+
 }
 
 //-----------------------------------------------------------------
@@ -316,9 +327,9 @@ void bm_read_all(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_v
 	unsigned t;
 
 	NumTextures = PHYSFSX_readInt(fp);
-	bitmap_index_read_n(fp, partial_range(Textures, NumTextures));
+	little_endian::bitmap_index_read_n(fp, partial_range(Textures, NumTextures));
 	range_for (tmap_info &ti, partial_range(TmapInfo, NumTextures))
-		tmap_info_read(ti, fp);
+		little_endian::tmap_info_read(ti, fp);
 
 	{
 		const auto t{PHYSFSX_readInt(fp)};
@@ -328,38 +339,38 @@ void bm_read_all(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_v
 
 	Num_vclips = PHYSFSX_readInt(fp);
 	range_for (vclip &vc, partial_range(Vclip, Num_vclips))
-		vclip_read(fp, vc);
+		::dcx::little_endian::vclip_read(fp, vc);
 
 	Num_effects = PHYSFSX_readInt(fp);
 	range_for (eclip &ec, partial_range(Effects, Num_effects))
-		eclip_read(fp, ec);
+		little_endian::eclip_read(fp, ec);
 
 	Num_wall_anims = PHYSFSX_readInt(fp);
 	range_for (auto &w, partial_range(WallAnims, Num_wall_anims))
-		wclip_read(fp, w);
+		little_endian::wclip_read(fp, w);
 
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	LevelSharedRobotInfoState.N_robot_types = PHYSFSX_readInt(fp);
 	range_for (auto &r, partial_range(Robot_info, LevelSharedRobotInfoState.N_robot_types))
-		robot_info_read(fp, r);
+		little_endian::robot_info_read(fp, r);
 
 	const auto N_robot_joints = LevelSharedRobotJointState.N_robot_joints = PHYSFSX_readInt(fp);
 	range_for (auto &r, partial_range(Robot_joints, N_robot_joints))
-		jointpos_read(fp, r);
+		::dcx::little_endian::jointpos_read(fp, r);
 
 	N_weapon_types = PHYSFSX_readInt(fp);
 	weapon_info_read_specified_version(Weapon_info, 0u, N_weapon_types, fp, Piggy_hamfile_version);
 
 	N_powerup_types = PHYSFSX_readInt(fp);
 	range_for (auto &p, partial_range(Powerup_info, N_powerup_types))
-		powerup_type_info_read(fp, p);
+		::dcx::little_endian::powerup_type_info_read(fp, p);
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
 	const auto N_polygon_models = LevelSharedPolygonModelState.N_polygon_models = PHYSFSX_readInt(fp);
 	{
 		const auto &&r = partial_range(Polygon_models, N_polygon_models);
 	range_for (auto &p, r)
-		polymodel_read(p, fp);
+		::dcx::little_endian::polymodel_read(p, fp);
 
 	range_for (auto &p, r)
 		polygon_model_data_read(&p, fp);
@@ -371,11 +382,11 @@ void bm_read_all(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_v
 		i = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
 
 	t = PHYSFSX_readInt(fp);
-	bitmap_index_read_n(fp, partial_range(Gauges, t));
-	bitmap_index_read_n(fp, partial_range(Gauges_hires, t));
+	little_endian::bitmap_index_read_n(fp, partial_range(Gauges, t));
+	little_endian::bitmap_index_read_n(fp, partial_range(Gauges_hires, t));
 
 	N_ObjBitmaps = PHYSFSX_readInt(fp);
-	bitmap_index_read_n(fp, partial_range(ObjBitmaps, N_ObjBitmaps));
+	little_endian::bitmap_index_read_n(fp, partial_range(ObjBitmaps, N_ObjBitmaps));
 	range_for (auto &i, partial_range(ObjBitmapPtrs, N_ObjBitmaps))
 	{
 		if (const auto oi = ObjBitmaps.valid_index(PHYSFSX_readSLE16(fp)))
@@ -384,10 +395,10 @@ void bm_read_all(d_level_shared_robot_info_state &LevelSharedRobotInfoState, d_v
 			i = {};
 	}
 
-	player_ship_read(&only_player_ship, fp);
+	little_endian::player_ship_read(&only_player_ship, fp);
 
 	Num_cockpits = PHYSFSX_readInt(fp);
-	bitmap_index_read_n(fp, partial_range(cockpit_bitmap, Num_cockpits));
+	little_endian::bitmap_index_read_n(fp, partial_range(cockpit_bitmap, Num_cockpits));
 
 	First_multi_bitmap_num = PHYSFSX_readInt(fp);
 
@@ -479,14 +490,14 @@ void bm_read_extra_robots(const char *fname, const Mission::descent_version_type
 		Error("Too many robots (%d) in <%s>.  Max is %d.",t,fname,MAX_ROBOT_TYPES-N_D2_ROBOT_TYPES);
 	auto &Robot_info = LevelSharedRobotInfoState.Robot_info;
 	range_for (auto &r, partial_range(Robot_info, N_D2_ROBOT_TYPES.value, N_robot_types))
-		robot_info_read(fp, r);
+		little_endian::robot_info_read(fp, r);
 
 	t = PHYSFSX_readInt(fp);
 	const auto N_robot_joints = LevelSharedRobotJointState.N_robot_joints = N_D2_ROBOT_JOINTS+t;
 	if (N_robot_joints >= MAX_ROBOT_JOINTS)
 		Error("Too many robot joints (%d) in <%s>.  Max is %d.",t,fname,MAX_ROBOT_JOINTS-N_D2_ROBOT_JOINTS);
 	range_for (auto &r, partial_range(Robot_joints, N_D2_ROBOT_JOINTS.value, N_robot_joints))
-		jointpos_read(fp, r);
+		::dcx::little_endian::jointpos_read(fp, r);
 
 	unsigned u = PHYSFSX_readInt(fp);
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
@@ -496,7 +507,7 @@ void bm_read_extra_robots(const char *fname, const Mission::descent_version_type
 	{
 		const auto &&r = partial_range(Polygon_models, N_D2_POLYGON_MODELS.value, N_polygon_models);
 		range_for (auto &p, r)
-			polymodel_read(p, fp);
+			::dcx::little_endian::polymodel_read(p, fp);
 
 		range_for (auto &p, r)
 			polygon_model_data_read(&p, fp);
@@ -510,7 +521,7 @@ void bm_read_extra_robots(const char *fname, const Mission::descent_version_type
 	t = PHYSFSX_readInt(fp);
 	if (N_D2_OBJBITMAPS+t >= ObjBitmaps.size())
 		Error("Too many object bitmaps (%d) in <%s>.  Max is %" DXX_PRI_size_type ".", t, fname, ObjBitmaps.size() - N_D2_OBJBITMAPS);
-	bitmap_index_read_n(fp, partial_range(ObjBitmaps, N_D2_OBJBITMAPS.value, N_D2_OBJBITMAPS + t));
+	little_endian::bitmap_index_read_n(fp, partial_range(ObjBitmaps, N_D2_OBJBITMAPS.value, N_D2_OBJBITMAPS + t));
 
 	t = PHYSFSX_readInt(fp);
 	if (N_D2_OBJBITMAPPTRS+t >= ObjBitmapPtrs.size())
@@ -556,7 +567,7 @@ void load_robot_replacements(const d_fname &level_name)
 		const unsigned i = PHYSFSX_readInt(fp);		//read robot number
 		if (i >= N_robot_types)
 			Error("Robots number (%u) out of range in (%s).  Range = [0..%u].", i, static_cast<const char *>(level_name), N_robot_types- 1);
-		robot_info_read(fp, Robot_info[static_cast<robot_id>(i)]);
+		little_endian::robot_info_read(fp, Robot_info[static_cast<robot_id>(i)]);
 	}
 
 	t = PHYSFSX_readInt(fp);			//read number of joints
@@ -565,7 +576,7 @@ void load_robot_replacements(const d_fname &level_name)
 		const unsigned i = PHYSFSX_readInt(fp);		//read joint number
 		if (i >= N_robot_joints)
 			Error("Robots joint (%u) out of range in (%s).  Range = [0..%u].", i, static_cast<const char *>(level_name), N_robot_joints - 1);
-		jointpos_read(fp, Robot_joints[i]);
+		::dcx::little_endian::jointpos_read(fp, Robot_joints[i]);
 	}
 
 	auto &Polygon_models = LevelSharedPolygonModelState.Polygon_models;
@@ -579,7 +590,7 @@ void load_robot_replacements(const d_fname &level_name)
 			Error("Polygon model (%u) out of range in (%s).  Range = [0..%u].", i, static_cast<const char *>(level_name), N_polygon_models - 1);
 
 		auto &m = Polygon_models[pmi];
-		polymodel_read(m, fp);
+		::dcx::little_endian::polymodel_read(m, fp);
 		polygon_model_data_read(&m, fp);
 
 		Dying_modelnums[pmi] = build_polygon_model_index_from_untrusted(PHYSFSX_readInt(fp));
@@ -590,7 +601,7 @@ void load_robot_replacements(const d_fname &level_name)
 	for (j=0;j<t;j++) {
 		const auto foi = PHYSFSX_readInt(fp);		//read objbitmap number
 		if (const auto oi = ObjBitmaps.valid_index(foi))
-			bitmap_index_read(fp, ObjBitmaps[*oi]);
+			little_endian::bitmap_index_read(fp, ObjBitmaps[*oi]);
 		else
 			Error("Object bitmap number (%u) out of range in (%s).  Range = [0..%" DXX_PRI_size_type "].", foi, static_cast<const char *>(level_name), ObjBitmaps.size() - 1);
 	}
@@ -750,8 +761,8 @@ int load_exit_models()
 		destroyed_exit_modelnum = dem;
 		auto &pem = Polygon_models[em];
 		auto &pdem = Polygon_models[dem];
-		polymodel_read(pem, exit_hamfile);
-		polymodel_read(pdem, exit_hamfile);
+		::dcx::little_endian::polymodel_read(pem, exit_hamfile);
+		::dcx::little_endian::polymodel_read(pdem, exit_hamfile);
 		pem.first_texture = start_num;
 		pdem.first_texture = start_num+3;
 
@@ -801,8 +812,8 @@ int load_exit_models()
 		destroyed_exit_modelnum = dem;
 		auto &pem = Polygon_models[em];
 		auto &pdem = Polygon_models[dem];
-		polymodel_read(pem, exit_hamfile);
-		polymodel_read(pdem, exit_hamfile);
+		::dcx::little_endian::polymodel_read(pem, exit_hamfile);
+		::dcx::little_endian::polymodel_read(pdem, exit_hamfile);
 		pem.first_texture = start_num;
 		pdem.first_texture = start_num+3;
 

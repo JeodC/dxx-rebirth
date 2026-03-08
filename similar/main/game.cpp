@@ -2524,6 +2524,9 @@ int create_special_path(void)
 
 #if DXX_BUILD_DESCENT == 2
 namespace dsx {
+
+namespace little_endian {
+
 /*
  * reads a flickering_light structure from a PHYSFS_File
  */
@@ -2550,5 +2553,8 @@ void flickering_light_write(const flickering_light &fl, PHYSFS_File *fp)
 	PHYSFSX_writeFix(fp, fl.timer);
 	PHYSFSX_writeFix(fp, fl.delay);
 }
+
+}
+
 }
 #endif

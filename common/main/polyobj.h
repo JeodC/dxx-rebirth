@@ -229,10 +229,15 @@ void free_model(polymodel &po);
 #endif
 #endif
 
+namespace little_endian {
+
 /*
  * reads a polymodel structure from a PHYSFS_File
  */
 void polymodel_read(polymodel &pm, NamedPHYSFS_File fp);
+
+}
+
 }
 #if 0
 void polymodel_write(PHYSFS_File *fp, const polymodel &pm);
@@ -243,7 +248,7 @@ void polymodel_write(PHYSFS_File *fp, const polymodel &pm);
  */
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
-void polygon_model_data_read(polymodel *pm, PHYSFS_File *fp);
+void polygon_model_data_read(polymodel *pm, PHYSFS_File *fp);	// Neutral endian: only reads bytes
 polygon_model_index build_polygon_model_index_from_untrusted(unsigned i);
 #if DXX_USE_OGL
 void ogl_cache_polymodel_textures(polygon_model_index model_num);

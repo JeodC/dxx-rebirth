@@ -1032,10 +1032,10 @@ static int load_game_data(
 	for (auto &nw : vmwallptr)
 	{
 		if (game_top_fileinfo_version >= 20)
-			wall_read(LoadFile, nw); // v20 walls and up.
+			little_endian::wall_read(LoadFile, nw); // v20 walls and up.
 		else if (game_top_fileinfo_version >= 17) {
 			v19_wall w;
-			v19_wall_read(LoadFile, w);
+			::dcx::little_endian::v19_wall_read(LoadFile, w);
 			nw.segnum	        = w.segnum;
 			nw.sidenum	= build_sidenum_from_untrusted(w.sidenum).value();
 			nw.linked_wall	= w.linked_wall;
@@ -1054,7 +1054,7 @@ static int load_game_data(
 			nw.state		= wall_state::closed;
 		} else {
 			v16_wall w;
-			v16_wall_read(LoadFile, w);
+			::dcx::little_endian::v16_wall_read(LoadFile, w);
 			nw.segnum = segment_none;
 			nw.sidenum = {};
 			nw.linked_wall = wall_none;
@@ -1080,40 +1080,40 @@ static int load_game_data(
 	{
 #if DXX_BUILD_DESCENT == 1
 		if (game_top_fileinfo_version <= 25)
-			v25_trigger_read(LoadFile, &i);
+			little_endian::v25_trigger_read(LoadFile, &i);
 		else {
-			v26_trigger_read(LoadFile, i);
+			little_endian::v26_trigger_read(LoadFile, i);
 		}
 #elif DXX_BUILD_DESCENT == 2
 		if (game_top_fileinfo_version < 31)
 		{
 			if (game_top_fileinfo_version < 30) {
-				v29_trigger_read_as_v31(LoadFile, i);
+				little_endian::v29_trigger_read_as_v31(LoadFile, i);
 			}
 			else
-				v30_trigger_read_as_v31(LoadFile, i);
+				little_endian::v30_trigger_read_as_v31(LoadFile, i);
 		}
 		else
-			trigger_read(LoadFile, i);
+			little_endian::trigger_read(LoadFile, i);
 #endif
 	}
 
 	//================ READ CONTROL CENTER TRIGGER INFO ===============
 
-	reconstruct_at(ControlCenterTriggers, control_center_triggers_read, LoadFile);
+	reconstruct_at(ControlCenterTriggers, ::dcx::little_endian::control_center_triggers_read, LoadFile);
 
 	//================ READ MATERIALOGRIFIZATIONATORS INFO ===============
 
 	for (auto &&[i, r] : enumerate(partial_range(RobotCenters, Num_robot_centers)))
 	{
 #if DXX_BUILD_DESCENT == 1
-		matcen_info_read(LoadFile, r, game_top_fileinfo_version);
+		little_endian::matcen_info_read(LoadFile, r, game_top_fileinfo_version);
 #elif DXX_BUILD_DESCENT == 2
 		if (game_top_fileinfo_version < 27) {
-			d1_matcen_info_read(LoadFile, r);
+			little_endian::d1_matcen_info_read(LoadFile, r);
 		}
 		else
-			matcen_info_read(LoadFile, r);
+			little_endian::matcen_info_read(LoadFile, r);
 #endif
 			//	Set links in RobotCenters to Station array
 		for (const shared_segment &seg : partial_const_range(Segments, Segments.get_count()))
@@ -1137,7 +1137,7 @@ static int load_game_data(
 	{
 		const auto &&lr = partial_range(Dl_indices, Num_static_lights);
 		range_for (auto &i, lr)
-			dl_index_read(&i, LoadFile);
+			little_endian::dl_index_read(&i, LoadFile);
 		std::sort(lr.begin(), lr.end());
 	}
 	}
@@ -1153,7 +1153,7 @@ static int load_game_data(
 	{
 		auto &Delta_lights = LevelSharedDestructibleLightState.Delta_lights;
 		range_for (auto &i, partial_range(Delta_lights, num_delta_lights))
-			delta_light_read(&i, LoadFile);
+			little_endian::delta_light_read(&i, LoadFile);
 	}
 #endif
 
@@ -1390,7 +1390,7 @@ int load_level(
 	if (Gamesave_current_version >= 7) {
 		Flickering_light_state.Num_flickering_lights = PHYSFSX_readInt(LoadFile);
 		range_for (auto &i, partial_range(Flickering_light_state.Flickering_lights, Flickering_light_state.Num_flickering_lights))
-			flickering_light_read(i, LoadFile);
+			little_endian::flickering_light_read(i, LoadFile);
 	}
 	else
 		Flickering_light_state.Num_flickering_lights = 0;
@@ -1742,7 +1742,7 @@ static int save_game_data(
 	walls_offset = PHYSFS_tell(SaveFile);
 	auto &vcwallptr = Walls.vcptr;
 	for (auto &w : vcwallptr)
-		wall_write(SaveFile, w, game_top_fileinfo_version);
+		little_endian::wall_write(SaveFile, w, game_top_fileinfo_version);
 
 	//==================== SAVE TRIGGER INFO =============================
 
@@ -1751,24 +1751,24 @@ static int save_game_data(
 	for (auto &t : vctrgptr)
 	{
 		if (game_top_fileinfo_version <= 29)
-			v29_trigger_write(SaveFile, t);
+			little_endian::v29_trigger_write(SaveFile, t);
 		else if (game_top_fileinfo_version <= 30)
-			v30_trigger_write(SaveFile, t);
+			little_endian::v30_trigger_write(SaveFile, t);
 		else if (game_top_fileinfo_version >= 31)
-			v31_trigger_write(SaveFile, t);
+			little_endian::v31_trigger_write(SaveFile, t);
 	}
 
 	//================ SAVE CONTROL CENTER TRIGGER INFO ===============
 
 	control_offset = PHYSFS_tell(SaveFile);
-	control_center_triggers_write(ControlCenterTriggers, SaveFile);
+	::dcx::little_endian::control_center_triggers_write(ControlCenterTriggers, SaveFile);
 
 
 	//================ SAVE MATERIALIZATION CENTER TRIGGER INFO ===============
 
 	matcen_offset = PHYSFS_tell(SaveFile);
 	range_for (auto &r, partial_const_range(RobotCenters, Num_robot_centers))
-		matcen_info_write(SaveFile, r, game_top_fileinfo_version);
+		little_endian::matcen_info_write(SaveFile, r, game_top_fileinfo_version);
 
 	//================ SAVE DELTA LIGHT INFO ===============
 #if DXX_BUILD_DESCENT == 2
@@ -1777,12 +1777,12 @@ static int save_game_data(
 		dl_indices_offset = PHYSFS_tell(SaveFile);
 		auto &Dl_indices = LevelSharedDestructibleLightState.Dl_indices;
 		for (const auto &i : Dl_indices.vcptr)
-			dl_index_write(&i, SaveFile);
+			little_endian::dl_index_write(&i, SaveFile);
 
 		delta_light_offset = PHYSFS_tell(SaveFile);
 		auto &Delta_lights = LevelSharedDestructibleLightState.Delta_lights;
 		range_for (auto &i, partial_const_range(Delta_lights, num_delta_lights))
-			delta_light_write(&i, SaveFile);
+			little_endian::delta_light_write(&i, SaveFile);
 	}
 #endif
 
@@ -1930,7 +1930,7 @@ static int save_level_sub(
 		const auto Num_flickering_lights = Flickering_light_state.Num_flickering_lights;
 		PHYSFS_writeSLE32(SaveFile, Num_flickering_lights);
 		range_for (auto &i, partial_const_range(Flickering_light_state.Flickering_lights, Num_flickering_lights))
-			flickering_light_write(i, SaveFile);
+			little_endian::flickering_light_write(i, SaveFile);
 	}
 
 	if (Gamesave_current_version >= 6)

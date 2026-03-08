@@ -613,6 +613,8 @@ v1_control_center_triggers::v1_control_center_triggers(const control_center_trig
 		w = underlying_value(r);
 }
 
+namespace little_endian {
+
 /*
  * reads n control_center_triggers structs from a PHYSFS_File and swaps if specified
  */
@@ -676,6 +678,8 @@ void control_center_triggers_write(const control_center_triggers &cct, PHYSFS_Fi
 {
 	const v1_control_center_triggers v1cct{cct};
 	PHYSFSX_serialize_write(fp, v1cct);
+}
+
 }
 
 }

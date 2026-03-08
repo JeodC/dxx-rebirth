@@ -636,6 +636,8 @@ DEFINE_SERIAL_VMS_VECTOR_TO_MESSAGE();
 DEFINE_SERIAL_UDT_TO_MESSAGE(polymodel, p, (p.n_models, serial::pad<3, 0>(), p.model_data_size, serial::pad<4>(), p.submodel_ptrs, p.submodel_offsets, p.submodel_norms, p.submodel_pnts, p.submodel_rads, p.submodel_parents, p.submodel_mins, p.submodel_maxs, p.mins, p.maxs, p.rad, p.n_textures, p.first_texture, p.simpler_model));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(polymodel, 12 + (10 * 4) + (10 * 3 * sizeof(vms_vector)) + (10 * sizeof(fix)) + 10 + (10 * 2 * sizeof(vms_vector)) + (2 * sizeof(vms_vector)) + 8);
 
+namespace little_endian {
+
 /*
  * reads a polymodel structure from a PHYSFS_File
  */
@@ -643,6 +645,8 @@ void polymodel_read(polymodel &pm, const NamedPHYSFS_File fp)
 {
 	pm.model_data.reset();
 	PHYSFSX_serialize_read(fp, pm);
+}
+
 }
 
 }

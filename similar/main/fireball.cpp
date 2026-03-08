@@ -1719,6 +1719,8 @@ void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime
 	}
 }
 
+namespace dynamic_endian {
+
 /*
  * reads n expl_wall structs from a PHYSFS_File and swaps if specified
  */
@@ -1757,6 +1759,10 @@ void expl_wall_read_n_swap(fvmwallptr &vmwallptr, PHYSFS_File *const fp, const p
 	Num_exploding_walls = num_exploding_walls;
 }
 
+}
+
+namespace native_endian {
+
 void expl_wall_write(fvcwallptr &vcwallptr, PHYSFS_File *const fp)
 {
 	const unsigned num_exploding_walls{Num_exploding_walls};
@@ -1771,6 +1777,8 @@ void expl_wall_write(fvcwallptr &vcwallptr, PHYSFS_File *const fp)
 		d.time = e.explode_time_elapsed;
 		PHYSFSX_writeBytes(fp, &d, sizeof(d));
 	}
+}
+
 }
 
 //	------------------------------------------------------------------------------------------------------

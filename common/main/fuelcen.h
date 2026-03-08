@@ -128,7 +128,12 @@ fix repaircen_give_shields(const shared_segment &segp, fix MaxAmountCanTake);
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
 typedef d1_matcen_info matcen_info;
+
+namespace little_endian {
+
 void matcen_info_read(NamedPHYSFS_File fp, matcen_info &ps, int version);
+
+}
 #elif DXX_BUILD_DESCENT == 2
 struct matcen_info : public prohibit_void_ptr<matcen_info>
 {
@@ -137,7 +142,16 @@ struct matcen_info : public prohibit_void_ptr<matcen_info>
 	station_number fuelcen_num;    // Index in fuelcen array.
 };
 
+namespace little_endian {
+
 void matcen_info_read(NamedPHYSFS_File fp, matcen_info &ps);
+
+/*
+ * reads an d1_matcen_info structure from a PHYSFS_File
+ */
+void d1_matcen_info_read(NamedPHYSFS_File fp, matcen_info &mi);
+
+}
 #endif
 
 #if DXX_USE_EDITOR
@@ -168,22 +182,27 @@ extern void init_all_matcens(void);
  */
 #if DXX_BUILD_DESCENT == 2
 void fuelcen_check_for_hoard_goal(object &plrobj, const shared_segment &segp);
-
-/*
- * reads an d1_matcen_info structure from a PHYSFS_File
- */
-void d1_matcen_info_read(NamedPHYSFS_File fp, matcen_info &mi);
 #endif
 
+namespace little_endian {
+
 void matcen_info_write(PHYSFS_File *fp, const matcen_info &mi, short version);
+
+}
+
 }
 
 namespace dcx {
 extern const fix EnergyToCreateOneRobot;
-}
-#endif
+
+namespace little_endian {
 
 void fuelcen_read(NamedPHYSFS_File fp, FuelCenter &fc);
 void fuelcen_write(PHYSFS_File *fp, const FuelCenter &fc);
+
+}
+
+}
+#endif
 
 #endif

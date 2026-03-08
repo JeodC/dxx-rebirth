@@ -100,16 +100,20 @@ void stop_effect(int effect_num);
 //restart a stopped effect
 void restart_effect(int effect_num);
 
+#ifdef DXX_BUILD_DESCENT
+namespace dsx {
+
+namespace little_endian {
+
 /*
  * reads n eclip structs from a PHYSFS_File
  */
 void eclip_read(NamedPHYSFS_File fp, eclip &ec);
+
+}
 #if 0
 void eclip_write(PHYSFS_File *fp, const eclip &ec);
 #endif
-
-#ifdef DXX_BUILD_DESCENT
-namespace dsx {
 
 using d_eclip_array = std::array<eclip, MAX_EFFECTS>;
 

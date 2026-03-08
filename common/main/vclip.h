@@ -76,6 +76,9 @@ void draw_weapon_vclip(const d_vclip_array &Vclip, const weapon_info_array &Weap
 }
 
 namespace dcx {
+
+namespace little_endian {
+
 /*
  * reads n vclip structs from a PHYSFS_File
  */
@@ -83,6 +86,9 @@ void vclip_read(NamedPHYSFS_File fp, vclip &vc);
 #if 0
 void vclip_write(PHYSFS_File *fp, const vclip &vc);
 #endif
+
+}
+
 }
 
 /* Defer expansion to source file so that serial.h not needed here */

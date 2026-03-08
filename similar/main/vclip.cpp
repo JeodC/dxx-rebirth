@@ -99,6 +99,8 @@ DEFINE_VCLIP_SERIAL_UDT();
 
 namespace dcx {
 
+namespace little_endian {
+
 void vclip_read(const NamedPHYSFS_File fp, vclip &vc)
 {
 	PHYSFSX_serialize_read(fp, vc);
@@ -110,4 +112,7 @@ void vclip_write(PHYSFS_File *fp, const vclip &vc)
 	PHYSFSX_serialize_write(fp, vc);
 }
 #endif
+
+}
+
 }

@@ -747,12 +747,16 @@ ASSERT_SERIAL_UDT_MESSAGE_SIZE(d1mi_v26, 20);
 
 }
 
+namespace little_endian {
+
 void matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi, int version)
 {
 	if (version > 25)
 		PHYSFSX_serialize_read<const d1mi_v26>(fp, mi);
 	else
 		PHYSFSX_serialize_read<const d1mi_v25>(fp, mi);
+}
+
 }
 #elif DXX_BUILD_DESCENT == 2
 void fuelcen_check_for_goal(object &plrobj, const shared_segment &segp)
@@ -805,6 +809,7 @@ void fuelcen_check_for_hoard_goal(object &plrobj, const shared_segment &segp)
 
 }
 
+namespace little_endian {
 
 /*
  * reads an d1_matcen_info structure from a PHYSFS_File
@@ -815,14 +820,22 @@ void d1_matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi)
 	mi.robot_flags[1] = 0;
 }
 
+}
+
 DEFINE_SERIAL_UDT_TO_MESSAGE(matcen_info, m, (m.robot_flags, serial::pad<sizeof(fix) * 2>(), m.segnum, m.fuelcen_num, serial::pad<1>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(matcen_info, 20);
+
+namespace little_endian {
 
 void matcen_info_read(const NamedPHYSFS_File fp, matcen_info &mi)
 {
 	PHYSFSX_serialize_read(fp, mi);
 }
+
+}
 #endif
+
+namespace little_endian {
 
 void matcen_info_write(PHYSFS_File *fp, const matcen_info &mi, short version)
 {
@@ -835,10 +848,17 @@ void matcen_info_write(PHYSFS_File *fp, const matcen_info &mi, short version)
 	else
 		PHYSFSX_serialize_write<d1cmi_v25>(fp, mi);
 }
+
+}
+
 }
 
 DEFINE_SERIAL_UDT_TO_MESSAGE(FuelCenter, fc, (fc.Type, serial::pad<3>(), serial::sign_extend<int>(fc.segnum), fc.Flag, fc.Enabled, fc.Lives, serial::pad<1>(), fc.Capacity, serial::pad<sizeof(fix)>(), fc.Timer, fc.Disable_time, serial::pad<3 * sizeof(fix)>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(FuelCenter, 40);
+
+namespace dcx {
+
+namespace little_endian {
 
 void fuelcen_read(const NamedPHYSFS_File fp, FuelCenter &fc)
 {
@@ -848,4 +868,8 @@ void fuelcen_read(const NamedPHYSFS_File fp, FuelCenter &fc)
 void fuelcen_write(PHYSFS_File *fp, const FuelCenter &fc)
 {
 	PHYSFSX_serialize_write(fp, fc);
+}
+
+}
+
 }

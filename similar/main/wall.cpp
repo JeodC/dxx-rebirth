@@ -1540,6 +1540,27 @@ void d_level_unique_stuck_object_state::init_stuck_objects()
 	DXX_POISON_VAR(Stuck_objects, 0xcc);
 	Num_stuck_objects = 0;
 }
+
+namespace little_endian {
+
+/*
+ * reads a v16_wall structure from a PHYSFS_File
+ */
+void v16_wall_read(const NamedPHYSFS_File fp, v16_wall &w)
+{
+	PHYSFSX_serialize_read(fp, w);
+}
+
+/*
+ * reads a v19_wall structure from a PHYSFS_File
+ */
+void v19_wall_read(const NamedPHYSFS_File fp, v19_wall &w)
+{
+	PHYSFSX_serialize_read(fp, w);
+}
+
+}
+
 }
 
 #if DXX_BUILD_DESCENT == 2
@@ -1678,12 +1699,16 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(wclip, wc, (wc.play_time, wc.num_frames, wc.frames,
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(wclip, 26 + (sizeof(int16_t) * MAX_CLIP_FRAMES));
 
 namespace dsx {
+
+namespace little_endian {
 /*
  * reads a wclip structure from a PHYSFS_File
  */
 void wclip_read(const NamedPHYSFS_File fp, wclip &wc)
 {
 	PHYSFSX_serialize_read(fp, wc);
+}
+
 }
 
 #if 0
@@ -1706,14 +1731,6 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(v16_wall, w, _SERIAL_UDT_WALL_V16_MEMBERS(w.));
 DEFINE_SERIAL_UDT_TO_MESSAGE(wrap_v16_wall, w, _SERIAL_UDT_WALL_V16_MEMBERS(w.w->));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(wrap_v16_wall, 9);
 
-/*
- * reads a v16_wall structure from a PHYSFS_File
- */
-void v16_wall_read(const NamedPHYSFS_File fp, v16_wall &w)
-{
-	PHYSFSX_serialize_read(fp, w);
-}
-
 struct wrap_v19_wall
 {
 	const wall *w;
@@ -1725,14 +1742,6 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(wrap_v19_wall, w, (w.w->segnum, serial::pad<2>(), w
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(v19_wall, 21);
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(wrap_v19_wall, 21);
 
-/*
- * reads a v19_wall structure from a PHYSFS_File
- */
-void v19_wall_read(const NamedPHYSFS_File fp, v19_wall &w)
-{
-	PHYSFSX_serialize_read(fp, w);
-}
-
 #if DXX_BUILD_DESCENT == 1
 #define _SERIAL_UDT_WALL_D2X_MEMBERS	serial::pad<2>()
 #elif DXX_BUILD_DESCENT == 2
@@ -1742,6 +1751,9 @@ DEFINE_SERIAL_UDT_TO_MESSAGE(wall, w, (serial::sign_extend<int>(w.segnum), w.sid
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(wall, 24);
 
 namespace dsx {
+
+namespace little_endian {
+
 /*
  * reads a wall structure from a PHYSFS_File
  */
@@ -1753,8 +1765,14 @@ void wall_read(const NamedPHYSFS_File fp, wall &w)
 
 }
 
+}
+
 DEFINE_SERIAL_UDT_TO_MESSAGE(active_door, d, (d.n_parts, d.front_wallnum, d.back_wallnum, d.time));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(active_door, 16);
+
+namespace dcx {
+
+namespace little_endian {
 
 /*
  * reads an active_door structure from a PHYSFS_File
@@ -1769,7 +1787,13 @@ void active_door_write(PHYSFS_File *fp, const active_door &ad)
 	PHYSFSX_serialize_write(fp, ad);
 }
 
+}
+
+}
+
 namespace dsx {
+
+namespace little_endian {
 
 void wall_write(PHYSFS_File *fp, const wall &w, short version)
 {
@@ -1783,11 +1807,15 @@ void wall_write(PHYSFS_File *fp, const wall &w, short version)
 
 }
 
+}
+
 #if DXX_BUILD_DESCENT == 2
 DEFINE_SERIAL_UDT_TO_MESSAGE(dsx::cloaking_wall, cw, (cw.front_wallnum, cw.back_wallnum, cw.front_ls, cw.back_ls, cw.time));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(dsx::cloaking_wall, 40);
 
 namespace dsx {
+
+namespace little_endian {
 
 void cloaking_wall_read(cloaking_wall &cw, const NamedPHYSFS_File fp)
 {
@@ -1798,5 +1826,8 @@ void cloaking_wall_write(const cloaking_wall &cw, PHYSFS_File *fp)
 {
 	PHYSFSX_serialize_write(fp, cw);
 }
+
+}
+
 }
 #endif

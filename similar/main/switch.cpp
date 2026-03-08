@@ -278,6 +278,7 @@ static void do_il_on(fvcsegptridx &vcsegptridx, fvmwallptr &vmwallptr, const tri
 }
 
 namespace dsx {
+
 namespace {
 
 #if DXX_BUILD_DESCENT == 1
@@ -572,10 +573,13 @@ window_event_result check_trigger(const vcsegptridx_t seg, const sidenum_t side,
 	return window_event_result::handled;
 }
 
+namespace little_endian {
+
 /*
  * reads a v29_trigger structure from a PHYSFS_File
  */
 #if DXX_BUILD_DESCENT == 1
+
 void v26_trigger_read(const NamedPHYSFS_File fp, trigger &t)
 {
 	switch (const auto type = static_cast<trigger_action>(PHYSFSX_readByte(fp)))
@@ -639,7 +643,11 @@ void v29_trigger_read(v29_trigger *t, const NamedPHYSFS_File fp)
 	}
 }
 
+}
+
 #if DXX_BUILD_DESCENT == 2
+namespace little_endian {
+
 /*
  * reads a v30_trigger structure from a PHYSFS_File
  */
@@ -654,6 +662,8 @@ void v30_trigger_read(v30_trigger *t, const NamedPHYSFS_File fp)
 		t->seg[i] = read_untrusted_segnum_le16(fp);
 	for (unsigned i=0; i<MAX_WALLS_PER_LINK; i++ )
 		t->side[i] = build_sidenum_from_untrusted(PHYSFSX_readSLE16(fp)).value_or(sidenum_t::WLEFT);
+}
+
 }
 
 namespace {
@@ -700,6 +710,12 @@ static void v30_trigger_to_v31_trigger(trigger &t, const v30_trigger &trig)
 	}
 }
 
+}
+
+namespace little_endian {
+
+namespace {
+
 static void v29_trigger_read_as_v30(const NamedPHYSFS_File fp, v30_trigger &trig)
 {
 	v29_trigger trig29;
@@ -726,6 +742,8 @@ void v30_trigger_read_as_v31(const NamedPHYSFS_File fp, trigger &t)
 	v30_trigger trig;
 	v30_trigger_read(&trig, fp);
 	v30_trigger_to_v31_trigger(t, trig);
+}
+
 }
 #endif
 
@@ -781,6 +799,8 @@ ASSERT_SERIAL_UDT_MESSAGE_SIZE(trigger, 54);
 DEFINE_SERIAL_UDT_TO_MESSAGE(trigger, t, (t.type, t.flags, t.num_links, serial::pad<1>(), t.value, serial::pad<4>(), t.seg, serialize_wide_trigger_side_numbers{t.side}));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(trigger, 52);
 #endif
+
+namespace little_endian {
 
 void trigger_read(const NamedPHYSFS_File fp, trigger &t)
 {
@@ -860,9 +880,11 @@ void v29_trigger_write(PHYSFS_File *fp, const trigger &rt)
 	for (const auto i : xrange(MAX_WALLS_PER_LINK))
 		PHYSFS_writeSLE16(fp, underlying_value(t->side[i]));
 }
+
 }
 
-namespace dsx {
+namespace little_endian {
+
 void v30_trigger_write(PHYSFS_File *fp, const trigger &rt)
 {
 	const trigger *t = &rt;
@@ -951,9 +973,7 @@ void v30_trigger_write(PHYSFS_File *fp, const trigger &rt)
 	for (const auto i : xrange(MAX_WALLS_PER_LINK))
 		PHYSFS_writeSLE16(fp, underlying_value(t->side[i]));
 }
-}
 
-namespace dsx {
 void v31_trigger_write(PHYSFS_File *fp, const trigger &rt)
 {
 	const trigger *t = &rt;
@@ -995,4 +1015,7 @@ void v31_trigger_write(PHYSFS_File *fp, const trigger &rt)
 	for (const auto i : xrange(MAX_WALLS_PER_LINK))
 		PHYSFS_writeSLE16(fp, underlying_value(t->side[i]));
 }
+
+}
+
 }

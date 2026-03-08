@@ -1485,11 +1485,11 @@ int state_save_all_sub(const char *filename, const char *desc)
 		PHYSFSX_writeBytes(fp, &i, sizeof(int));
 	}
 	for (auto &w : vcwallptr)
-		wall_write(fp, w, 0x7fff);
+		little_endian::wall_write(fp, w, 0x7fff);
 
 #if DXX_BUILD_DESCENT == 2
 //Save exploding wall info
-	expl_wall_write(Walls.vmptr, fp);
+	native_endian::expl_wall_write(Walls.vmptr, fp);
 #endif
 	}
 
@@ -1501,7 +1501,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 		PHYSFSX_writeBytes(fp, &i, sizeof(int));
 	}
 		for (auto &ad : ActiveDoors.vcptr)
-			active_door_write(fp, ad);
+			::dcx::little_endian::active_door_write(fp, ad);
 	}
 
 #if DXX_BUILD_DESCENT == 2
@@ -1513,7 +1513,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 		PHYSFSX_writeBytes(fp, &i, sizeof(int));
 	}
 		for (auto &w : CloakingWalls.vcptr)
-			cloaking_wall_write(w, fp);
+			little_endian::cloaking_wall_write(w, fp);
 	}
 #endif
 
@@ -1525,7 +1525,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 		PHYSFSX_writeBytes(fp, &num_triggers, sizeof(int));
 	}
 		for (auto &vt : Triggers.vcptr)
-			trigger_write(fp, vt);
+			little_endian::trigger_write(fp, vt);
 	}
 
 //Save tmap info
@@ -1533,7 +1533,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 	{
 		for (auto &&[ss, us] : zip(seg.shared_segment::sides, seg.unique_segment::sides))	// d_zip
 		{
-			segment_side_wall_tmap_write(fp, ss, us);
+			::dcx::native_endian::segment_side_wall_tmap_write(fp, ss, us);
 		}
 	}
 
@@ -1550,12 +1550,14 @@ int state_save_all_sub(const char *filename, const char *desc)
 	const unsigned Num_robot_centers = LevelSharedRobotcenterState.Num_robot_centers;
 	PHYSFSX_writeBytes(fp, &Num_robot_centers, sizeof(int));
 	range_for (auto &r, partial_const_range(RobotCenters, Num_robot_centers))
+	{
 #if DXX_BUILD_DESCENT == 1
-		matcen_info_write(fp, r, STATE_MATCEN_VERSION);
+		little_endian::matcen_info_write(fp, r, STATE_MATCEN_VERSION);
 #elif DXX_BUILD_DESCENT == 2
-		matcen_info_write(fp, r, 0x7f);
+		little_endian::matcen_info_write(fp, r, 0x7f);
 #endif
-	control_center_triggers_write(ControlCenterTriggers, fp);
+	}
+	::dcx::little_endian::control_center_triggers_write(ControlCenterTriggers, fp);
 	const auto Num_fuelcenters = LevelUniqueFuelcenterState.Num_fuelcenters;
 	PHYSFSX_writeBytes(fp, &Num_fuelcenters, sizeof(int));
 	range_for (auto &s, partial_range(Station, Num_fuelcenters))
@@ -1565,7 +1567,7 @@ int state_save_all_sub(const char *filename, const char *desc)
 		if (s.Type == segment_special::controlcen)
 			s.Timer = LevelUniqueControlCenterState.Countdown_timer;
 #endif
-		fuelcen_write(fp, s);
+		::dcx::little_endian::fuelcen_write(fp, s);
 	}
 
 // Save the control cen info
@@ -2175,7 +2177,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		auto &Walls = LevelUniqueWallSubsystemState.Walls;
 	Walls.set_count(PHYSFSX_readSXE32(fp, swap));
 		for (auto &w : Walls.vmptr)
-			wall_read(fp, w);
+			little_endian::wall_read(fp, w);
 
 #if DXX_BUILD_DESCENT == 2
 	//now that we have the walls, check if any sounds are linked to
@@ -2189,7 +2191,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	//Restore exploding wall info
 	if (version >= 10) {
 		unsigned i = PHYSFSX_readSXE32(fp, swap);
-		expl_wall_read_n_swap(Walls.vmptr, fp, swap, i);
+		dynamic_endian::expl_wall_read_n_swap(Walls.vmptr, fp, swap, i);
 	}
 #endif
 	}
@@ -2199,7 +2201,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		auto &ActiveDoors = LevelUniqueWallSubsystemState.ActiveDoors;
 	ActiveDoors.set_count(PHYSFSX_readSXE32(fp, swap));
 		for (auto &ad : ActiveDoors.vmptr)
-			active_door_read(fp, ad);
+			::dcx::little_endian::active_door_read(fp, ad);
 	}
 
 #if DXX_BUILD_DESCENT == 2
@@ -2208,7 +2210,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		auto &CloakingWalls = LevelUniqueWallSubsystemState.CloakingWalls;
 		CloakingWalls.set_count(num_cloaking_walls);
 		for (auto &w : CloakingWalls.vmptr)
-			cloaking_wall_read(w, fp);
+			little_endian::cloaking_wall_read(w, fp);
 	}
 #endif
 
@@ -2217,7 +2219,7 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 		auto &Triggers = LevelUniqueWallSubsystemState.Triggers;
 	Triggers.set_count(PHYSFSX_readSXE32(fp, swap));
 		for (auto &t : Triggers.vmptr)
-			trigger_read(fp, t);
+			little_endian::trigger_read(fp, t);
 	}
 
 	//Restore tmap info (to temp values so we can use compiled-in tmap info to compute static_light
@@ -2242,17 +2244,19 @@ int state_restore_all_sub(const d_level_shared_destructible_light_state &LevelSh
 	const unsigned Num_robot_centers = PHYSFSX_readSXE32(fp, swap);
 	LevelSharedRobotcenterState.Num_robot_centers = Num_robot_centers;
 	range_for (auto &r, partial_range(RobotCenters, Num_robot_centers))
+	{
 #if DXX_BUILD_DESCENT == 1
-		matcen_info_read(fp, r, STATE_MATCEN_VERSION);
+		little_endian::matcen_info_read(fp, r, STATE_MATCEN_VERSION);
 #elif DXX_BUILD_DESCENT == 2
-		matcen_info_read(fp, r);
+		little_endian::matcen_info_read(fp, r);
 #endif
-	reconstruct_at(ControlCenterTriggers, control_center_triggers_read, fp);
+	}
+	reconstruct_at(ControlCenterTriggers, ::dcx::little_endian::control_center_triggers_read, fp);
 	const unsigned Num_fuelcenters = PHYSFSX_readSXE32(fp, swap);
 	LevelUniqueFuelcenterState.Num_fuelcenters = Num_fuelcenters;
 	range_for (auto &s, partial_range(Station, Num_fuelcenters))
 	{
-		fuelcen_read(fp, s);
+		::dcx::little_endian::fuelcen_read(fp, s);
 #if DXX_BUILD_DESCENT == 1
 		// NOTE: Usually Descent1 handles countdown by Timer value of the Reactor Station. Since we now use Descent2 code to handle countdown (which we do in case there IS NO Reactor Station which causes potential trouble in Multiplayer), let's find the Reactor here and read the timer from it.
 		if (s.Type == segment_special::controlcen)

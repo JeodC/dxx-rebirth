@@ -159,7 +159,12 @@ template <typename T>
 extern const per_side_array<per_side_relative_vertnum_array<segment_relative_vertnum>>  Side_to_verts; // Side_to_verts[my_side] is list of vertices forming side my_side.
 extern const per_side_array<sidenum_t> Side_opposite; // Side_opposite[my_side] returns side opposite cube from my_side.
 
+namespace native_endian {
+
 void segment_side_wall_tmap_write(PHYSFS_File *fp, const shared_side &sside, const unique_side &uside);
+
+}
+
 }
 void add_segment_to_group(segnum_t segment_num, int group_num);
 
@@ -180,6 +185,8 @@ using d_delta_light_array = enumerated_array<delta_light, MAX_DELTA_LIGHTS, delt
 
 void clear_light_subtracted();
 
+namespace little_endian {
+
 void segment2_write(const cscusegment s2, PHYSFS_File *fp);
 
 void delta_light_read(delta_light *dl, NamedPHYSFS_File fp);
@@ -187,6 +194,9 @@ void delta_light_write(const delta_light *dl, PHYSFS_File *fp);
 
 void dl_index_read(dl_index *di, NamedPHYSFS_File fp);
 void dl_index_write(const dl_index *di, PHYSFS_File *fp);
+
+}
+
 enum class dlindexnum_t : uint16_t;
 }
 #define DXX_VALPTRIDX_REPORT_ERROR_STYLE_default_dl_index trap_terse

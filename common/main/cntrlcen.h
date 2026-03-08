@@ -60,12 +60,16 @@ struct v1_control_center_triggers
 static_assert(sizeof(v1_control_center_triggers) == (2 + (2 * 10) + (2 * 10)));
 extern control_center_triggers ControlCenterTriggers;
 
+namespace little_endian {
+
 /*
  * reads 1 control_center_triggers struct from a PHYSFS_File
  */
 [[nodiscard]]
 control_center_triggers control_center_triggers_read(NamedPHYSFS_File fp);
 void control_center_triggers_write(const control_center_triggers &cct, PHYSFS_File *fp);
+
+}
 
 }
 

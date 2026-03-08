@@ -95,11 +95,21 @@ bool drop_powerup(d_level_unique_object_state &LevelUniqueObjectState, const d_l
 // creates afterburner blobs behind the specified object
 void drop_afterburner_blobs(object &obj, int count, fix size_scale, fix lifetime);
 
+namespace dynamic_endian {
+
 /*
  * reads n expl_wall structs from a PHYSFS_File and swaps if specified
  */
 void expl_wall_read_n_swap(fvmwallptr &, PHYSFS_File *fp, physfsx_endian swap, unsigned);
+
+}
+
+namespace native_endian {
+
 void expl_wall_write(fvcwallptr &, PHYSFS_File *);
+
+}
+
 extern fix	Flash_effect;
 #endif
 

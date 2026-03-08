@@ -58,7 +58,7 @@ std::optional<sidenum_t> build_sidenum_from_untrusted(const uint8_t untrusted)
 	}
 }
 
-void segment_side_wall_tmap_write(PHYSFS_File *fp, const shared_side &sside, const unique_side &uside)
+void native_endian::segment_side_wall_tmap_write(PHYSFS_File *fp, const shared_side &sside, const unique_side &uside)
 {
 	PHYSFSX_serialize_write<composite_side, std::endian::native>(fp, composite_side{sside, uside});
 }
@@ -96,6 +96,8 @@ static std::optional<delta_light_index> build_delta_light_index_from_untrusted(c
 		return std::nullopt;
 }
 
+namespace little_endian {
+
 /*
  * reads a delta_light structure from a PHYSFS_File
  */
@@ -109,7 +111,6 @@ void delta_light_read(delta_light *dl, const NamedPHYSFS_File fp)
 	dl->vert_light[side_relative_vertnum::_2] = PHYSFSX_readByte(fp);
 	dl->vert_light[side_relative_vertnum::_3] = PHYSFSX_readByte(fp);
 }
-
 
 /*
  * reads a dl_index structure from a PHYSFS_File
@@ -157,6 +158,8 @@ void dl_index_write(const dl_index *di, PHYSFS_File *fp)
 	PHYSFSX_writeU8(fp, underlying_value(di->sidenum));
 	PHYSFSX_writeU8(fp, di->count);
 	PHYSFS_writeSLE16(fp, underlying_value(di->index));
+}
+
 }
 
 }

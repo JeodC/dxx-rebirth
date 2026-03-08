@@ -685,7 +685,7 @@ int save_mine_data_compiled(PHYSFS_File *SaveFile)
 #if DXX_BUILD_DESCENT == 2
 	if (Gamesave_current_version > 5)
 		for (auto &s : segment_range)
-			segment2_write(s, SaveFile);
+			little_endian::segment2_write(s, SaveFile);
 #endif
 
 	return 0;

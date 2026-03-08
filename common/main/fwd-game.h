@@ -212,11 +212,15 @@ void disable_flicker(d_flickering_light_state &fls, vmsegidx_t segnum, sidenum_t
 // turn flickering off (because light has been turned on)
 void enable_flicker(d_flickering_light_state &fls, vmsegidx_t segnum, sidenum_t sidenum);
 
+namespace little_endian {
+
 /*
  * reads a flickering_light structure from a PHYSFS_File
  */
 void flickering_light_read(flickering_light &fl, NamedPHYSFS_File fp);
 void flickering_light_write(const flickering_light &fl, PHYSFS_File *fp);
+
+}
 #endif
 
 //Cheats

@@ -49,6 +49,15 @@ constexpr std::integral_constant<unsigned, 16> ROBOT_NAME_LENGTH{};
 
 struct d_level_shared_robot_joint_state;
 
+namespace little_endian {
+
+/*
+ * reads n jointpos structs from a PHYSFS_File
+ */
+void jointpos_read(NamedPHYSFS_File fp, jointpos &jp);
+
+}
+
 }
 
 #ifdef DXX_BUILD_DESCENT
@@ -87,17 +96,17 @@ extern d_level_shared_robot_joint_state LevelSharedRobotJointState;
 [[nodiscard]]
 vms_vector calc_gun_point(const robot_info &, const object_base &obj, robot_gun_number gun_num);
 
+namespace little_endian {
+
 /*
  * reads n robot_info structs from a PHYSFS_File
  */
 void robot_info_read(NamedPHYSFS_File fp, robot_info &r);
+
+}
+
 void robot_set_angles(robot_info &r, const polymodel &pm, const enumerated_array<std::array<vms_angvec, MAX_SUBMODELS>, N_ANIM_STATES, robot_animation_state> &angs);
 weapon_id_type get_robot_weapon(const robot_info &ri, const robot_gun_number gun_num);
 
 }
 #endif
-
-/*
- * reads n jointpos structs from a PHYSFS_File
- */
-void jointpos_read(NamedPHYSFS_File fp, jointpos &jp);

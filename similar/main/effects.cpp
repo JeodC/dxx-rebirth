@@ -183,12 +183,20 @@ DEFINE_VCLIP_SERIAL_UDT();
 DEFINE_SERIAL_UDT_TO_MESSAGE(eclip, ec, (ec.vc, ec.time_left, ec.frame_count, ec.changing_wall_texture, ec.changing_object_texture.dsx, ec.flags, ec.crit_clip, ec.dest_bm_num, serial::pad<2>(), ec.dest_vclip, serial::pad<3>(), ec.dest_eclip, ec.dest_size, ec.sound_num, serial::pad<3>(), ec.segnum, serial::pad<2>(), ec.sidenum, serial::pad<3>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(eclip, 130);
 
+namespace dsx {
+
+namespace little_endian {
+
 /*
  * reads n eclip structs from a PHYSFS_File
  */
 void eclip_read(NamedPHYSFS_File fp, eclip &ec)
 {
 	PHYSFSX_serialize_read(fp, ec);
+}
+
+}
+
 }
 
 #if 0

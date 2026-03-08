@@ -213,6 +213,8 @@ imobjptridx_t robot_create(const d_robot_info_array &Robot_info, const robot_id 
 	return objp;
 }
 
+namespace little_endian {
+
 /*
  * reads n robot_info structs from a PHYSFS_File
  */
@@ -321,7 +323,14 @@ void robot_info_read(const NamedPHYSFS_File fp, robot_info &ri)
 
 	ri.always_0xabcd = PHYSFSX_readInt(fp);
 }
+
 }
+
+}
+
+namespace dcx {
+
+namespace little_endian {
 
 /*
  * reads n jointpos structs from a PHYSFS_File
@@ -339,3 +348,7 @@ void jointpos_write(PHYSFS_File *fp, const jointpos &jp)
 	PHYSFSX_writeAngleVec(fp, jp.angles);
 }
 #endif
+
+}
+
+}
