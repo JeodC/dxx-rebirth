@@ -205,7 +205,7 @@ struct player_ship
 	} model_num;
 	vclip_index expl_vclip_num;
 	fix     mass,drag;
-	fix     max_thrust,reverse_thrust;       //low_thrust
+	fix     max_thrust;       //low_thrust
 	fix     wiggle;
 	fix     max_rotthrust;
 	enumerated_array<vms_vector, /* N_PLAYER_GUNS = */ 8, player_gun_number> gun_points;
