@@ -34,7 +34,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 void slew_init(object &obj);                // say this is slew obj
 int slew_stop();                            // Stops object
 #endif
+#if !defined(RELEASE)
 void slew_reset_orient();                   // Resets orientation
+#endif
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 int slew_frame(int dont_check_keys);        // Does slew frame
@@ -43,7 +45,6 @@ int slew_frame(int dont_check_keys);        // Does slew frame
 
 #else
 
-#define slew_reset_orient()
 #define slew_frame(dont_check_keys)
 
 #endif

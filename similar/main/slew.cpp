@@ -63,6 +63,7 @@ int slew_stop()
 }
 #endif
 
+#if !defined(RELEASE)
 void slew_reset_orient()
 {
 	if (!slew_obj || slew_obj->control_source != object::control_type::slew)
@@ -72,8 +73,8 @@ void slew_reset_orient()
 
 	slew_obj->orient.rvec.y = slew_obj->orient.rvec.z = slew_obj->orient.uvec.x =
    slew_obj->orient.uvec.z = slew_obj->orient.fvec.x = slew_obj->orient.fvec.y = 0;
-
 }
+#endif
 
 namespace dsx {
 
