@@ -42,15 +42,17 @@ object *slew_obj=NULL;	//what object is slewing, or NULL if none
 
 // -------------------------------------------------------------------
 //say start slewing with this object
-void slew_init(const vmobjptr_t obj)
+#if !defined(RELEASE) || DXX_USE_EDITOR
+void slew_init(object &obj)
 {
-	slew_obj = obj;
+	slew_obj = &obj;
 
-	slew_obj->control_source = object::control_type::slew;
-	slew_obj->movement_source = object::movement_type::None;
+	obj.control_source = object::control_type::slew;
+	obj.movement_source = object::movement_type::None;
 
 	slew_stop();		//make sure not moving
 }
+#endif
 
 
 int slew_stop()
