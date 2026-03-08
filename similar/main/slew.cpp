@@ -52,8 +52,6 @@ void slew_init(object &obj)
 
 	slew_stop();		//make sure not moving
 }
-#endif
-
 
 int slew_stop()
 {
@@ -63,6 +61,7 @@ int slew_stop()
 	slew_obj->mtype.phys_info.velocity = {};
 	return 1;
 }
+#endif
 
 void slew_reset_orient()
 {
