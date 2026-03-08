@@ -2650,7 +2650,9 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 		DXX_MARKER_COLLISION_TABLE_FRAGMENT(NO, DO);
 #endif
 	default:
+		[[unlikely]];
 		Int3();	//Error( "Unhandled collision_type in collide.c!\n" );
+		break;
 	}
 }
 
