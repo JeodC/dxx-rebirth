@@ -248,6 +248,53 @@ namespace {
 
 #include "kconfig.ui-table.cpp"
 
+/* Validate that every `kc_item` in every kc_* array satisfies the `requires`
+ * expression.
+ */
+static_assert(
+	/* Define, and immediately call, a lambda that takes a variable number of
+	 * references to objects of any type.  All such references will be of type
+	 * `kc_item (&)[N]` for varying `N`.
+	 */
+	(([]<auto &... kc_item_arrays_pack>() {
+		/* Define a lambda that takes a reference to one object and a deduced
+		 * pack of indexes into that object.  The reference will be of type
+		 * `kc_item (&)[sizeof...(Is)]`.  Call that lambda from a fold
+		 * expression that applies the lambda once to each of the objects from
+		 * `kc_item_arrays_pack`.
+		 */
+		const auto check_one_array{[]<auto &kc_item_array, std::size_t... Is>(std::index_sequence<Is...>) {
+			/* Define a lambda that takes a reference to one `kc_item &`, and
+			 * `requires` that the input item satisfy the validation predicate.
+			 * Call the lambda from a fold expression that applies the lambda
+			 * once to each element of `kc_item_array`.
+			 */
+			const auto check_one_item{[]<auto &item>() requires(
+				/* If `item.state_bit == STATE_NONE`, then this is a
+				 * count-based `kc_item`, and the pointer is optional.
+				 * `input_button_matched` can safely be called on count-based
+				 * `kc_item` records with `ci_state_ptr == nullptr`.
+				 *
+				 * Otherwise, this is a state-based `kc_item`, and
+				 * `input_button_matched` will write through
+				 * `item.ci_state_ptr` without checking.  Such items must have
+				 * a non-nullptr value in `item.ci_state_ptr`.
+				 */
+				item.state_bit == STATE_NONE || item.ci_state_ptr != nullptr
+			) {
+				return true;
+			}};
+			return (check_one_item.template operator()<kc_item_array[Is]>() && ...);
+		}};
+		return (check_one_array.template operator()<kc_item_arrays_pack>(std::make_index_sequence<std::extent_v<std::remove_reference_t<decltype(kc_item_arrays_pack)>>>()) && ...);
+		/* Pass to the outermost lambda references to all defined kc_* arrays. */
+		}).template operator()<kc_keyboard,
+#if DXX_MAX_JOYSTICKS
+		kc_joystick,
+#endif
+		kc_mouse, kc_rebirth>())
+);
+
 static enumerated_array<kc_mitem, std::size(kc_keyboard), dxx_kconfig_ui_kc_keyboard> kcm_keyboard;
 #if DXX_MAX_JOYSTICKS
 static enumerated_array<kc_mitem, std::size(kc_joystick), dxx_kconfig_ui_kc_joystick> kcm_joystick;
@@ -970,8 +1017,6 @@ static void input_button_matched(control_info &Controls, const kc_item& item, in
 {
 	if (item.state_bit)
 	{
-		if (!item.ci_state_ptr)
-			throw std::logic_error("NULL state pointer with non-zero state bit");
 		if (down)
 			Controls.state.*item.ci_state_ptr |= item.state_bit;
 		else
