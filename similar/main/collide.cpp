@@ -2670,7 +2670,15 @@ void collide_two_objects(const d_robot_info_array &Robot_info, vmobjptridx_t A, 
 #define DISABLE_SAME_COLLISION(type)	COLLISION_RESULT(type, type, collision_result::ignore)
 
 #define COLLISION_RESULT(type1,type2,value)	\
-	result[COLLISION_OF((type1), (type2))] = (value == collision_result::check)
+	/* `result` is default-constructed to all zero bits, so the call to `reset`
+	 * should be redundant.  It is included to be explicit, and since this is
+	 * `constexpr`, the entire expression is resolved at compile time, so there
+	 * is no runtime penalty to the explicit `reset`.
+	 */	\
+	if constexpr (std::size_t idx{COLLISION_OF((type1), (type2))}; value == collision_result::check)	\
+		result.set(idx);	\
+	else	\
+		result.reset(idx)
 
 namespace dcx {
 
