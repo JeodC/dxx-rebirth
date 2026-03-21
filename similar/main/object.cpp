@@ -896,7 +896,10 @@ void render_object(grs_canvas &canvas, const d_level_unique_light_state &LevelUn
 					case powerup_type_t::POW_VULCAN_AMMO:
 					case powerup_type_t::POW_TURBO:
 					case powerup_type_t::POW_MEGAWOW:
-#if DXX_BUILD_DESCENT == 2
+						/* For Descent 1, the below powerups do not exist, so they
+						 * are `[[unlikely]]`.
+						 * For Descent 2, use an ordinary break.
+						 */
 					case powerup_type_t::POW_FULL_MAP:
 					case powerup_type_t::POW_HEADLIGHT:
 					case powerup_type_t::POW_GAUSS_WEAPON:
@@ -917,8 +920,16 @@ void render_object(grs_canvas &canvas, const d_level_unique_light_state &LevelUn
 					case powerup_type_t::POW_EARTHSHAKER_MISSILE:
 					case powerup_type_t::POW_FLAG_BLUE:
 					case powerup_type_t::POW_FLAG_RED:
-#endif
+#if DXX_BUILD_DESCENT == 1
+					case powerup_type_t::POW_HOARD_ORB:
+						/* POW_HOARD_ORB has specific handling in Descent 2, so
+						 * it is only `[[unlikely]]` in Descent 1.
+						 */
+						[[unlikely]];
+						return;
+#elif DXX_BUILD_DESCENT == 2
 						break;
+#endif
 				}
 
 			draw_powerup(Vclip, canvas, obj);

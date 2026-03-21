@@ -32,6 +32,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 namespace dcx {
 
+enum class powerup_type_t : uint8_t;
+
 constexpr std::integral_constant<unsigned, 196> VULCAN_WEAPON_AMMO_AMOUNT{};
 constexpr uint16_t VULCAN_AMMO_AMOUNT = 49*2;
 
@@ -50,8 +52,6 @@ extern uint8_t N_powerup_types;
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
-
-enum class powerup_type_t : uint8_t;
 
 #if DXX_BUILD_DESCENT == 1
 constexpr std::integral_constant<unsigned, 392*2> VULCAN_AMMO_MAX{};

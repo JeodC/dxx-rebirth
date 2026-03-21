@@ -39,10 +39,6 @@ struct powerup_type_info : public prohibit_void_ptr<powerup_type_info>
 	fix light;      // amount of light cast by this powerup, set in bitmaps.tbl
 };
 
-}
-
-namespace dsx {
-
 enum class powerup_type_t : uint8_t
 {
 	POW_EXTRA_LIFE = 0,
@@ -76,7 +72,7 @@ enum class powerup_type_t : uint8_t
 	POW_TURBO = 24,
 	POW_INVULNERABILITY = 25,
 	POW_MEGAWOW = 27,
-#if DXX_BUILD_DESCENT == 2
+	/* if DXX_BUILD_DESCENT == 2 */
 	POW_GAUSS_WEAPON = 28,
 	POW_HELIX_WEAPON = 29,
 	POW_PHOENIX_WEAPON = 30,
@@ -102,8 +98,12 @@ enum class powerup_type_t : uint8_t
 	POW_FLAG_RED = 47,
 
 	POW_HOARD_ORB = 7,       // use unused slot
-#endif
+	/* endif */
 };
+
+}
+
+namespace dsx {
 
 using d_powerup_info_array = per_powerup_type_array<powerup_type_info>;
 extern d_powerup_info_array Powerup_info;

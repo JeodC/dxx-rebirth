@@ -1736,7 +1736,11 @@ void DropSecondaryWeapon (player_info &player_info)
 		case powerup_type_t::POW_TURBO:
 		case powerup_type_t::POW_INVULNERABILITY:
 		case powerup_type_t::POW_MEGAWOW:
-#if DXX_BUILD_DESCENT == 2
+			break;
+			/* For Descent 1, the below powerups do not exist, so they are
+			 * `[[unlikely]]`.
+			 * For Descent 2, use an ordinary break.
+			 */
 		case powerup_type_t::POW_GAUSS_WEAPON:
 		case powerup_type_t::POW_HELIX_WEAPON:
 		case powerup_type_t::POW_PHOENIX_WEAPON:
@@ -1753,8 +1757,20 @@ void DropSecondaryWeapon (player_info &player_info)
 		case powerup_type_t::POW_FLAG_BLUE:
 		case powerup_type_t::POW_FLAG_RED:
 		case powerup_type_t::POW_HOARD_ORB:
-#endif
+#if DXX_BUILD_DESCENT == 1
+			/* These weapons have specific handling in Descent 2, so it is only
+			 * `[[unlikely]]` in Descent 1.
+			 */
+		case powerup_type_t::POW_SMISSILE1_1:
+		case powerup_type_t::POW_GUIDED_MISSILE_1:
+		case powerup_type_t::POW_MERCURY_MISSILE_1:
+		case powerup_type_t::POW_SMART_MINE:
+		case powerup_type_t::POW_EARTHSHAKER_MISSILE:
+			[[unlikely]];
+			return;
+#elif DXX_BUILD_DESCENT == 2
 			break;
+#endif
 	}
 
 	seed = d_rand();
