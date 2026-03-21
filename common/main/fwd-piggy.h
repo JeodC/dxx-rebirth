@@ -105,6 +105,8 @@ void piggy_bitmap_page_in(GameBitmaps_array &, bitmap_index bmp);
 #if DXX_BUILD_DESCENT == 1
 void piggy_read_sounds(int pc_shareware);
 #elif DXX_BUILD_DESCENT == 2
+extern per_bitmap_index_array<BitmapFile> AllBitmaps;
+
 void piggy_init_pigfile(std::span<const char> filename);
 void piggy_read_sounds(void);
 
@@ -153,8 +155,6 @@ extern ubyte bogus_bitmap_initialized;
 #include "hash.h"
 extern hashtable AllBitmapsNames;
 extern hashtable AllDigiSndNames;
-#elif DXX_BUILD_DESCENT == 2
-extern per_bitmap_index_array<BitmapFile> AllBitmaps;
 #endif
 #endif
 

@@ -137,7 +137,9 @@ namespace dsx {
 grs_bitmap bogus_bitmap;
 bool MacPig;	// using the Macintosh pigfile?
 bool PCSharePig; // using PC Shareware pigfile?
+static
 #endif
+per_bitmap_index_array<BitmapFile> AllBitmaps;
 std::array<digi_sound, MAX_SOUND_FILES> GameSounds;
 GameBitmaps_array GameBitmaps;
 }
@@ -146,9 +148,7 @@ GameBitmaps_array GameBitmaps;
 #define DBM_FLAG_LARGE 	128		// Flags added onto the flags struct in b
 
 static char default_pigfile_registered[]{DEFAULT_PIGFILE_REGISTERED};
-static
 #endif
-per_bitmap_index_array<BitmapFile> AllBitmaps;
 namespace {
 static std::array<SoundFile, MAX_SOUND_FILES> AllSounds;
 
