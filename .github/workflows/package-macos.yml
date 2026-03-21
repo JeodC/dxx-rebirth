@@ -5,8 +5,8 @@ on:
 
 jobs:
   package:
-    name: OS 14
-    runs-on: macos-14
+    name: OS 26
+    runs-on: macos-26
     env:
         MACOSX_DEPLOYMENT_TARGET: 14
     steps:
