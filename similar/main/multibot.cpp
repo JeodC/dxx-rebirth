@@ -108,6 +108,8 @@ std::array<fix64, MAX_ROBOTS_CONTROLLED> robot_controlled_time,
 //	return( ((objnum % 4) + pnum) % N_players);
 //}
 
+namespace dsx {
+
 int multi_can_move_robot(const vmobjptridx_t objnum, int agitation)
 {
 	auto &BossUniqueState = LevelUniqueObjectState.BossState;
@@ -158,6 +160,8 @@ int multi_can_move_robot(const vmobjptridx_t objnum, int agitation)
 	}
 	else
 		return multi_add_controlled_robot(objnum, agitation);
+}
+
 }
 
 void multi_check_robot_timeout()
