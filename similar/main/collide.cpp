@@ -158,6 +158,14 @@ constexpr uint8_t COLLISION_OF(const object_type a, const object_type b)
 	return (static_cast<underlying_object_type>(a) << 4) | static_cast<underlying_object_type>(b);
 }
 
+static void collide_robot_and_controlcen(const d_robot_info_array &, object_base &obj_robot, const object_base &obj_cc, const vms_vector &)
+{
+	assert(obj_cc.type == object_type::OBJ_CNTRLCEN);
+	assert(obj_robot.type == object_type::OBJ_ROBOT);
+	const auto &&hitvec = vm_vec_normalized(vm_vec_build_sub(obj_cc.pos, obj_robot.pos));
+	bump_one_object(obj_robot, hitvec, 0);
+}
+
 }
 
 }
@@ -1047,10 +1055,6 @@ static window_event_result collide_weapon_and_wall(
 
 	return result;
 }
-}
-}
-
-namespace {
 
 static void collide_debris_and_wall(const d_robot_info_array &Robot_info, const vmobjptridx_t debris, const unique_segment &hitseg, const sidenum_t hitwall, const vms_vector &)
 {
@@ -1064,20 +1068,6 @@ static void collide_robot_and_robot(const d_robot_info_array &Robot_info, const 
 {
 	bump_two_objects(Robot_info, robot1, robot2, 1);
 }
-
-static void collide_robot_and_controlcen(const d_robot_info_array &, object_base &obj_robot, const object_base &obj_cc, const vms_vector &)
-{
-	assert(obj_cc.type == object_type::OBJ_CNTRLCEN);
-	assert(obj_robot.type == object_type::OBJ_ROBOT);
-	const auto &&hitvec = vm_vec_normalized(vm_vec_build_sub(obj_cc.pos, obj_robot.pos));
-	bump_one_object(obj_robot, hitvec, 0);
-}
-
-}
-
-namespace dsx {
-
-namespace {
 
 static void collide_robot_and_player(const d_robot_info_array &Robot_info, const vmobjptridx_t robot, const vmobjptridx_t playerobj, const vms_vector &collision_point)
 {
