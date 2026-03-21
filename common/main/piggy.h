@@ -36,11 +36,15 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #ifdef DXX_BUILD_DESCENT
 #if DXX_BUILD_DESCENT == 2
 namespace dsx {
+
+#if DXX_USE_EDITOR
 struct alias
 {
 	std::array<char, FILENAME_LEN> alias_name;
 	std::array<char, FILENAME_LEN> file_name;
 };
+#endif
+
 }
 #endif
 #endif

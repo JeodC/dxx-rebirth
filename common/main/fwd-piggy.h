@@ -57,8 +57,8 @@ void remove_char(char * s, char c);	// in piggy.cpp
 
 namespace dsx {
 extern char descent_pig_basename[12];
-struct alias;
 #if DXX_USE_EDITOR
+struct alias;
 extern std::array<alias, MAX_ALIASES> alias_list;
 extern unsigned Num_aliases;
 #endif
