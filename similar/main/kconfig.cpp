@@ -264,29 +264,24 @@ static_assert(
 		 * `kc_item_arrays_pack`.
 		 */
 		const auto check_one_array{[]<auto &kc_item_array, std::size_t... Is>(std::index_sequence<Is...>) {
-			/* Define a lambda that takes a reference to one `kc_item &`, and
-			 * `requires` that the input item satisfy the validation predicate.
-			 * Call the lambda from a fold expression that applies the lambda
-			 * once to each element of `kc_item_array`.
+			/* Use a fold expression to check each element of `kc_item_array`.
+			 * In practice, if the static_assert fails, both gcc and clang
+			 * include in the error output the specific array index that
+			 * failed.
 			 */
-			const auto check_one_item{[]<auto &item>() requires(
-				/* If `item.state_bit == STATE_NONE`, then this is a
-				 * count-based `kc_item`, and the pointer is optional.
-				 * `input_button_matched` can safely be called on count-based
-				 * `kc_item` records with `ci_state_ptr == nullptr`.
-				 *
-				 * Otherwise, this is a state-based `kc_item`, and
-				 * `input_button_matched` will write through
-				 * `item.ci_state_ptr` without checking.  Such items must have
-				 * a non-nullptr value in `item.ci_state_ptr`.
-				 */
-				item.state_bit == STATE_NONE || item.ci_state_ptr != nullptr
-			) {
-				return true;
-			}};
-			return (check_one_item.template operator()<kc_item_array[Is]>() && ...);
+			/* If `item.state_bit == STATE_NONE`, then this is a
+			 * count-based `kc_item`, and the pointer is optional.
+			 * `input_button_matched` can safely be called on count-based
+			 * `kc_item` records with `ci_state_ptr == nullptr`.
+			 *
+			 * Otherwise, this is a state-based `kc_item`, and
+			 * `input_button_matched` will write through
+			 * `item.ci_state_ptr` without checking.  Such items must have
+			 * a non-nullptr value in `item.ci_state_ptr`.
+			 */
+			static_assert(((kc_item_array[Is].state_bit == STATE_NONE || kc_item_array[Is].ci_state_ptr != nullptr) && ...));
 		}};
-		return (check_one_array.template operator()<kc_item_arrays_pack>(std::make_index_sequence<std::extent_v<std::remove_reference_t<decltype(kc_item_arrays_pack)>>>()) && ...);
+		return (check_one_array.template operator()<kc_item_arrays_pack>(std::make_index_sequence<std::extent_v<std::remove_reference_t<decltype(kc_item_arrays_pack)>>>()), ..., true);
 		/* Pass to the outermost lambda references to all defined kc_* arrays. */
 		}).template operator()<kc_keyboard,
 #if DXX_MAX_JOYSTICKS
