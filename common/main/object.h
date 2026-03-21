@@ -542,9 +542,9 @@ struct object_rw
 	} __pack__ rtype;
 } __pack__;
 
-}
-
 static_assert(sizeof(object_rw) == 264);
+
+}
 
 namespace dcx {
 
