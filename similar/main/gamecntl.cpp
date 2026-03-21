@@ -129,6 +129,14 @@ struct pause_window : window
 	std::array<char, 128> msg;
 };
 
+struct cheat_code
+{
+	static constexpr std::size_t CHEAT_MAX_LEN{15};
+	char string[CHEAT_MAX_LEN];
+	uint8_t length;
+	int8_t game_cheats::*stateptr;
+};
+
 }
 
 }
@@ -1588,60 +1596,71 @@ static window_event_result HandleTestKey(const d_level_shared_robot_info_state &
 }
 #endif		//#ifndef RELEASE
 
-#define CHEAT_MAX_LEN 15
-struct cheat_code
-{
-	const char string[CHEAT_MAX_LEN];
-	int8_t game_cheats::*stateptr;
-};
-
 constexpr cheat_code cheat_codes[] = {
 #if DXX_BUILD_DESCENT == 1
-	{ "gabbagabbahey", &game_cheats::enabled },
-	{ "scourge", &game_cheats::wowie },
-	{ "bigred", &game_cheats::wowie2 },
-	{ "mitzi", &game_cheats::allkeys },
-	{ "racerx", &game_cheats::invul },
-	{ "guile", &game_cheats::cloak },
-	{ "twilight", &game_cheats::shields },
-	{ "poboys", &game_cheats::killreactor },
-	{ "farmerjoe", &game_cheats::levelwarp },
-	{ "bruin", &game_cheats::extralife },
-	{ "porgys", &game_cheats::rapidfire },
-	{ "ahimsa", &game_cheats::robotfiringsuspended },
-	{ "baldguy", &game_cheats::baldguy },
+	{"gabbagabbahey", 13, &game_cheats::enabled},
+	{"scourge", 7, &game_cheats::wowie},
+	{"bigred", 6, &game_cheats::wowie2},
+	{"mitzi", 5, &game_cheats::allkeys},
+	{"racerx", 6, &game_cheats::invul},
+	{"guile", 5, &game_cheats::cloak},
+	{"twilight", 8, &game_cheats::shields},
+	{"poboys", 6, &game_cheats::killreactor},
+	{"farmerjoe", 9, &game_cheats::levelwarp},
+	{"bruin", 5, &game_cheats::extralife},
+	{"porgys", 6, &game_cheats::rapidfire},
+	{"ahimsa", 6, &game_cheats::robotfiringsuspended},
+	{"baldguy", 7, &game_cheats::baldguy},
 #elif DXX_BUILD_DESCENT == 2
-	{ "gabbagabbahey", &game_cheats::lamer },
-	{ "motherlode", &game_cheats::lamer },
-	{ "currygoat", &game_cheats::lamer },
-	{ "zingermans", &game_cheats::lamer },
-	{ "eatangelos", &game_cheats::lamer },
-	{ "ericaanne", &game_cheats::lamer },
-	{ "joshuaakira", &game_cheats::lamer },
-	{ "whammazoom", &game_cheats::lamer },
-	{ "honestbob", &game_cheats::wowie },
-	{ "oralgroove", &game_cheats::allkeys },
-	{ "alifalafel", &game_cheats::accessory },
-	{ "almighty", &game_cheats::invul },
-	{ "blueorb", &game_cheats::shields },
-	{ "delshiftb", &game_cheats::killreactor },
-	{ "freespace", &game_cheats::levelwarp },
-	{ "rockrgrl", &game_cheats::fullautomap },
-	{ "wildfire", &game_cheats::rapidfire },
-	{ "duddaboo", &game_cheats::bouncyfire },
-	{ "lpnlizard", &game_cheats::homingfire },
-	{ "imagespace", &game_cheats::robotfiringsuspended },
-	{ "spaniard", &game_cheats::killallrobots },
-	{ "silkwing", &game_cheats::robotskillrobots },
-	{ "godzilla", &game_cheats::monsterdamage },
-	{ "helpvishnu", &game_cheats::buddyclone },
-	{ "gowingnut", &game_cheats::buddyangry },
+	{"gabbagabbahey", 13, &game_cheats::lamer},
+	{"motherlode", 10, &game_cheats::lamer},
+	{"currygoat", 9, &game_cheats::lamer},
+	{"zingermans", 10, &game_cheats::lamer},
+	{"eatangelos", 10, &game_cheats::lamer},
+	{"ericaanne", 9, &game_cheats::lamer},
+	{"joshuaakira", 11, &game_cheats::lamer},
+	{"whammazoom", 10, &game_cheats::lamer},
+	{"honestbob", 9, &game_cheats::wowie},
+	{"oralgroove", 10, &game_cheats::allkeys},
+	{"alifalafel", 10, &game_cheats::accessory},
+	{"almighty", 8, &game_cheats::invul},
+	{"blueorb", 7, &game_cheats::shields},
+	{"delshiftb", 9, &game_cheats::killreactor},
+	{"freespace", 9, &game_cheats::levelwarp},
+	{"rockrgrl", 8, &game_cheats::fullautomap},
+	{"wildfire", 8, &game_cheats::rapidfire},
+	{"duddaboo", 8, &game_cheats::bouncyfire},
+	{"lpnlizard", 9, &game_cheats::homingfire},
+	{"imagespace", 10, &game_cheats::robotfiringsuspended},
+	{"spaniard", 8, &game_cheats::killallrobots},
+	{"silkwing", 8, &game_cheats::robotskillrobots},
+	{"godzilla", 8, &game_cheats::monsterdamage},
+	{"helpvishnu", 10, &game_cheats::buddyclone},
+	{"gowingnut", 9, &game_cheats::buddyangry},
 #endif
-	{ "flash", &game_cheats::exitpath },
-	{ "astral", &game_cheats::ghostphysics },
-	{ "buggin", &game_cheats::turbo },
-	{ "bittersweet", &game_cheats::acid },
+	{"flash", 5, &game_cheats::exitpath},
+	{"astral", 6, &game_cheats::ghostphysics},
+	{"buggin", 6, &game_cheats::turbo},
+	{"bittersweet", 11, &game_cheats::acid},
 };
+
+/* Validate that every `cheat_code` in `cheat_codes` satisfies the validation
+ * predicate.
+ */
+static_assert(
+	([]<std::size_t... Is>(std::index_sequence<Is...>) {
+		/* Use a fold expression to check each element of the input array.
+		 */
+		static_assert(((
+			cheat_codes[Is].length < cheat_code::CHEAT_MAX_LEN &&
+			cheat_codes[Is].string[cheat_codes[Is].length] == 0 &&
+			/* Embedded nulls could mislead this check, but this catches
+			 * the simple case that the recorded length is too long. */
+			cheat_codes[Is].string[cheat_codes[Is].length - 1] != 0
+			) && ...));
+		return true;
+	})(std::make_index_sequence<std::extent_v<std::remove_reference_t<decltype(cheat_codes)>>>())
+);
 
 struct levelwarp_menu_items
 {
@@ -1701,7 +1720,7 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 	if (+(Game_mode & GM_MULTI))
 		return window_event_result::ignored;
 
-	static std::array<char, CHEAT_MAX_LEN> cheat_buffer;
+	static std::array<char, cheat_code::CHEAT_MAX_LEN> cheat_buffer;
 	std::move(std::next(cheat_buffer.begin()), cheat_buffer.end(), cheat_buffer.begin());
 	cheat_buffer.back() = key_ascii();
 	int8_t game_cheats::*gotcha;
@@ -1709,9 +1728,12 @@ static window_event_result FinalCheats(const d_level_shared_robot_info_state &Le
 	{
 		if (i >= std::size(cheat_codes))
 			return window_event_result::ignored;
-		int cheatlen = strlen(cheat_codes[i].string);
-		Assert(cheatlen <= CHEAT_MAX_LEN);
-		if (d_strnicmp(cheat_codes[i].string, &cheat_buffer[CHEAT_MAX_LEN-cheatlen], cheatlen)==0)
+		const std::size_t cheatlen{cheat_codes[i].length};
+		/* The `static_assert` to validate the `cheat_codes` array requires
+		 * that every `cheatlen` will be small enough to avoid underflow with
+		 * this subtraction.
+		 */
+		if (d_strnicmp(cheat_codes[i].string, &cheat_buffer[cheat_code::CHEAT_MAX_LEN - cheatlen], cheatlen) == 0)
 		{
 			gotcha = cheat_codes[i].stateptr;
 #if DXX_BUILD_DESCENT == 1
