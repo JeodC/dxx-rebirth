@@ -89,9 +89,9 @@ struct d_level_shared_robot_joint_state {
 }
 
 #ifdef DXX_BUILD_DESCENT
-constexpr auto weapon_none = weapon_id_type::unspecified;
-
 namespace dsx {
+
+constexpr auto weapon_none{weapon_id_type::unspecified};
 
 //  Robot information
 struct robot_info : prohibit_void_ptr<robot_info>
