@@ -154,20 +154,19 @@ void restore_effect_bitmap_icons()
 void stop_effect(int effect_num)
 {
 	auto &Effects = LevelUniqueEffectsClipState.Effects;
-	eclip *ec = &Effects[effect_num];
-	
+	eclip &ec{Effects[effect_num]};
 	//Assert(ec->bm_ptr != -1);
 
-	ec->flags |= EF_STOPPED;
+	ec.flags |= EF_STOPPED;
 
-	ec->frame_count = 0;
+	ec.frame_count = 0;
 	//*ec->bm_ptr = &GameBitmaps[ec->vc.frames[0].index];
 
-	if (ec->changing_wall_texture < Textures.size())
-		Textures[ec->changing_wall_texture] = ec->vc.frames[0];
+	if (ec.changing_wall_texture < Textures.size())
+		Textures[ec.changing_wall_texture] = ec.vc.frames[0];
 	
-	if (const auto changing_object_texture{ec->changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
-		ObjBitmaps[changing_object_texture] = ec->vc.frames[0];
+	if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
+		ObjBitmaps[changing_object_texture] = ec.vc.frames[0];
 }
 
 namespace dsx {
