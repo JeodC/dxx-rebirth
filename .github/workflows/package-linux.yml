@@ -59,3 +59,14 @@ jobs:
         with:
           name: "DXX-Rebirth-Linux-AppImage-${{ steps.architecture.outputs.uname_m }}"
           path: 'D*X-Rebirth.AppImage'
+
+      - name: Check header includes
+        run: >
+          nproc="$(nproc)"
+
+          scons
+          "-j$nproc"
+          CXX=g++-14
+          "CXXFLAGS=-flto=$(( $nproc + 1 / 2 ))"
+          check_header_includes=1
+          build/{common,d1x-rebirth,d2x-rebirth}/check_header_includes

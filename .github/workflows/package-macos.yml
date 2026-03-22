@@ -47,3 +47,10 @@ jobs:
         with:
           name: "DXX-Rebirth-MacOS${{ env.MACOSX_DEPLOYMENT_TARGET }}-${{ steps.architecture.outputs.uname_m }}"
           path: 'D*X-Rebirth.app'
+
+      - name: Check header includes
+        working-directory: src
+        run: |
+          set -eu
+          export PKG_CONFIG_PATH=/usr/local/opt/readline/lib/pkgconfig
+          scons -j4 opengl=1 sdl2=1 macos_add_frameworks=0 macos_bundle_libs=1 check_header_includes=1 build/{common,d1x-rebirth,d2x-rebirth}/check_header_includes

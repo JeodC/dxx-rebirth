@@ -61,3 +61,12 @@ jobs:
         with:
           name: "DXX-Rebirth-Windows-${{ steps.architecture.outputs.uname_m }}"
           path: 'D*X-Rebirth/'
+
+      - name: Check header includes
+        working-directory: src
+        run: >-
+          scons -j`nproc`
+          CHOST=x86_64-w64-mingw32
+          RC=windres
+          check_header_includes=1
+          build/{common,d1x-rebirth,d2x-rebirth}/check_header_includes
