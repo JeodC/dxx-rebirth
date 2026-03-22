@@ -113,15 +113,14 @@ void do_special_effects()
 		if (ec.flags & EF_CRITICAL)
 			continue;
 
-		if (ec.crit_clip!=-1 && LevelUniqueControlCenterState.Control_center_destroyed)
+		if (const auto opt_crit_clip{Effects.valid_index(ec.crit_clip)}; opt_crit_clip && LevelUniqueControlCenterState.Control_center_destroyed)
 		{
-			int n = ec.crit_clip;
-
+			auto &critical_effect{Effects[*opt_crit_clip]};
 			if (ec.changing_wall_texture < Textures.size())
-				Textures[ec.changing_wall_texture] = Effects[n].vc.frames[Effects[n].frame_count];
+				Textures[ec.changing_wall_texture] = critical_effect.vc.frames[critical_effect.frame_count];
 
 			if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
-				ObjBitmaps[changing_object_texture] = Effects[n].vc.frames[Effects[n].frame_count];
+				ObjBitmaps[changing_object_texture] = critical_effect.vc.frames[critical_effect.frame_count];
 
 		}
 		else	{
@@ -155,7 +154,7 @@ namespace dsx {
 //stop an effect from animating.  Show first frame.
 void stop_boss_effect(d_eclip_array &Effects, object_bitmaps_array &ObjBitmaps, Textures_array &Textures)
 {
-	eclip &ec{Effects[ECLIP_NUM_BOSS]};
+	eclip &ec{Effects[effect_index::boss]};
 	//Assert(ec->bm_ptr != -1);
 	ec.flags |= EF_STOPPED;
 
@@ -172,13 +171,13 @@ void stop_boss_effect(d_eclip_array &Effects, object_bitmaps_array &ObjBitmaps, 
 //restart a stopped boss effect
 void restart_boss_effect(d_eclip_array &Effects)
 {
-	Effects[ECLIP_NUM_BOSS].flags &= ~EF_STOPPED;
+	Effects[effect_index::boss].flags &= ~EF_STOPPED;
 }
 
 }
 
 DEFINE_VCLIP_SERIAL_UDT();
-DEFINE_SERIAL_UDT_TO_MESSAGE(eclip, ec, (ec.vc, ec.time_left, ec.frame_count, ec.changing_wall_texture, ec.changing_object_texture.dsx, ec.flags, ec.crit_clip, ec.dest_bm_num, serial::pad<2>(), ec.dest_vclip, serial::pad<3>(), ec.dest_eclip, ec.dest_size, ec.sound_num, serial::pad<3>(), ec.segnum, serial::pad<2>(), ec.sidenum, serial::pad<3>()));
+DEFINE_SERIAL_UDT_TO_MESSAGE(eclip, ec, (ec.vc, ec.time_left, ec.frame_count, ec.changing_wall_texture, ec.changing_object_texture.dsx, ec.flags, ec.crit_clip, serial::pad<3>(), ec.dest_bm_num, serial::pad<2>(), ec.dest_vclip, serial::pad<3>(), ec.dest_eclip, serial::pad<3>(), ec.dest_size, ec.sound_num, serial::pad<3>(), ec.segnum, serial::pad<2>(), ec.sidenum, serial::pad<3>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(eclip, 130);
 
 namespace dsx {

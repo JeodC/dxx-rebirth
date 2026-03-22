@@ -215,13 +215,14 @@ void flash_frame()
 }
 
 namespace {
-static inline int is_alphablend_eclip(int eclip_num)
+
+static constexpr int is_alphablend_eclip(const effect_index eclip_num)
 {
+	return
 #if DXX_BUILD_DESCENT == 2
-	if (eclip_num == ECLIP_NUM_FORCE_FIELD || eclip_num == ECLIP_NUM_FORCE_FIELD2)
-		return 1;
+		eclip_num == effect_index::diagonal_force_field || eclip_num == effect_index::straight_force_field ||
 #endif
-	return eclip_num == ECLIP_NUM_FUELCEN;
+		eclip_num == effect_index::fuel_center;
 }
 
 // ----------------------------------------------------------------------------

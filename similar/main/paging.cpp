@@ -100,7 +100,7 @@ static void paging_touch_vclip(const d_vclip_array &Vclip, const vclip_index vcl
 		paging_touch_vclip(Vclip[vclip_id], line);
 }
 
-static void paging_touch_vclip(const d_eclip_array &Effects, const int eclip_id, const unsigned line
+static void paging_touch_vclip(const d_eclip_array &Effects, const effect_index eclip_id, const unsigned line
 #if DXX_HAVE_CXX_BUILTIN_FILE_LINE
 							   = __builtin_LINE()
 #else
@@ -108,8 +108,8 @@ static void paging_touch_vclip(const d_eclip_array &Effects, const int eclip_id,
 #endif
 							   )
 {
-	if (eclip_id > -1)
-		paging_touch_vclip(Effects[eclip_id].vc, line);
+	if (const auto opt_eid{Effects.valid_index(eclip_id)})
+		paging_touch_vclip(Effects[*opt_eid].vc, line);
 }
 
 static void paging_touch_wall_effects(const d_eclip_array &Effects, const Textures_array &Textures, const d_vclip_array &Vclip, const int tmap_num)

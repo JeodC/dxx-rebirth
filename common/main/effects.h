@@ -29,18 +29,27 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "dxxsconf.h"
 #include "pack.h"
 #include "bm.h"
+#include "d_array.h"
 #include "textures.h"
-#include <array>
 
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
 constexpr std::integral_constant<unsigned, 60> MAX_EFFECTS{};
-constexpr uint32_t eclip_none{UINT32_MAX};
 #elif DXX_BUILD_DESCENT == 2
 constexpr std::integral_constant<unsigned, 110> MAX_EFFECTS{};
-constexpr uint16_t eclip_none{UINT16_MAX};
 #endif
+
+enum class effect_index : uint8_t
+{
+	fuel_center = 2,
+	boss = 53,
+#if DXX_BUILD_DESCENT == 2
+	diagonal_force_field = 78,	// diagonal force field texture
+	straight_force_field = 93,	// straight force field texture
+#endif
+	None = UINT8_MAX,
+};
 }
 
 //flags for eclips.  If no flags are set, always plays
@@ -48,13 +57,6 @@ constexpr uint16_t eclip_none{UINT16_MAX};
 #define EF_CRITICAL 1   //this doesn't get played directly (only when mine critical)
 #define EF_ONE_SHOT 2   //this is a special that gets played once
 #define EF_STOPPED  4   //this has been stopped
-
-#define ECLIP_NUM_FUELCEN     2
-#define ECLIP_NUM_BOSS        53
-#if DXX_BUILD_DESCENT == 2
-#define ECLIP_NUM_FORCE_FIELD 78 // diagonal force field texture
-#define ECLIP_NUM_FORCE_FIELD2 93 // straight force field texture
-#endif
 
 namespace dcx {
 
@@ -69,11 +71,11 @@ struct eclip : public prohibit_void_ptr<eclip>
 		::d2x::object_bitmap_index d2x;    //Which element of d2x::ObjBitmapPtrs array to replace.
 	} changing_object_texture;
 	int     flags;          //see above
-	int     crit_clip;      //use this clip instead of above one when mine critical
 	texture_index dest_bm_num;    //use this bitmap when monitor destroyed
+	effect_index crit_clip;      //use this clip instead of above one when mine critical
+	effect_index dest_eclip;     //what eclip to play when exploding
 	vclip_index dest_vclip;     //what vclip to play when exploding
 	sound_effect sound_num;      //what sound this makes
-	int     dest_eclip;     //what eclip to play when exploding
 	fix     dest_size;      //3d size of explosion
 	segnum_t     segnum;
 	sidenum_t sidenum; //what seg & side, for one-shot clips
@@ -110,7 +112,7 @@ void eclip_read(NamedPHYSFS_File fp, eclip &ec);
 void eclip_write(PHYSFS_File *fp, const eclip &ec);
 #endif
 
-using d_eclip_array = std::array<eclip, MAX_EFFECTS>;
+using d_eclip_array = enumerated_array<eclip, MAX_EFFECTS, effect_index>;
 
 struct d_level_unique_effects_clip_state
 {

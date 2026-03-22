@@ -96,17 +96,17 @@ constexpr std::integral_constant<unsigned, 800> MAX_TEXTURES{};
 constexpr std::integral_constant<unsigned, 1200> MAX_TEXTURES{};
 #endif
 
+enum class effect_index : uint8_t;
+
 struct tmap_info : prohibit_void_ptr<tmap_info>
 {
 	fix     lighting;  //how much light this casts
 	fix     damage;    //how much damage being against this does (for lava)
-#if DXX_BUILD_DESCENT == 1
-	unsigned eclip_num;		//if not -1, the eclip that changes this   
-#elif DXX_BUILD_DESCENT == 2
-	uint16_t eclip_num; //the eclip that changes this, or -1
+#if DXX_BUILD_DESCENT == 2
 	texture_index destroyed; //bitmap to show when destroyed, or -1
 	short   slide_u,slide_v;    //slide rates of texture, stored in 8:8 fix
 #endif
+	effect_index eclip_num;		//if not effect_index::None, the eclip that changes this
 	tmapinfo_flags flags;
 #if DXX_BUILD_DESCENT == 1 || (DXX_BUILD_DESCENT == 2 && DXX_USE_EDITOR)
 	/* Descent 1 always uses this.  In Descent 2, it is only used by the

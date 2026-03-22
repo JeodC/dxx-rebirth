@@ -1602,14 +1602,14 @@ unsigned blast_nearby_glass_context::can_blast(const texture2_value tmap_num2) c
 	if (texture2_index >= TmapInfo.size()) [[unlikely]]
 		return 0;
 	auto &ti{TmapInfo[texture2_index]};
-	const auto ec = ti.eclip_num;
-	if (ec == eclip_none)
+	const auto opt_eclip_num{Effects.valid_index(ti.eclip_num)};
+	if (!opt_eclip_num)
 	{
 		return ti.destroyed != texture_index{UINT16_MAX};
 	}
 	else
 	{
-		auto &e = Effects[ec];
+		auto &e{Effects[*opt_eclip_num]};
 		return e.dest_bm_num != texture_index{UINT16_MAX} && !(e.flags & EF_ONE_SHOT);
 	}
 }

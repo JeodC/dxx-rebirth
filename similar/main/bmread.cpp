@@ -535,7 +535,7 @@ int gamedata_read_tbl(d_level_shared_robot_info_state &LevelSharedRobotInfoState
 	DXX_MAKE_VAR_UNDEFINED(TmapInfo);
 	range_for (auto &ti, TmapInfo)
 	{
-		ti.eclip_num = eclip_none;
+		ti.eclip_num = effect_index::None;
 		ti.flags = {};
 #if DXX_BUILD_DESCENT == 2
 		ti.slide_u = ti.slide_v = 0;
@@ -683,7 +683,7 @@ int gamedata_read_tbl(d_level_shared_robot_info_state &LevelSharedRobotInfoState
 				dest_bm=NULL;
 #endif
 				dest_vclip = vclip_index::None;
-				dest_eclip=eclip_none;
+				dest_eclip = INT_MAX;
 				dest_size=-1;
 				crit_clip=-1;
 				crit_flag=0;
@@ -840,7 +840,7 @@ int gamedata_read_tbl(d_level_shared_robot_info_state &LevelSharedRobotInfoState
 	for (auto &&[idx, e] : enumerate(Effects))
 	{
 		if ((e.changing_wall_texture != texture_index{UINT16_MAX} || e.changing_object_texture.dsx != object_bitmap_index::None) && e.vc.num_frames == ~0u)
-			Error("EClip %" DXX_PRI_size_type " referenced (by polygon object?), but not defined", idx);
+			Error("EClip %" DXX_PRI_size_type " referenced (by polygon object?), but not defined", static_cast<std::size_t>(idx));
 	}
 
 #if DXX_BUILD_DESCENT == 2
@@ -943,13 +943,16 @@ static std::size_t bm_read_eclip(std::size_t texture_count, int skip)
 {
 	auto &Effects = LevelUniqueEffectsClipState.Effects;
 	auto &TmapInfo = LevelUniqueTmapInfoState.TmapInfo;
-
-	assert(clip_num < Effects.size());
+	const auto opt_eclip_num{Effects.valid_index(clip_num)};
+	assert(opt_eclip_num);
+	if (!opt_eclip_num)
+		return texture_count;
 
 	if (clip_num+1 > Num_effects)
 		Num_effects = clip_num+1;
 
-	Effects[clip_num].flags = 0;
+	auto &e{Effects[*opt_eclip_num]};
+	e.flags = 0;
 
 #if DXX_BUILD_DESCENT == 2
 	auto dest_bm_num{texture_index{UINT16_MAX}};
@@ -972,26 +975,27 @@ static std::size_t bm_read_eclip(std::size_t texture_count, int skip)
 	{
 		const auto bitmap = bm_load_sub(skip, arg);
 
-		Effects[clip_num].vc.play_time = fl2f(play_time);
-		Effects[clip_num].vc.num_frames = frames;
-		Effects[clip_num].vc.frame_time = fl2f(play_time)/frames;
+		e.vc.play_time = fl2f(play_time);
+		e.vc.num_frames = frames;
+		e.vc.frame_time = fl2f(play_time)/frames;
 
 		Assert(clip_count < frames);
-		Effects[clip_num].vc.frames[clip_count] = bitmap;
+		e.vc.frames[clip_count] = bitmap;
 		set_lighting_flag(GameBitmaps[bitmap]);
 
 		Assert(!obj_eclip);		//obj eclips for non-abm files not supported!
 		Assert(crit_flag==0);
 
 		if (clip_count == 0) {
-			Effects[clip_num].changing_wall_texture = static_cast<texture_index>(texture_count);
+			e.changing_wall_texture = static_cast<texture_index>(texture_count);
 			Assert(tmap_count < MAX_TEXTURES);
 	  		tmap_count++;
 			Textures[texture_count] = bitmap;
 			set_texture_name(LevelUniqueTmapInfoState.TmapInfo, texture_count, arg);
 			Assert(texture_count < MAX_TEXTURES);
 			texture_count++;
-			TmapInfo[texture_count].eclip_num = clip_num;
+			auto &ti{TmapInfo[texture_count]};
+			ti.eclip_num = *opt_eclip_num;
 			NumTextures = texture_count;
 		}
 
@@ -1001,49 +1005,53 @@ static std::size_t bm_read_eclip(std::size_t texture_count, int skip)
 		std::array<bitmap_index, MAX_BITMAPS_PER_BRUSH> bm;
 		abm_flag = 0;
 
-		ab_load(skip, arg, bm, &Effects[clip_num].vc.num_frames );
+		ab_load(skip, arg, bm, &e.vc.num_frames);
 
-		Effects[clip_num].vc.play_time = fl2f(play_time);
-		Effects[clip_num].vc.frame_time = Effects[clip_num].vc.play_time/Effects[clip_num].vc.num_frames;
+		e.vc.play_time = fl2f(play_time);
+		e.vc.frame_time = e.vc.play_time / e.vc.num_frames;
 
 		clip_count = 0;
 		set_lighting_flag(GameBitmaps[bm[clip_count]]);
-		Effects[clip_num].vc.frames[clip_count] = bm[clip_count];
+		e.vc.frames[clip_count] = bm[clip_count];
 
 		if (!obj_eclip && !crit_flag) {
-			Effects[clip_num].changing_wall_texture = static_cast<texture_index>(texture_count);
+			e.changing_wall_texture = static_cast<texture_index>(texture_count);
 			Assert(tmap_count < MAX_TEXTURES);
   			tmap_count++;
 			Textures[texture_count] = bm[clip_count];
 			set_texture_name(LevelUniqueTmapInfoState.TmapInfo, texture_count, arg);
 			Assert(texture_count < MAX_TEXTURES);
-			TmapInfo[texture_count].eclip_num = clip_num;
+			auto &ti{TmapInfo[texture_count]};
+			ti.eclip_num = *opt_eclip_num;
 			texture_count++;
 			NumTextures = texture_count;
 		}
 
 		if (obj_eclip) {
-			auto &changing_object_texture{Effects[clip_num].changing_object_texture.dsx};
+			auto &changing_object_texture{e.changing_object_texture.dsx};
 			if (changing_object_texture == object_bitmap_index::None)
 			{		//first time referenced
 				changing_object_texture = static_cast<object_bitmap_index>(N_ObjBitmaps);		// XChange ObjectBitmaps
 				N_ObjBitmaps++;
 			}
 
-			ObjBitmaps[changing_object_texture] = Effects[clip_num].vc.frames[0];
+			ObjBitmaps[changing_object_texture] = e.vc.frames[0];
 		}
 
 		//if for an object, Effects_bm_ptrs set in object load
 
-		for(clip_count=1;clip_count < Effects[clip_num].vc.num_frames; clip_count++) {
+		for(clip_count=1;clip_count < e.vc.num_frames; clip_count++) {
 			set_lighting_flag(GameBitmaps[bm[clip_count]]);
-			Effects[clip_num].vc.frames[clip_count] = bm[clip_count];
+			e.vc.frames[clip_count] = bm[clip_count];
 		}
 
 	}
 
-	Effects[clip_num].crit_clip = crit_clip;
-	Effects[clip_num].sound_num = sound_num;
+	if (const auto opt_crit_clip{Effects.valid_index(crit_clip)}) [[likely]]
+		e.crit_clip = *opt_crit_clip;
+	else
+		e.crit_clip = effect_index::None;
+	e.sound_num = sound_num;
 
 #if DXX_BUILD_DESCENT == 1
 	if (!dest_bm.empty())
@@ -1055,10 +1063,10 @@ static std::size_t bm_read_eclip(std::size_t texture_count, int skip)
 		{
 			const auto &&r = get_texture(LevelUniqueTmapInfoState.TmapInfo, skip, dest_bm.c_str(), texture_count);
 			texture_count = r.texture_count;
-			Effects[clip_num].dest_bm_num = r.idx_updated_texture;
+			e.dest_bm_num = r.idx_updated_texture;
 		}
 #elif DXX_BUILD_DESCENT == 2
-		Effects[clip_num].dest_bm_num = dest_bm_num;
+		e.dest_bm_num = dest_bm_num;
 #endif
 
 		if (dest_vclip == vclip_index::None)
@@ -1066,18 +1074,21 @@ static std::size_t bm_read_eclip(std::size_t texture_count, int skip)
 		if (dest_size==-1)
 			Error("Desctuction vclip missing on line %d",linenum);
 
-		Effects[clip_num].dest_vclip = dest_vclip;
-		Effects[clip_num].dest_size = dest_size;
+		e.dest_vclip = dest_vclip;
+		e.dest_size = dest_size;
 
-		Effects[clip_num].dest_eclip = dest_eclip;
+		if (const auto opt_dest_eclip_num{Effects.valid_index(dest_eclip)})
+			e.dest_eclip = *opt_dest_eclip_num;
+		else
+			e.dest_eclip = effect_index::None;
 	}
 	else {
-		Effects[clip_num].dest_bm_num = texture_index{UINT16_MAX};
-		Effects[clip_num].dest_eclip = eclip_none;
+		e.dest_bm_num = texture_index{UINT16_MAX};
+		e.dest_eclip = effect_index::None;
 	}
 
 	if (crit_flag)
-		Effects[clip_num].flags |= EF_CRITICAL;
+		e.flags |= EF_CRITICAL;
 	return texture_count;
 }
 
@@ -1443,9 +1454,10 @@ static grs_bitmap *load_polymodel_bitmap(int skip, const char *name)
 //	Assert( N_ObjBitmaps == N_ObjBitmapPtrs );
 
 	if (name[0] == '%') {		//an animating bitmap!
-		const unsigned eclip_num = atoi(name+1);
-
-		auto &changing_object_texture{Effects[eclip_num].changing_object_texture.dsx};
+		const auto opt_eclip_num{Effects.valid_index(atoi(name+1))};
+		if (!opt_eclip_num) [[unlikely]]
+			return nullptr;
+		auto &changing_object_texture{Effects[*opt_eclip_num].changing_object_texture.dsx};
 		// On first reference, changing_object_texture will be None.
 		// Assign it a value.
 		if (changing_object_texture == object_bitmap_index::None)
@@ -2650,9 +2662,9 @@ void bm_read_hostage()
 }
 
 #if DXX_BUILD_DESCENT == 1
-DEFINE_SERIAL_UDT_TO_MESSAGE(tmap_info, t, (static_cast<const std::array<char, 13> &>(t.filename), t.flags, t.lighting, t.damage, t.eclip_num));
+DEFINE_SERIAL_UDT_TO_MESSAGE(tmap_info, t, (static_cast<const std::array<char, 13> &>(t.filename), t.flags, t.lighting, t.damage, t.eclip_num, serial::pad<3>()));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(tmap_info, 26);
 #elif DXX_BUILD_DESCENT == 2
-DEFINE_SERIAL_UDT_TO_MESSAGE(tmap_info, t, (t.flags, serial::pad<3>(), t.lighting, t.damage, t.eclip_num, t.destroyed, t.slide_u, t.slide_v));
+DEFINE_SERIAL_UDT_TO_MESSAGE(tmap_info, t, (t.flags, serial::pad<3>(), t.lighting, t.damage, t.eclip_num, serial::pad<1>(), t.destroyed, t.slide_u, t.slide_v));
 ASSERT_SERIAL_UDT_MESSAGE_SIZE(tmap_info, 20);
 #endif

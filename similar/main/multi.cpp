@@ -5666,18 +5666,18 @@ void init_hoard_data(d_vclip_array &Vclip)
 	Powerup_info[powerup_type_t::POW_HOARD_ORB].light = Powerup_info[powerup_type_t::POW_SHIELD_BOOST].light;
 
 	//Create orb goal wall effect
-	const auto goal_eclip = Num_effects++;
-	assert(goal_eclip < Effects.size());
-	Effects[goal_eclip] = Effects[94];        //copy from blue goal
-	Effects[goal_eclip].changing_wall_texture = static_cast<texture_index>(NumTextures);
-	Effects[goal_eclip].vc.num_frames=n_goal_frames;
+	const auto opt_goal_eclip{Effects.valid_index(Num_effects++)};
+	assert(opt_goal_eclip);
+	Effects[*opt_goal_eclip] = Effects[(effect_index{94})];        //copy from blue goal
+	Effects[*opt_goal_eclip].changing_wall_texture = static_cast<texture_index>(NumTextures);
+	Effects[*opt_goal_eclip].vc.num_frames=n_goal_frames;
 
 	TmapInfo[NumTextures] = find_required_goal_texture(LevelUniqueTmapInfoState, tmapinfo_flag::goal_blue);
-	TmapInfo[NumTextures].eclip_num = goal_eclip;
+	TmapInfo[NumTextures].eclip_num = *opt_goal_eclip;
 	TmapInfo[NumTextures].flags = static_cast<tmapinfo_flags>(tmapinfo_flag::goal_hoard);
 	NumTextures++;
 	Assert(NumTextures < MAX_TEXTURES);
-	range_for (auto &i, partial_range(Effects[goal_eclip].vc.frames, n_goal_frames))
+	range_for (auto &i, partial_range(Effects[*opt_goal_eclip].vc.frames, n_goal_frames))
 	{
 		const bitmap_index bi{bitmap_num};
 		i = bi;
@@ -5699,7 +5699,7 @@ void init_hoard_data(d_vclip_array &Vclip)
 	//Load and remap bitmap data for goal texture
 	PHYSFSX_skipBytes<2>(ifile);		//skip frame count
 	PHYSFSX_readBytes(ifile, palette, sizeof(palette[0]) * std::size(palette));
-	range_for (auto &i, partial_const_range(Effects[goal_eclip].vc.frames, n_goal_frames))
+	range_for (auto &i, partial_const_range(Effects[*opt_goal_eclip].vc.frames, n_goal_frames))
 	{
 		grs_bitmap *const bm = &GameBitmaps[i];
 		PHYSFSX_readBytes(ifile, bm->get_bitmap_data(), 64 * 64);

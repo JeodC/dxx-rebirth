@@ -638,18 +638,18 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 		if (tm >= TmapInfo.size()) [[unlikely]]
 			return 0;
 		auto &tmi2 = TmapInfo[tm];
-		const auto ec = tmi2.eclip_num;
+		const auto opt_eclip_num{Effects.valid_index(tmi2.eclip_num)};
 		texture_index db{};
 		if (
 #if DXX_BUILD_DESCENT == 1
-			ec != eclip_none &&
+			opt_eclip_num &&
 #elif DXX_BUILD_DESCENT == 2
 		//check if it's an animation (monitor) or casts light
-			ec == eclip_none
+			!opt_eclip_num
 			? tmi2.destroyed != texture_index{UINT16_MAX}
 			:
 #endif
-			(db = Effects[ec].dest_bm_num) != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT)
+			((db = Effects[*opt_eclip_num].dest_bm_num) != texture_index{UINT16_MAX} && !(Effects[*opt_eclip_num].flags & EF_ONE_SHOT))
 		)
 		{
 			const auto tmf = get_texture_rotation_high(tmap2);		//tm flags
@@ -698,7 +698,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 			{		//not trans, thus on effect
 #if DXX_BUILD_DESCENT == 2
 				if (+(Game_mode & GM_MULTI) && Netgame.AlwaysLighting)
-					if (!(ec != eclip_none && db != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT)))
+					if (!(db != texture_index{UINT16_MAX} && opt_eclip_num && !(Effects[*opt_eclip_num].flags & EF_ONE_SHOT)))
 						return 0;
 
 				//note: this must get called before the texture changes,
@@ -715,35 +715,36 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 
 				fix dest_size;
 				vclip_index vc;
-				if (ec != eclip_none)
-				{
-					dest_size = Effects[ec].dest_size;
-					vc = Effects[ec].dest_vclip;
-				}
-				else
+#if DXX_BUILD_DESCENT == 2
+				if (!opt_eclip_num)
 				{
 					dest_size = i2f(20);
 					vc = vclip_index{3};
+				}
+				else
+#endif
+				{
+					auto &e{Effects[*opt_eclip_num]};
+					dest_size = e.dest_size;
+					vc = e.dest_vclip;
 				}
 
 				object_create_explosion_without_damage(Vclip, seg, pnt, dest_size, vc);
 
 #if DXX_BUILD_DESCENT == 2
-				if (ec != eclip_none && db != texture_index{UINT16_MAX} && !(Effects[ec].flags & EF_ONE_SHOT))
+				if (db != texture_index{UINT16_MAX} && opt_eclip_num && !(Effects[*opt_eclip_num].flags & EF_ONE_SHOT))
 #endif
 				{
 
 					if (const auto sound_num{Vclip[vc].sound_num}; sound_num != sound_effect::None)
 		  				digi_link_sound_to_pos( sound_num, seg, sidenum_t::WLEFT, pnt,  0, F1_0 );
 
-					if (const auto sound_num{Effects[ec].sound_num}; sound_num != sound_effect::None)		//kill sound
+					if (const auto sound_num{Effects[*opt_eclip_num].sound_num}; sound_num != sound_effect::None)		//kill sound
 						digi_kill_sound_linked_to_segment(seg,side,sound_num);
 
-					if (Effects[ec].dest_eclip!=-1 && Effects[Effects[ec].dest_eclip].segnum == segment_none)
+					if (const auto opt_dest_eclip_num{Effects.valid_index(Effects[*opt_eclip_num].dest_eclip)}; opt_dest_eclip_num && Effects[*opt_dest_eclip_num].segnum == segment_none)
 					{
-						eclip *new_ec;
-
-						new_ec = &Effects[Effects[ec].dest_eclip];
+						eclip *const new_ec{&Effects[*opt_dest_eclip_num]};
 						const auto bm_num{new_ec->changing_wall_texture};
 
 						new_ec->time_left = new_ec->vc.frame_time;
@@ -751,7 +752,7 @@ int check_effect_blowup(const d_level_shared_destructible_light_state &LevelShar
 						new_ec->segnum = seg;
 						new_ec->sidenum = side;
 						new_ec->flags |= EF_ONE_SHOT;
-						new_ec->dest_bm_num = Effects[ec].dest_bm_num;
+						new_ec->dest_bm_num = Effects[*opt_eclip_num].dest_bm_num;
 
 						assert(bm_num != 0);
 						auto &tmap_num2 = seg->unique_segment::sides[side].tmap_num2;

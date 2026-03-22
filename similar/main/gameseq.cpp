@@ -823,27 +823,30 @@ static void set_sound_sources(fvcsegptridx &vcsegptridx, fvcvertptr &vcvertptr)
 #endif
 	Dont_start_sound_objects = 1;
 
-	const auto get_eclip_for_tmap = [](const d_level_unique_tmap_info_state::TmapInfo_array &TmapInfo, const unique_side &side) {
+	const auto get_eclip_for_tmap{[](const d_level_unique_tmap_info_state::TmapInfo_array &TmapInfo, const unique_side &side) -> std::optional<effect_index> {
+		/* In Descent 1, the `eclip_num` from `tm2` is the only source of
+		 * an eclip.  If there is no valid eclip from tm2, then fall out and
+		 * return an empty optional.
+		 * In Descent 2, if `eclip_num` from `tm2` is not usable, then try
+		 * the `eclip_num` from `tmap_num`.
+		 */
 		if (const auto tm2 = side.tmap_num2; tm2 != texture2_value::None)
 		{
 			const auto texture2_index{get_texture_index(tm2)};
 			if (texture2_index >= TmapInfo.size()) [[unlikely]]
-				return eclip_none;
+				return std::nullopt;
 			const auto ec{TmapInfo[texture2_index].eclip_num};
-#if DXX_BUILD_DESCENT == 2
-			if (ec != eclip_none)
-#endif
-				return ec;
+			const auto opt_eclip_num_tm2{Effects.valid_index(ec)};
+			if (opt_eclip_num_tm2)
+				return opt_eclip_num_tm2;
 		}
-#if DXX_BUILD_DESCENT == 1
-		return eclip_none;
-#elif DXX_BUILD_DESCENT == 2
+#if DXX_BUILD_DESCENT == 2
 		const auto texture1_index{get_texture_index(side.tmap_num)};
-		if (texture1_index >= TmapInfo.size()) [[unlikely]]
-			return eclip_none;
-		return TmapInfo[texture1_index].eclip_num;
+		if (texture1_index < TmapInfo.size()) [[likely]]
+			return Effects.valid_index(TmapInfo[texture1_index].eclip_num);
 #endif
-	};
+		return std::nullopt;
+	}};
 
 	range_for (const auto &&seg, vcsegptridx)
 	{
@@ -854,10 +857,9 @@ static void set_sound_sources(fvcsegptridx &vcsegptridx, fvcvertptr &vcvertptr)
 			if (!(wid & WALL_IS_DOORWAY_FLAG::render))
 				continue;
 #endif
-			const auto ec = get_eclip_for_tmap(TmapInfo, seg->unique_segment::sides[sidenum]);
-			if (ec != eclip_none)
+			if (const auto opt_eclip_num{get_eclip_for_tmap(TmapInfo, seg->unique_segment::sides[sidenum])})
 			{
-				if (const auto sn{Effects[ec].sound_num}; sn != sound_effect::None)
+				if (const auto sn{Effects[*opt_eclip_num].sound_num}; sn != sound_effect::None)
 				{
 #if DXX_BUILD_DESCENT == 2
 						auto csegnum = seg->children[sidenum];

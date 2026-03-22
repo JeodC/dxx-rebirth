@@ -147,7 +147,10 @@ static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
 	ti.flags = tmapinfo_flags{flags};
 	ti.lighting = PHYSFSX_readFix(fp);
 	ti.damage = PHYSFSX_readFix(fp);
-	ti.eclip_num = PHYSFSX_readInt(fp);
+	if (const auto opt_eclip_num{d_eclip_array::valid_index(PHYSFSX_readInt(fp))}) [[likely]]
+		ti.eclip_num = *opt_eclip_num;
+	else
+		ti.eclip_num = effect_index::None;
 }
 
 }
@@ -288,7 +291,10 @@ static void tmap_info_read(tmap_info &ti, const NamedPHYSFS_File fp)
 	PHYSFSX_skipBytes<3>(fp);
 	ti.lighting = PHYSFSX_readFix(fp);
 	ti.damage = PHYSFSX_readFix(fp);
-	ti.eclip_num = PHYSFSX_readSLE16(fp);
+	if (const auto opt_eclip_num{LevelUniqueEffectsClipState.Effects.valid_index(PHYSFSX_readSLE16(fp))}) [[likely]]
+		ti.eclip_num = *opt_eclip_num;
+	else
+		ti.eclip_num = effect_index::None;
 	const auto destroyed{PHYSFSX_readULE16(fp)};
 	ti.destroyed = (destroyed < Textures.size()) ? texture_index{destroyed} : texture_index{UINT16_MAX};
 	ti.slide_u = PHYSFSX_readSLE16(fp);
