@@ -2759,7 +2759,7 @@ static void do_super_boss_stuff(const d_robot_info_array &Robot_info, fvmsegptri
 	) {
 		const auto Gate_interval = GameUniqueState.Boss_gate_interval;
 		if (GameTime64 - BossUniqueState.Last_gate_time > Gate_interval/2) {
-			restart_effect(ECLIP_NUM_BOSS);
+			restart_boss_effect(LevelUniqueEffectsClipState.Effects);
 			if (eclip_state == 0) {
 #if DXX_USE_MULTIPLAYER
 				if (multiplayer)

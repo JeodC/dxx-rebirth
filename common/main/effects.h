@@ -97,9 +97,6 @@ extern void restore_effect_bitmap_icons();
 //stop an effect from animating.  Show first frame.
 void stop_effect(int effect_num);
 
-//restart a stopped effect
-void restart_effect(int effect_num);
-
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 
@@ -123,6 +120,9 @@ struct d_level_unique_effects_clip_state
 };
 
 extern d_level_unique_effects_clip_state LevelUniqueEffectsClipState;
+
+//restart a stopped boss effect
+void restart_boss_effect(d_eclip_array &);
 
 }
 #endif

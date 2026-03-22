@@ -170,13 +170,14 @@ void stop_effect(int effect_num)
 		ObjBitmaps[changing_object_texture] = ec->vc.frames[0];
 }
 
-//restart a stopped effect
-void restart_effect(int effect_num)
-{
-	auto &Effects = LevelUniqueEffectsClipState.Effects;
-	Effects[effect_num].flags &= ~EF_STOPPED;
+namespace dsx {
 
-	//Assert(Effects[effect_num].bm_ptr != -1);
+//restart a stopped boss effect
+void restart_boss_effect(d_eclip_array &Effects)
+{
+	Effects[ECLIP_NUM_BOSS].flags &= ~EF_STOPPED;
+}
+
 }
 
 DEFINE_VCLIP_SERIAL_UDT();
