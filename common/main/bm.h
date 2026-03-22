@@ -70,6 +70,7 @@ inline constexpr bool enable_bit_enum_boolnot<tmapinfo_flags>{true};
 
 }
 
+#ifdef DXX_BUILD_DESCENT
 namespace d1x {
 
 enum class object_bitmap_index : uint16_t
@@ -88,7 +89,6 @@ enum class object_bitmap_index : uint16_t
 
 }
 
-#ifdef DXX_BUILD_DESCENT
 namespace dsx {
 #if DXX_BUILD_DESCENT == 1
 constexpr std::integral_constant<unsigned, 800> MAX_TEXTURES{};
