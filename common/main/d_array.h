@@ -13,6 +13,34 @@
 
 namespace dcx {
 
+template <std::size_t N, typename E>
+struct enumerated_array_length_operations
+{
+protected:
+	using index_type = E;
+	[[nodiscard]]
+	static constexpr std::optional<index_type> valid_index(const std::size_t s)
+	{
+		/* static_cast<index_type> is necessary here, since
+		 * `sizeof(index_type) < sizeof(std::size_t)` is supported and commonly
+		 * used.
+		 *
+		 * The narrowing rule is stateless, and therefore does not observe that
+		 * the cast is on a path where `s < N` ensures no narrowing can occur.
+		 */
+		if (s < N) [[likely]]
+			return std::optional{static_cast<index_type>(s)};
+		return std::nullopt;
+	}
+	[[nodiscard]]
+	static constexpr std::optional<index_type> valid_index(const index_type e)
+	{
+		if (static_cast<std::size_t>(e) < N) [[likely]]
+			return std::optional{e};
+		return std::nullopt;
+	}
+};
+
 /* Wrap a std::array and override the normal indexing operations to take
  * an instance of type `E`.  This is intended for use where `E` is an
  * instance of `enum class`.  When `E` is an `enum class`, instances of
@@ -36,10 +64,13 @@ template <typename T, std::size_t N, typename E>
  * platforms.
  */
 requires(!std::is_same<unsigned, E>::value && !std::is_same<unsigned long, E>::value)
-struct enumerated_array : std::array<T, N>
+struct enumerated_array :
+	std::array<T, N>,
+	enumerated_array_length_operations<N, E>
 {
 	using base_type = std::array<T, N>;
-	using index_type = E;
+	using operations_type = enumerated_array_length_operations<N, E>;
+	using typename operations_type::index_type;
 	using typename base_type::reference;
 	using typename base_type::const_reference;
 	constexpr reference at(index_type position) = delete;
@@ -54,32 +85,14 @@ struct enumerated_array : std::array<T, N>
 	{
 		return this->base_type::operator[](static_cast<std::size_t>(position));
 	}
+	/* Reject implicit conversions from integer types to `E`.  Some
+	 * instantiations use an `E` that cannot be implicitly constructed from an
+	 * integer.  Others use one that can.  Ensure that no implicit conversions
+	 * are done, by providing an explicitly deleted overload that matches
+	 * integers.
+	 */
 	const_reference operator[](std::integral auto) const = delete;
-	[[nodiscard]]
-	static constexpr std::optional<E> valid_index(const std::size_t s)
-	{
-		/* static_cast<E> is necessary here, since
-		 * `sizeof(E) < sizeof(std::size_t)` is supported and commonly used.
-		 * The narrowing rule is stateless, and therefore does not observe that
-		 * the cast is on a path where `s < N` ensures no narrowing can occur.
-		 */
-		if (s < N)
-		{
-			[[likely]];
-			return std::optional(static_cast<E>(s));
-		}
-		return std::nullopt;
-	}
-	[[nodiscard]]
-	static constexpr std::optional<E> valid_index(const E e)
-	{
-		if (static_cast<std::size_t>(e) < N)
-		{
-			[[likely]];
-			return std::optional{e};
-		}
-		return std::nullopt;
-	}
+	using operations_type::valid_index;
 };
 
 }
