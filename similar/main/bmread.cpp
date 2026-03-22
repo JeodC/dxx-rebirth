@@ -884,13 +884,13 @@ void verify_textures()
 		Error("%d textures were not 64x64.",j);
 
 #if DXX_BUILD_DESCENT == 2
-	for (uint_fast32_t i = 0; i < Num_effects; ++i)
-		if (const auto changing_object_texture{Effects[i].changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
+	for (const std::size_t num_effects{Num_effects}; const auto &&[i, e] : enumerate(partial_range(Effects, num_effects)))
+		if (const auto changing_object_texture{e.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 		{
 			const auto o = ObjBitmaps[changing_object_texture];
 			auto &gbo = GameBitmaps[o];
 			if (gbo.bm_w != 64 || gbo.bm_h != 64)
-				Error("Effect %" PRIuFAST32 " is used on object, but is not 64x64",i);
+				Error("Effect %" PRIuFAST32 " is used on object, but is not 64x64", static_cast<uint_fast32_t>(i));
 		}
 #endif
 }
