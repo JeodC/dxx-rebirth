@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <iterator>
 #include <cstdio>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 #include <ranges>
