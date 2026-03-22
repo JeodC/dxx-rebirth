@@ -1212,7 +1212,7 @@ void multi_do_boss_stop_gate(const multiplayer_rspan<multiplayer_command_t::MULT
 		Int3(); // Got boss actions for a robot who's not a boss?
 		return;
 	}
-	stop_effect(ECLIP_NUM_BOSS);
+	stop_boss_effect(LevelUniqueEffectsClipState.Effects, ObjBitmaps, Textures);
 }
 
 void multi_do_boss_create_robot(const playernum_t pnum, const multiplayer_rspan<multiplayer_command_t::MULTI_BOSS_CREATE_ROBOT> buf)

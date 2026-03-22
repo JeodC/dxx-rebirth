@@ -29,6 +29,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "dxxsconf.h"
 #include "pack.h"
 #include "bm.h"
+#include "textures.h"
 #include <array>
 
 #ifdef DXX_BUILD_DESCENT
@@ -94,9 +95,6 @@ extern void do_special_effects();
 // Restore bitmap
 extern void restore_effect_bitmap_icons();
 
-//stop an effect from animating.  Show first frame.
-void stop_effect(int effect_num);
-
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
 
@@ -120,6 +118,9 @@ struct d_level_unique_effects_clip_state
 };
 
 extern d_level_unique_effects_clip_state LevelUniqueEffectsClipState;
+
+//stop an effect from animating.  Show first frame.
+void stop_boss_effect(d_eclip_array &Effects, object_bitmaps_array &ObjBitmaps, Textures_array &Textures);
 
 //restart a stopped boss effect
 void restart_boss_effect(d_eclip_array &);

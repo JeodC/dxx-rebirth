@@ -186,7 +186,8 @@ constexpr std::integral_constant<unsigned, 610> MAX_OBJ_BITMAPS{};
 extern unsigned N_ObjBitmaps;
 #endif
 
-extern enumerated_array<bitmap_index, MAX_OBJ_BITMAPS, object_bitmap_index> ObjBitmaps;
+using object_bitmaps_array = enumerated_array<bitmap_index, MAX_OBJ_BITMAPS, object_bitmap_index>;
+extern object_bitmaps_array ObjBitmaps;
 extern std::array<object_bitmap_index, MAX_OBJ_BITMAPS> ObjBitmapPtrs;
 
 enum class cockpit_bitmap_index : uint8_t

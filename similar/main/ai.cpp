@@ -2769,7 +2769,7 @@ static void do_super_boss_stuff(const d_robot_info_array &Robot_info, fvmsegptri
 			}
 		}
 		else {
-			stop_effect(ECLIP_NUM_BOSS);
+			stop_boss_effect(LevelUniqueEffectsClipState.Effects, ObjBitmaps, Textures);
 			if (eclip_state == 1) {
 #if DXX_USE_MULTIPLAYER
 				if (multiplayer)

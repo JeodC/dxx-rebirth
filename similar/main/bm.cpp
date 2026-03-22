@@ -117,7 +117,7 @@ int             First_multi_bitmap_num=-1;
 namespace dsx {
 
 cockpit_bitmap_array cockpit_bitmap;
-enumerated_array<bitmap_index, MAX_OBJ_BITMAPS, object_bitmap_index> ObjBitmaps;
+object_bitmaps_array ObjBitmaps;
 std::array<object_bitmap_index, MAX_OBJ_BITMAPS> ObjBitmapPtrs;     // These point back into ObjBitmaps, since some are used twice.
 
 void gamedata_close()

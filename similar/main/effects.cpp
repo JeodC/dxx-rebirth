@@ -150,13 +150,13 @@ void restore_effect_bitmap_icons()
 	}
 }
 
-//stop an effect from animating.  Show first frame.
-void stop_effect(int effect_num)
-{
-	auto &Effects = LevelUniqueEffectsClipState.Effects;
-	eclip &ec{Effects[effect_num]};
-	//Assert(ec->bm_ptr != -1);
+namespace dsx {
 
+//stop an effect from animating.  Show first frame.
+void stop_boss_effect(d_eclip_array &Effects, object_bitmaps_array &ObjBitmaps, Textures_array &Textures)
+{
+	eclip &ec{Effects[ECLIP_NUM_BOSS]};
+	//Assert(ec->bm_ptr != -1);
 	ec.flags |= EF_STOPPED;
 
 	ec.frame_count = 0;
@@ -168,8 +168,6 @@ void stop_effect(int effect_num)
 	if (const auto changing_object_texture{ec.changing_object_texture.dsx}; changing_object_texture != object_bitmap_index::None)
 		ObjBitmaps[changing_object_texture] = ec.vc.frames[0];
 }
-
-namespace dsx {
 
 //restart a stopped boss effect
 void restart_boss_effect(d_eclip_array &Effects)
