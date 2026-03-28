@@ -255,7 +255,7 @@ static unsigned count_number_of_objects_of_type(fvcobjptr &vcobjptr)
 #define count_number_of_robots	count_number_of_objects_of_type<object_type::OBJ_ROBOT>
 #define count_number_of_hostages	count_number_of_objects_of_type<object_type::OBJ_HOSTAGE>
 
-constexpr constant_xrange<sidenum_t, sidenum_t::WRIGHT, sidenum_t::WFRONT> displacement_sides{};
+constexpr constant_xrange<sidenum_t::WRIGHT, sidenum_t::WFRONT> displacement_sides{};
 static_assert(static_cast<uint8_t>(sidenum_t::WBACK) + 1 == static_cast<uint8_t>(sidenum_t::WFRONT), "side ordering error");
 
 static unsigned generate_extra_starts_by_copying(object_array &Objects, valptridx<player>::array_managed_type &Players, segment_array &Segments, const xrange<unsigned, std::integral_constant<unsigned, 0>> preplaced_start_range, const per_player_array<sidemask_t> &player_init_segment_capacity_flag, const unsigned total_required_num_starts, unsigned synthetic_player_idx)

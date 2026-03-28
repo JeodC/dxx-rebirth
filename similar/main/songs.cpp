@@ -356,7 +356,7 @@ static void songs_init()
 		assign_builtin_song(builtin_songs[song_number::endlevel], "endlevel.hmp");	// can't find it? give a warning
 		assign_builtin_song(builtin_songs[song_number::endgame], "endgame.hmp");	// ditto
 
-		for (const auto i : constant_xrange<unsigned, 0u, predef>{})
+		for (const auto i : constant_xrange<0u, predef>{})
 		{
 			auto &s{builtin_songs[build_song_number_from_level_song_number(level_song_number{i})]};
 			const auto d{s.filename.data()};
@@ -402,14 +402,14 @@ static void songs_init()
 			add_song(deferred_pathname, lineno, use_secret_songs(canUseExtensions, result) ? secret_songs : main_songs, result);
 		}
 #if DXX_BUILD_DESCENT == 1
-		// HACK: If Descent.hog is patched from 1.0 to 1.5, descent.sng is turncated. So let's patch it up here
-		constexpr std::size_t truncated_song_count = 12;
+		// HACK: If Descent.hog is patched from 1.0 to 1.5, descent.sng is truncated. So let's patch it up here
+		constexpr unsigned truncated_song_count{12};
 		if (!canUseExtensions &&
 			main_songs.size() == truncated_song_count &&
 			PHYSFS_fileLength(fp) == 422)
 		{
 			main_songs.resize(truncated_song_count + 15);
-			for (const auto i : constant_xrange<unsigned, truncated_song_count, 27>{})
+			for (const auto i : constant_xrange<truncated_song_count, 27u>{})
 			{
 				auto &s = main_songs[i];
 				snprintf(std::data(s.filename), std::size(s.filename), "game%02u.hmp", i - 4);

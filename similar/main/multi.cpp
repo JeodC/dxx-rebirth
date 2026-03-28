@@ -5530,7 +5530,7 @@ void MultiLevelInv_Repopulate(fix frequency)
                 return;
 
 	MultiLevelInv_Recount(); // recount current items
-	for (const uint8_t i : constant_xrange<uint8_t, uint8_t{0}, uint8_t{MAX_POWERUP_TYPES}>{})
+	for (const uint8_t i : constant_xrange<uint8_t{0}, uint8_t{MAX_POWERUP_TYPES}>{})
 	{
 		const powerup_type_t pi{i};
 		auto &rt = MultiLevelInv.RespawnTimer[pi];

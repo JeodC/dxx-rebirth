@@ -8,5 +8,5 @@
 
 #include "d_range.h"
 
-template <typename index_type, index_type begin_value, index_type end_value>
-using constant_xrange = xrange<index_type, std::integral_constant<index_type, begin_value>, std::integral_constant<index_type, end_value>>;
+template <auto begin_value, decltype(begin_value) end_value>
+using constant_xrange = xrange<decltype(begin_value), std::integral_constant<decltype(begin_value), begin_value>, std::integral_constant<decltype(begin_value), end_value>>;

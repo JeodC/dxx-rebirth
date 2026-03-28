@@ -1499,7 +1499,7 @@ static void test_create_path_many(fvmobjptridx &vmobjptridx, const d_level_share
 	auto &SSegments = LevelSharedSegmentState.get_segments();
 	std::minstd_rand mrd{seed};
 	std::uniform_int_distribution<std::underlying_type_t<segnum_t>> uid{0u, SSegments.get_count()};
-	for (const auto i : constant_xrange<std::size_t, 0, 1000u>{})
+	for (const auto i : constant_xrange<std::size_t{0}, 1000u>{})
 	{
 		(void)i;
 		const vcsegidx_t start_segment{segnum_t{uid(mrd)}};

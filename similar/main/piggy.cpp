@@ -293,7 +293,7 @@ void initialize_array_bogus_data()
 {
 	bogus_data.fill(gr_find_closest_color(0, 0, 63));	// blue
 	// Make a big red X !
-	for (const auto c{gr_find_closest_color(63, 0, 0)}; const auto i : constant_xrange<std::size_t, 0, 64u>{})
+	for (const auto c{gr_find_closest_color(63, 0, 0)}; const auto i : constant_xrange<std::size_t{0}, 64u>{})
 	{
 		bogus_data[i*64+i] = c;
 		bogus_data[i*64+(63-i)] = c;

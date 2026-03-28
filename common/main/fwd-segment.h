@@ -76,7 +76,7 @@ enum class sidemask_t : uint8_t;
 
 [[nodiscard]]
 std::optional<sidenum_t> build_sidenum_from_untrusted(uint8_t untrusted);
-constexpr constant_xrange<sidenum_t, sidenum_t{0}, sidenum_t{6}> MAX_SIDES_PER_SEGMENT{};
+constexpr constant_xrange<sidenum_t{0}, sidenum_t{6}> MAX_SIDES_PER_SEGMENT{};
 constexpr std::integral_constant<sidenum_t, MAX_SIDES_PER_SEGMENT.value> side_none{};
 
 enum texture_index : uint16_t;
@@ -109,7 +109,7 @@ enum class vertnum_t : uint32_t;
 enum class side_relative_vertnum : uint8_t;
 enum class segment_relative_vertnum : uint8_t;
 enum class segment_special : uint8_t;
-constexpr constant_xrange<side_relative_vertnum, side_relative_vertnum{0}, side_relative_vertnum{4}> MAX_VERTICES_PER_SIDE{};
+constexpr constant_xrange<side_relative_vertnum{0}, side_relative_vertnum{4}> MAX_VERTICES_PER_SIDE{};
 
 template <typename T>
 using per_segment_relative_vertnum_array = enumerated_array<T, MAX_VERTICES_PER_SEGMENT, segment_relative_vertnum>;
