@@ -473,6 +473,8 @@ void show_fullscr(grs_canvas &canvas, grs_bitmap &bm, bool fill)
 		ogl_ubitmapm_cs(canvas, 0, 0, opengl_bitmap_use_dst_canvas, opengl_bitmap_use_dst_canvas, bm, ogl_colors::white, fill);//use opengl to scale, faster and saves ram. -MPM
 		return;
 	}
+#else
+	static_cast<void>(fill);
 #endif
 	if (scr.get_type() != bm_mode::linear)
 	{
