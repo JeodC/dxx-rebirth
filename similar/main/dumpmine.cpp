@@ -45,6 +45,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "object.h"
 #include "wall.h"
 #include "gameseg.h"
+#include "game.h"
 #include "robot.h"
 #include "newmenu.h"
 #include "textures.h"

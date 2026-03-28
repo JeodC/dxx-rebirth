@@ -56,6 +56,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "bm.h"
 
 #include "d_construct.h"
+#include "d_underlying_value.h"
 #include "d_zip.h"
 #include "partial_range.h"
 #include <memory>

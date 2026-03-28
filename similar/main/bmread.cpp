@@ -39,6 +39,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "bm.h"
 #include "u_mem.h"
 #include "dxxerror.h"
+#include "digi.h"
 #include "object.h"
 #include "physfsx.h"
 #include "vclip.h"

@@ -35,6 +35,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "segment.h"
 
 #include "d_enumerate.h"
+#include "d_underlying_value.h"
 #include "compiler-range_for.h"
 #include "partial_range.h"
 

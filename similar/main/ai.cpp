@@ -5151,4 +5151,15 @@ int ai_restore_state(const d_robot_info_array &Robot_info, const NamedPHYSFS_Fil
 	return 1;
 }
 
+void boss_link_see_sound(const d_robot_info_array &Robot_info, const vcobjptridx_t objp)
+{
+#if DXX_BUILD_DESCENT == 1
+	(void)Robot_info;
+	constexpr auto soundnum{sound_effect::SOUND_BOSS_SHARE_SEE};
+#elif DXX_BUILD_DESCENT == 2
+	const auto soundnum{Robot_info[get_robot_id(objp)].see_sound};
+#endif
+	digi_link_sound_to_object2(soundnum, objp, 1, F1_0, sound_stack::allow_stacking, vm_distance{F1_0*512});	//	F1_0*512 means play twice as loud
+}
+
 }

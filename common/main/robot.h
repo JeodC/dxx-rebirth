@@ -26,16 +26,12 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #pragma once
 
 #include <ranges>
+#include "fwd-game.h"
 #include "fwd-robot.h"
-#include "game.h"
 
 #include "pack.h"
-#include "aistruct.h"
-#include "weapon_id.h"
 #include "object.h"
-#include "fwd-partial_range.h"
 #include "d_array.h"
-#include "digi.h"
 
 namespace dcx {
 
@@ -245,27 +241,11 @@ struct d_level_shared_robot_joint_state : ::dcx::d_level_shared_robot_joint_stat
 //      jp_list_ptr is stuffed with a pointer to a static array of joint positions.  This pointer is valid forever.
 std::ranges::subrange<const jointpos *> robot_get_anim_state(const d_robot_info_array &, const std::array<jointpos, MAX_ROBOT_JOINTS> &, robot_id robot_type, robot_gun_animation_index gun_num, robot_animation_state state);
 
-/*
- * reads n robot_info structs from a PHYSFS_File
- */
+void boss_link_see_sound(const d_robot_info_array &Robot_info, const vcobjptridx_t objp);
+
 }
 #endif
 
 #if 0
 void jointpos_write(PHYSFS_File *fp, const jointpos &jp);
-#endif
-#ifdef DXX_BUILD_DESCENT
-namespace dsx {
-
-static inline void boss_link_see_sound(const d_robot_info_array &Robot_info, const vcobjptridx_t objp)
-{
-#if DXX_BUILD_DESCENT == 1
-	(void)Robot_info;
-	constexpr auto soundnum{sound_effect::SOUND_BOSS_SHARE_SEE};
-#elif DXX_BUILD_DESCENT == 2
-	const auto soundnum{Robot_info[get_robot_id(objp)].see_sound};
-#endif
-	digi_link_sound_to_object2(soundnum, objp, 1, F1_0, sound_stack::allow_stacking, vm_distance{F1_0*512});	//	F1_0*512 means play twice as loud
-}
-}
 #endif
