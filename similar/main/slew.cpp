@@ -38,6 +38,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 //variables for slew system
 
+namespace dsx {
+
 object *slew_obj=NULL;	//what object is slewing, or NULL if none
 
 // -------------------------------------------------------------------
@@ -75,8 +77,6 @@ void slew_reset_orient()
    slew_obj->orient.uvec.z = slew_obj->orient.fvec.x = slew_obj->orient.fvec.y = 0;
 }
 #endif
-
-namespace dsx {
 
 namespace {
 

@@ -30,14 +30,21 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 //from slew.c
 
 #if !defined(RELEASE) || DXX_USE_EDITOR
-void slew_init(object &obj);                // say this is slew obj
-int slew_stop();                            // Stops object
 #ifdef DXX_BUILD_DESCENT
 namespace dsx {
+
+struct object;
+
+void slew_init(object &obj);                // say this is slew obj
+int slew_stop();                            // Stops object
+
+#if !defined(RELEASE)
+
+void slew_reset_orient();                   // Resets orientation
+
+#endif
+
 int slew_frame();        // Does slew frame
 }
 #endif
-#endif
-#if !defined(RELEASE)
-void slew_reset_orient();                   // Resets orientation
 #endif
