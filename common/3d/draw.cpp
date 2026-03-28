@@ -53,7 +53,7 @@ namespace {
 //deal with a clipped line
 static void must_clip_line(const g3_draw_line_context &context, g3_draw_line_point *p0, g3_draw_line_point *p1, const clipping_code codes_or, temporary_points_t &tp)
 {
-	if ((p0->p3_flags&projection_flag::temp_point) || (p1->p3_flags&projection_flag::temp_point))
+	if (+(p0->p3_flags & projection_flag::temp_point) || +(p1->p3_flags & projection_flag::temp_point))
 		;		//line has already been clipped, so give up
 	else {
 		clip_line(p0,p1,codes_or,tp);
@@ -62,10 +62,10 @@ static void must_clip_line(const g3_draw_line_context &context, g3_draw_line_poi
 
 	//free temp points
 
-	if (p0->p3_flags & projection_flag::temp_point)
+	if (+(p0->p3_flags & projection_flag::temp_point))
 		tp.free_temp_point(*p0);
 
-	if (p1->p3_flags & projection_flag::temp_point)
+	if (+(p1->p3_flags & projection_flag::temp_point))
 		tp.free_temp_point(*p1);
 }
 
@@ -86,8 +86,8 @@ void g3_draw_line(const g3_draw_line_context &context, g3_draw_line_point &p0, g
 	const clipping_code codes_or = p0.p3_codes | p1.p3_codes;
 	if (
 		(codes_or & clipping_code::behind) != clipping_code::None ||
-		(static_cast<void>((p0.p3_flags & projection_flag::projected) || (g3_project_point(p0), 0)), p0.p3_flags & projection_flag::overflow) ||
-		(static_cast<void>((p1.p3_flags & projection_flag::projected) || (g3_project_point(p1), 0)), p1.p3_flags & projection_flag::overflow)
+		(static_cast<void>(+(p0.p3_flags & projection_flag::projected) || (g3_project_point(p0), 0)), +(p0.p3_flags & projection_flag::overflow)) ||
+		(static_cast<void>(+(p1.p3_flags & projection_flag::projected) || (g3_project_point(p1), 0)), +(p1.p3_flags & projection_flag::overflow))
 	)
 		return must_clip_line(context, &p0,&p1, codes_or, tp);
 	gr_line(context.canvas, p0.p3_sx, p0.p3_sy, p1.p3_sx, p1.p3_sy, context.color);
@@ -129,7 +129,7 @@ static void must_clip_flat_face(grs_canvas &canvas, std::size_t nv, g3s_codes cc
 			if (!(p->p3_flags&projection_flag::projected))
 				g3_project_point(*p);
 	
-			if (p->p3_flags&projection_flag::overflow) {
+			if (+(p->p3_flags & projection_flag::overflow)) {
 				goto free_points;
 			}
 
@@ -177,7 +177,7 @@ void _g3_draw_poly(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const
 		if (!(p->p3_flags&projection_flag::projected))
 			g3_project_point(*p);
 
-		if (p->p3_flags&projection_flag::overflow)
+		if (+(p->p3_flags & projection_flag::overflow))
 		{
 			must_clip_flat_face(canvas, pointlist.size(), cc, Vbuf0, Vbuf1, color);
 			return;
@@ -232,7 +232,7 @@ void _g3_draw_tmap(grs_canvas &canvas, const std::span<g3_draw_tmap_point *const
 		if (!(p->p3_flags&projection_flag::projected))
 			g3_project_point(*p);
 
-		if (p->p3_flags&projection_flag::overflow) {
+		if (+(p->p3_flags & projection_flag::overflow)) {
 			Int3();		//should not overflow after clip
 			return;
 		}
@@ -253,7 +253,7 @@ static void must_clip_tmap_face(grs_canvas &canvas, std::size_t nv, g3s_codes cc
 
 			if (!(p->p3_flags&projection_flag::projected))
 				g3_project_point(*p);
-			if (p->p3_flags&projection_flag::overflow) {
+			if (+(p->p3_flags & projection_flag::overflow)) {
 				Int3();		//should not overflow after clip
 				goto free_points;
 			}

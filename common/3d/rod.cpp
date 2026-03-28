@@ -154,7 +154,7 @@ void g3_draw_bitmap(grs_canvas &canvas, const vms_vector &pos, fix width, fix he
 	if ((g3_rotate_point(pnt, pos) & clipping_code::behind) != clipping_code::None)
 		return;
 	g3_project_point(pnt);
-	if (pnt.p3_flags & projection_flag::overflow)
+	if (+(pnt.p3_flags & projection_flag::overflow))
 		return;
 #ifndef __powerc
 	const auto pz = pnt.p3_vec.z;

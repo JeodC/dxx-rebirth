@@ -84,7 +84,7 @@ static g3s_point &clip_edge(const clipping_code plane_flag, g3s_point *on_pnt, g
 	if ((plane_flag & (clipping_code::off_left | clipping_code::off_bot)) != clipping_code::None)
 		tmp.p3_vec.z = -tmp.p3_vec.z;
 
-	if (on_pnt->p3_flags & projection_flag::uvs) {
+	if (+(on_pnt->p3_flags & projection_flag::uvs)) {
 // PSX_HACK!!!!
 //		tmp.p3_u = on_pnt->p3_u + fixmuldiv(off_pnt->p3_u-on_pnt->p3_u,kn,kd);
 //		tmp.p3_v = on_pnt->p3_v + fixmuldiv(off_pnt->p3_v-on_pnt->p3_v,kn,kd);
@@ -94,7 +94,7 @@ static g3s_point &clip_edge(const clipping_code plane_flag, g3s_point *on_pnt, g
 		tmp.p3_flags |= projection_flag::uvs;
 	}
 
-	if (on_pnt->p3_flags & projection_flag::ls) {
+	if (+(on_pnt->p3_flags & projection_flag::ls)) {
 // PSX_HACK
 //		tmp.p3_r = on_pnt->p3_r + fixmuldiv(off_pnt->p3_r-on_pnt->p3_r,kn,kd);
 //		tmp.p3_g = on_pnt->p3_g + fixmuldiv(off_pnt->p3_g-on_pnt->p3_g,kn,kd);
@@ -123,7 +123,7 @@ void clip_line(g3_draw_line_point *&p0, g3_draw_line_point *&p1, const clipping_
 			if ((p0->p3_codes & plane_flag) != clipping_code::None)
 				std::swap(p0, p1);
 			auto &old_p1 = *std::exchange(p1, &clip_edge(plane_flag, p0, p1, tp));
-			if (old_p1.p3_flags & projection_flag::temp_point)
+			if (+(old_p1.p3_flags & projection_flag::temp_point))
 				tp.free_temp_point(old_p1);
 		}
 	}
@@ -163,7 +163,7 @@ static int clip_plane(const clipping_code plane_flag, polygon_clip_points &src, 
 
 			//see if must free discarded point
 
-			if (src[i]->p3_flags & projection_flag::temp_point)
+			if (+(src[i]->p3_flags & projection_flag::temp_point))
 				tp.free_temp_point(*src[i]);
 		}
 		else {			//cur not off, copy to dest buffer
