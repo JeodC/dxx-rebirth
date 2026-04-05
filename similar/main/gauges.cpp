@@ -79,12 +79,12 @@ class local_multires_gauge_graphic
 {
 public:
 	const gauge_screen_resolution hiresmode = gauge_screen_resolution{HIRESMODE};
-	bool is_hires() const
+	constexpr bool is_hires() const
 	{
 		return hiresmode != gauge_screen_resolution::low;
 	}
 	template <typename T>
-		T get(T h, T l) const
+		constexpr T get(T h, T l) const
 	{
 		return is_hires() ? h : l;
 	}
@@ -426,7 +426,7 @@ class hud_scale_float;
 #else
 struct hud_unscaled_int
 {
-	long operator()(const unsigned i) const
+	constexpr long operator()(const unsigned i) const
 	{
 		return i;
 	}
@@ -446,10 +446,10 @@ class base_hud_scaled_int
 	const long v;
 public:
 	explicit constexpr base_hud_scaled_int(const long l) :
-		v(l)
+		v{l}
 	{
 	}
-	operator long() const
+	constexpr operator long() const
 	{
 		return v;
 	}
@@ -466,17 +466,17 @@ class base_hud_scale_float
 {
 protected:
 	const double scale;
-	long operator()(const int i) const
+	constexpr long operator()(const int i) const
 	{
 		return (this->scale * static_cast<double>(i)) + 0.5;
 	}
-	double get() const
+	constexpr double get() const
 	{
 		return scale;
 	}
 public:
 	constexpr base_hud_scale_float(const double s) :
-		scale(s)
+		scale{s}
 	{
 	}
 };
@@ -488,9 +488,9 @@ public:
 	using scaled = hud_scaled_int<tag>;
 	using base_hud_scale_float::get;
 	using base_hud_scale_float::base_hud_scale_float;
-	scaled operator()(const int i) const
+	constexpr scaled operator()(const int i) const
 	{
-		return scaled(this->base_hud_scale_float::operator()(i));
+		return scaled{this->base_hud_scale_float::operator()(i)};
 	}
 };
 
@@ -595,8 +595,8 @@ namespace {
 struct hud_draw_context_canvas
 {
 	grs_canvas &canvas;
-	hud_draw_context_canvas(grs_canvas &c) :
-		canvas(c)
+	constexpr hud_draw_context_canvas(grs_canvas &c) :
+		canvas{c}
 	{
 	}
 };
@@ -604,16 +604,16 @@ struct hud_draw_context_canvas
 struct hud_draw_context_multires
 {
 	const local_multires_gauge_graphic multires_gauge_graphic;
-	hud_draw_context_multires(const local_multires_gauge_graphic mr) :
-		multires_gauge_graphic(mr)
+	constexpr hud_draw_context_multires(const local_multires_gauge_graphic mr) :
+		multires_gauge_graphic{mr}
 	{
 	}
 };
 
 struct hud_draw_context_mr : hud_draw_context_canvas, hud_draw_context_multires
 {
-	hud_draw_context_mr(grs_canvas &c, const local_multires_gauge_graphic mr) :
-		hud_draw_context_canvas(c), hud_draw_context_multires(mr)
+	constexpr hud_draw_context_mr(grs_canvas &c, const local_multires_gauge_graphic mr) :
+		hud_draw_context_canvas{c}, hud_draw_context_multires{mr}
 	{
 	}
 };
@@ -624,7 +624,7 @@ struct hud_draw_context_xyscale
 	const hud_y_scale_float yscale;
 #if DXX_USE_OGL
 	constexpr hud_draw_context_xyscale(const hud_x_scale_float x, const hud_y_scale_float y) :
-		xscale(x), yscale(y)
+		xscale{x}, yscale{y}
 	{
 	}
 #else
@@ -638,14 +638,14 @@ struct hud_draw_context_xyscale
 struct hud_draw_context_hs_mr : hud_draw_context_mr, hud_draw_context_xyscale
 {
 #if DXX_USE_OGL
-	hud_draw_context_hs_mr(grs_canvas &c, const unsigned screen_width, const unsigned screen_height, const local_multires_gauge_graphic multires_gauge_graphic) :
-		hud_draw_context_mr(c, multires_gauge_graphic),
-		hud_draw_context_xyscale(HUD_SCALE_X(screen_width, multires_gauge_graphic), HUD_SCALE_Y(screen_height, multires_gauge_graphic))
+	constexpr hud_draw_context_hs_mr(grs_canvas &c, const unsigned screen_width, const unsigned screen_height, const local_multires_gauge_graphic multires_gauge_graphic) :
+		hud_draw_context_mr{c, multires_gauge_graphic},
+		hud_draw_context_xyscale{HUD_SCALE_X(screen_width, multires_gauge_graphic), HUD_SCALE_Y(screen_height, multires_gauge_graphic)}
 	{
 	}
 #else
-	hud_draw_context_hs_mr(grs_canvas &c, unsigned, unsigned, const local_multires_gauge_graphic multires_gauge_graphic) :
-		hud_draw_context_mr(c, multires_gauge_graphic)
+	constexpr hud_draw_context_hs_mr(grs_canvas &c, unsigned, unsigned, const local_multires_gauge_graphic multires_gauge_graphic) :
+		hud_draw_context_mr{c, multires_gauge_graphic}
 	{
 	}
 #endif
@@ -653,8 +653,8 @@ struct hud_draw_context_hs_mr : hud_draw_context_mr, hud_draw_context_xyscale
 
 struct hud_draw_context_hs : hud_draw_context_canvas, hud_draw_context_xyscale
 {
-	hud_draw_context_hs(const hud_draw_context_hs_mr &hudctx) :
-		hud_draw_context_canvas(hudctx.canvas), hud_draw_context_xyscale(hudctx)
+	constexpr hud_draw_context_hs(const hud_draw_context_hs_mr &hudctx) :
+		hud_draw_context_canvas{hudctx.canvas}, hud_draw_context_xyscale{hudctx}
 	{
 	}
 };
@@ -930,8 +930,8 @@ class draw_keys_state
 	const hud_draw_context_hs_mr hudctx;
 	const player_flags player_key_flags;
 public:
-	draw_keys_state(const hud_draw_context_hs_mr hc, const player_flags f) :
-		hudctx(hc), player_key_flags(f)
+	constexpr draw_keys_state(const hud_draw_context_hs_mr hc, const player_flags f) :
+		hudctx{hc}, player_key_flags{f}
 	{
 	}
 	void draw_all_cockpit_keys();
