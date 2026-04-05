@@ -81,7 +81,9 @@ public:
 	const gauge_screen_resolution hiresmode = gauge_screen_resolution{HIRESMODE};
 	constexpr bool is_hires() const
 	{
-		return hiresmode != gauge_screen_resolution::low;
+		if (hiresmode != gauge_screen_resolution::low) [[likely]]
+			return true;
+		return false;
 	}
 	template <typename T>
 		constexpr T get(T h, T l) const
