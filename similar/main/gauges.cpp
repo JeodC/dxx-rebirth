@@ -630,7 +630,9 @@ struct hud_draw_context_mr : hud_draw_context_canvas, hud_draw_context_multires
 
 struct hud_draw_context_xyscale
 {
+	[[no_unique_address]]
 	const hud_x_scale_float xscale;
+	[[no_unique_address]]
 	const hud_y_scale_float yscale;
 #if DXX_USE_OGL
 	constexpr hud_draw_context_xyscale(const hud_x_scale_float x, const hud_y_scale_float y) :
