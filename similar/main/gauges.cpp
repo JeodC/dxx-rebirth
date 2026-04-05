@@ -88,11 +88,6 @@ public:
 	{
 		return is_hires() ? h : l;
 	}
-	template <typename T>
-		const T &rget(const T &h, const T &l) const
-		{
-			return is_hires() ? h : l;
-		}
 };
 
 static bool show_cloak_invul_timer()
@@ -325,7 +320,7 @@ static constexpr const char *PRIMARY_WEAPON_NAMES_SHORT(const primary_weapon_ind
 #define SB_SECONDARY_W_BOX_RIGHT_L	(SB_SECONDARY_W_BOX_LEFT_L+54+1)
 #define SB_SECONDARY_W_BOX_BOT_L	(SB_SECONDARY_W_BOX_TOP_L+43)
 #define SB_SECONDARY_AMMO_X		(SB_SECONDARY_W_BOX_LEFT + (multires_gauge_graphic.get(14 - 4, 11)))	//(212+9)
-#define GET_GAUGE_INDEX(x)		((multires_gauge_graphic.rget(Gauges_hires, Gauges)[x]))
+#define GET_GAUGE_INDEX(x)		(multires_gauge_graphic.get<const decltype(Gauges) &>(Gauges_hires, Gauges)[x])
 
 #endif
 
