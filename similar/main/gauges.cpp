@@ -561,25 +561,31 @@ static CockpitWeaponBoxFrameBitmaps WinBoxOverlay;
 namespace dsx {
 
 #if DXX_BUILD_DESCENT == 1
-#define PAGE_IN_GAUGE(x,g)	PAGE_IN_GAUGE(x)
 std::array<bitmap_index, MAX_GAUGE_BMS_MAC> Gauges; // Array of all gauge bitmaps.
 #elif DXX_BUILD_DESCENT == 2
-#define PAGE_IN_GAUGE	PAGE_IN_GAUGE
 std::array<bitmap_index, MAX_GAUGE_BMS> Gauges,   // Array of all gauge bitmaps.
 	Gauges_hires;   // hires gauges
 #endif
 
 namespace {
-static inline void PAGE_IN_GAUGE(int x, const local_multires_gauge_graphic multires_gauge_graphic)
+
+static inline void PAGE_IN_GAUGE(int x
+#if DXX_BUILD_DESCENT == 2
+	, const local_multires_gauge_graphic multires_gauge_graphic
+#endif
+	)
 {
-	const auto &g =
+	const auto &g{
 #if DXX_BUILD_DESCENT == 2
 		multires_gauge_graphic.is_hires() ? Gauges_hires :
 #endif
-		Gauges;
+		Gauges
+	};
 	PIGGY_PAGE_IN(g[x]);
 }
+
 }
+
 }
 
 namespace {
@@ -923,7 +929,11 @@ static void hud_gauge_bitblt(const hud_gauge_bitblt_draw_context hudctx, const u
 #if DXX_BUILD_DESCENT == 2
 	auto &multires_gauge_graphic = hudctx.multires_gauge_graphic;
 #endif
-	PAGE_IN_GAUGE(gauge, multires_gauge_graphic);
+	PAGE_IN_GAUGE(gauge
+#if DXX_BUILD_DESCENT == 2
+		, hudctx.multires_gauge_graphic
+#endif
+	);
 	hud_bitblt(hudctx, x, y, GameBitmaps[GET_GAUGE_INDEX(gauge)]);
 }
 
@@ -1189,8 +1199,16 @@ static void hud_show_keys(const hud_draw_context_mr hudctx, const hud_ar_scale_f
 	{
 		grs_bitmap *const bm;
 	public:
-		gauge_key(const unsigned key_icon, const local_multires_gauge_graphic multires_gauge_graphic) :
-			bm(&GameBitmaps[(static_cast<void>(multires_gauge_graphic), PAGE_IN_GAUGE(key_icon, multires_gauge_graphic), GET_GAUGE_INDEX(key_icon))])
+		gauge_key(const unsigned key_icon
+#if DXX_BUILD_DESCENT == 2
+			, const local_multires_gauge_graphic multires_gauge_graphic
+#endif
+		) :
+			bm{&GameBitmaps[(PAGE_IN_GAUGE(key_icon
+#if DXX_BUILD_DESCENT == 2
+				, multires_gauge_graphic
+#endif
+			), GET_GAUGE_INDEX(key_icon))]}
 		{
 		}
 		grs_bitmap *operator->() const
@@ -1202,8 +1220,14 @@ static void hud_show_keys(const hud_draw_context_mr hudctx, const hud_ar_scale_f
 			return *bm;
 		}
 	};
+#if DXX_BUILD_DESCENT == 2
 	auto &multires_gauge_graphic = hudctx.multires_gauge_graphic;
-	const gauge_key blue(KEY_ICON_BLUE, multires_gauge_graphic);
+#endif
+	const gauge_key blue{KEY_ICON_BLUE
+#if DXX_BUILD_DESCENT == 2
+		, hudctx.multires_gauge_graphic
+#endif
+	};
 	const unsigned y = hud_scale_ar(GameBitmaps[ GET_GAUGE_INDEX(GAUGE_LIVES) ].bm_h + 2) + FSPACY(1);
 
 	const unsigned blue_bitmap_width = blue->bm_w;
@@ -1214,14 +1238,22 @@ static void hud_show_keys(const hud_draw_context_mr hudctx, const hud_ar_scale_f
 
 	if (!(player_key_flags & (PLAYER_FLAGS_GOLD_KEY | PLAYER_FLAGS_RED_KEY)))
 		return;
-	const gauge_key yellow(KEY_ICON_YELLOW, multires_gauge_graphic);
+	const gauge_key yellow{KEY_ICON_YELLOW
+#if DXX_BUILD_DESCENT == 2
+		, hudctx.multires_gauge_graphic
+#endif
+	};
 	const unsigned yellow_bitmap_width = yellow->bm_w;
 	if (player_key_flags & PLAYER_FLAGS_GOLD_KEY)
 		hud_bitblt_free(canvas, fspacx2 + hud_scale_ar(blue_bitmap_width + 3), y, hud_scale_ar(yellow_bitmap_width), hud_scale_ar(yellow->bm_h), yellow);
 
 	if (player_key_flags & PLAYER_FLAGS_RED_KEY)
 	{
-		const gauge_key red(KEY_ICON_RED, multires_gauge_graphic);
+		const gauge_key red{KEY_ICON_RED
+#if DXX_BUILD_DESCENT == 2
+			, hudctx.multires_gauge_graphic
+#endif
+		};
 		hud_bitblt_free(canvas, fspacx2 + hud_scale_ar(blue_bitmap_width + yellow_bitmap_width + 6), y, hud_scale_ar(red->bm_w), hud_scale_ar(red->bm_h), red);
 	}
 }
@@ -1964,7 +1996,11 @@ static void hud_show_lives(const hud_draw_context_hs_mr hudctx, const hud_ar_sca
 #if DXX_BUILD_DESCENT == 2
 		auto &multires_gauge_graphic = hudctx.multires_gauge_graphic;
 #endif
-		PAGE_IN_GAUGE(GAUGE_LIVES, multires_gauge_graphic);
+		PAGE_IN_GAUGE(GAUGE_LIVES
+#if DXX_BUILD_DESCENT == 2
+			, multires_gauge_graphic
+#endif
+		);
 		auto &bm = GameBitmaps[GET_GAUGE_INDEX(GAUGE_LIVES)];
 		const auto &&fspacy1 = FSPACY(1);
 		hud_bitblt_free(canvas, x, fspacy1, hud_scale_ar(bm.bm_w), hud_scale_ar(bm.bm_h), bm);
@@ -2009,7 +2045,11 @@ static void sb_show_lives(const hud_draw_context_hs_mr hudctx, const hud_ar_scal
 
 	if (const uint16_t lives = get_local_player().lives - 1)
 	{
-		PAGE_IN_GAUGE(GAUGE_LIVES, multires_gauge_graphic);
+		PAGE_IN_GAUGE(GAUGE_LIVES
+#if DXX_BUILD_DESCENT == 2
+			, hudctx.multires_gauge_graphic
+#endif
+		);
 		const auto scaled_width = hud_scale_ar(bm.bm_w);
 		hud_bitblt_free(canvas, scaled_x, scaled_y, scaled_width, hud_scale_ar(bm.bm_h), bm);
 		gr_printf(canvas, game_font, scaled_x + scaled_width, scaled_y, " x %hu", lives);
@@ -2567,11 +2607,15 @@ static void draw_player_ship(const hud_draw_context_hs_mr hudctx, const player_i
 	}
 
 	const auto color{get_player_or_team_color(Netgame, Game_mode, Player_num)};
+	const auto gauge_index{GAUGE_SHIPS + underlying_value(color)};
 #if DXX_BUILD_DESCENT == 2
 	auto &multires_gauge_graphic = hudctx.multires_gauge_graphic;
 #endif
-	const auto gauge_index{GAUGE_SHIPS + underlying_value(color)};
-	PAGE_IN_GAUGE(gauge_index, multires_gauge_graphic);
+	PAGE_IN_GAUGE(gauge_index
+#if DXX_BUILD_DESCENT == 2
+		, hudctx.multires_gauge_graphic
+#endif
+	);
 	auto &bm = GameBitmaps[GET_GAUGE_INDEX(gauge_index)];
 	hud_bitblt(hudctx, x, y, bm);
 	auto &canvas = hudctx.canvas;
@@ -3290,18 +3334,30 @@ void show_reticle(grs_canvas &canvas, const player_info &player_info, enum retic
 			const auto use_hires_reticle = multires_gauge_graphic.is_hires();
 			const unsigned ofs = (use_hires_reticle ? 0 : 2);
 			gauge_index = RETICLE_CROSS + cross_bm_num;
-			PAGE_IN_GAUGE(gauge_index, multires_gauge_graphic);
+			PAGE_IN_GAUGE(gauge_index
+#if DXX_BUILD_DESCENT == 2
+				, multires_gauge_graphic
+#endif
+			);
 			auto &cross = GameBitmaps[GET_GAUGE_INDEX(gauge_index)];
 			const auto &&hud_scale_ar = HUD_SCALE_AR(hudctx.xscale, hudctx.yscale);
 			hud_bitblt_free(canvas, x + hud_scale_ar(cross_offsets[ofs].x), y + hud_scale_ar(cross_offsets[ofs].y), hud_scale_ar(cross.bm_w), hud_scale_ar(cross.bm_h), cross);
 
 			gauge_index = RETICLE_PRIMARY + primary_bm_num;
-			PAGE_IN_GAUGE(gauge_index, multires_gauge_graphic);
+			PAGE_IN_GAUGE(gauge_index
+#if DXX_BUILD_DESCENT == 2
+				, multires_gauge_graphic
+#endif
+			);
 			auto &primary = GameBitmaps[GET_GAUGE_INDEX(gauge_index)];
 			hud_bitblt_free(canvas, x + hud_scale_ar(primary_offsets[ofs].x), y + hud_scale_ar(primary_offsets[ofs].y), hud_scale_ar(primary.bm_w), hud_scale_ar(primary.bm_h), primary);
 
 			gauge_index = RETICLE_SECONDARY + secondary_bm_num;
-			PAGE_IN_GAUGE(gauge_index, multires_gauge_graphic);
+			PAGE_IN_GAUGE(gauge_index
+#if DXX_BUILD_DESCENT == 2
+				, multires_gauge_graphic
+#endif
+			);
 			auto &secondary = GameBitmaps[GET_GAUGE_INDEX(gauge_index)];
 			hud_bitblt_free(canvas, x + hud_scale_ar(secondary_offsets[ofs].x), y + hud_scale_ar(secondary_offsets[ofs].y), hud_scale_ar(secondary.bm_w), hud_scale_ar(secondary.bm_h), secondary);
 			return;
