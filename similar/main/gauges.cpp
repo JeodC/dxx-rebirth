@@ -422,21 +422,8 @@ enum class weapon_box_state : uint8_t
 };
 static_assert(static_cast<unsigned>(weapon_box_state::set) == 0, "weapon_box_states must start at zero");
 
-#if DXX_USE_OGL
 template <char tag>
 class hud_scale_float;
-#else
-struct hud_unscaled_int
-{
-	constexpr long operator()(const unsigned i) const
-	{
-		return i;
-	}
-};
-
-template <char tag>
-using hud_scale_float = hud_unscaled_int;
-#endif
 
 using hud_ar_scale_float = hud_scale_float<'a'>;
 using hud_x_scale_float = hud_scale_float<'x'>;
@@ -487,12 +474,11 @@ template <char tag>
 class hud_scale_float : base_hud_scale_float
 {
 public:
-	using scaled = hud_scaled_int<tag>;
 	using base_hud_scale_float::get;
 	using base_hud_scale_float::base_hud_scale_float;
-	constexpr scaled operator()(const int i) const
+	constexpr auto operator()(const int i) const
 	{
-		return scaled{this->base_hud_scale_float::operator()(i)};
+		return hud_scaled_int<tag>{this->base_hud_scale_float::operator()(i)};
 	}
 };
 
@@ -520,6 +506,22 @@ static hud_ar_scale_float HUD_SCALE_AR(const unsigned screen_width, const unsign
 #else
 #define hud_bitblt_free(canvas,x,y,w,h,bm)	hud_bitblt_free(canvas,x,y,bm)
 #define draw_numerical_display_draw_context	hud_draw_context_hs_mr
+
+struct base_hud_scale_float
+{
+	constexpr long operator()(const unsigned i) const
+	{
+		return i;
+	}
+};
+
+/* Use a dummy tag type so that 'x'/'y' cannot be intermixed, and so that the
+ * empty 'x' type and empty 'y' type can overlap.
+ */
+template <char tag>
+class hud_scale_float : public base_hud_scale_float
+{
+};
 
 static hud_ar_scale_float HUD_SCALE_AR(hud_x_scale_float, hud_y_scale_float)
 {
