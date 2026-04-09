@@ -19,16 +19,25 @@ jobs:
           gcc-14 g++-14
           python3
           scons
-          libsdl1.2-dev
-          libsdl-image1.2-dev
-          libsdl-mixer1.2-dev
+          libsdl2-dev
+          libsdl2-image-dev
+          libsdl2-mixer-dev
           libphysfs-dev
           libpng-dev
+          libgl-dev
+          libglu1-mesa-dev
 
       - name: Collect architecture
         id: architecture
         run: |
           printf 'uname_m=%s\n' "$(uname -m)" >> "$GITHUB_OUTPUT"
+
+      - name: Update gamecontrollerdb.txt
+        run: >-
+          curl --fail --silent --show-error --location
+          --output contrib/gamecontrollerdb.txt
+          https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt
+          || true
 
       - name: Configure and Build
         run: >
@@ -38,6 +47,7 @@ jobs:
           "-j$nproc"
           -k
           CXX=g++-14
+          sdl2=1
           "CXXFLAGS=-flto=$(( $nproc + 1 / 2 ))"
 
       - name: Upload SConf log
@@ -69,6 +79,7 @@ jobs:
           "-j$nproc"
           -k
           CXX=g++-14
+          sdl2=1
           "CXXFLAGS=-flto=$(( $nproc + 1 / 2 ))"
           check_header_includes=1
           build/{common,d1x-rebirth,d2x-rebirth}/check_header_includes

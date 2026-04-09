@@ -21,6 +21,12 @@ build_appimage() {
     name="$1"
     prettyname="$2"
 
+    # Copy gamecontrollerdb.txt into AppDir if available
+    if [ -f "contrib/gamecontrollerdb.txt" ]; then
+        mkdir -p "${name}.appdir/usr/share/${name}"
+        cp "contrib/gamecontrollerdb.txt" "${name}.appdir/usr/share/${name}/"
+    fi
+
     # Package!
     OUTPUT="${prettyname}.AppImage"	\
     "./$appimage" \

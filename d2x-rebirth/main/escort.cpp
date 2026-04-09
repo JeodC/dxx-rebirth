@@ -597,13 +597,13 @@ void set_escort_special_goal(d_unique_buddy_state &BuddyState, const int raw_spe
 			case KEY_1:	Escort_special_goal = ESCORT_GOAL_ENERGY;			break;
 			case KEY_2:	Escort_special_goal = ESCORT_GOAL_ENERGYCEN;		break;
 			case KEY_3:	Escort_special_goal = ESCORT_GOAL_SHIELD;			break;
-			case KEY_4:	Escort_special_goal = ESCORT_GOAL_POWERUP;		break;
+			case KEY_4:	Escort_special_goal = ESCORT_GOAL_POWERUP;			break;
 			case KEY_5:	Escort_special_goal = ESCORT_GOAL_ROBOT;			break;
-			case KEY_6:	Escort_special_goal = ESCORT_GOAL_HOSTAGE;		break;
+			case KEY_6:	Escort_special_goal = ESCORT_GOAL_HOSTAGE;			break;
 			case KEY_7:	Escort_special_goal = ESCORT_GOAL_SCRAM;			break;
-			case KEY_8:	Escort_special_goal = ESCORT_GOAL_PLAYER_SPEW;	break;
-			case KEY_9:	Escort_special_goal = ESCORT_GOAL_EXIT;			break;
-			case KEY_0:	Escort_special_goal = ESCORT_GOAL_UNSPECIFIED;								break;
+			case KEY_8:	Escort_special_goal = ESCORT_GOAL_PLAYER_SPEW;		break;
+			case KEY_9:	Escort_special_goal = ESCORT_GOAL_EXIT;				break;
+			case KEY_0:	Escort_special_goal = ESCORT_GOAL_UNSPECIFIED;		break;
 			default:
 				Int3();		//	Oops, called with illegal key value.
 		}
@@ -1885,100 +1885,6 @@ void drop_stolen_items_local(d_level_unique_object_state &LevelUniqueObjectState
 	}
 }
 
-// --------------------------------------------------------------------------------------------------------------
-namespace {
-
-struct escort_menu_items
-{
-	std::array<char, 300> msg;
-	const unsigned border_x, border_y;
-	escort_menu_items(int next_goal, const char *Buddy_messages_suppressed, grs_canvas &src, gr_string_size &);
-};
-
-struct escort_menu : escort_menu_items, window
-{
-	escort_menu(int next_goal, const char *Buddy_messages_suppressed, grs_canvas &src, gr_string_size = {});
-	virtual window_event_result event_handler(const d_event &) override;
-	static window_event_result event_key_command(const d_event &event);
-	void show_escort_menu();
-};
-
-escort_menu::escort_menu(int next_goal, const char *Buddy_messages_suppressed, grs_canvas &src, gr_string_size text_size) :
-	escort_menu_items(next_goal, Buddy_messages_suppressed, src, text_size),
-	window(src, ((src.cv_bitmap.bm_w - text_size.width) / 2) - border_x, ((src.cv_bitmap.bm_h - text_size.height) / 2) - border_y, text_size.width + (border_x * 2), text_size.height + (border_y * 2))
-{
-	gr_set_fontcolor(w_canv, BM_XRGB(0, 28, 0), -1);
-}
-
-window_event_result escort_menu::event_key_command(const d_event &event)
-{
-	auto &BuddyState = LevelUniqueObjectState.BuddyState;
-	switch (const auto key = event_key_get(event))
-	{
-		case KEY_0:
-		case KEY_1:
-		case KEY_2:
-		case KEY_3:
-		case KEY_4:
-		case KEY_5:
-		case KEY_6:
-		case KEY_7:
-		case KEY_8:
-		case KEY_9:
-			BuddyState.Looking_for_marker = game_marker_index::None;
-			BuddyState.Last_buddy_key = -1;
-			set_escort_special_goal(BuddyState, key);
-			BuddyState.Last_buddy_key = -1;
-			return window_event_result::close;
-		case KEY_ESC:
-		case KEY_ENTER:
-			return window_event_result::close;
-		case KEY_T: {
-			const auto temp = std::exchange(BuddyState.Buddy_messages_suppressed, 0);
-			buddy_message("Messages %s.", temp ? "enabled" : "suppressed");
-			BuddyState.Buddy_messages_suppressed = ~temp;
-			return window_event_result::close;
-		}
-			
-		default:
-			break;
-	}
-	return window_event_result::ignored;
-}
-
-window_event_result escort_menu::event_handler(const d_event &event)
-{
-	switch (event.type)
-	{
-		case event_type::window_activated:
-			game_flush_inputs(Controls);
-			break;
-		case event_type::key_command:
-			return event_key_command(event);
-		case event_type::idle:
-			timer_delay2(50);
-			break;
-		case event_type::window_draw:
-			show_escort_menu();
-			break;
-		case event_type::window_close:
-			return window_event_result::ignored;	// continue closing
-		default:
-			return window_event_result::ignored;
-	}
-	return window_event_result::handled;
-}
-
-//	-------------------------------------------------------------------------------
-//	Show the Buddy menu!
-void escort_menu::show_escort_menu()
-{
-	nm_draw_background(w_canv, 0, 0, w_canv.cv_bitmap.bm_w, w_canv.cv_bitmap.bm_h);
-	gr_ustring(w_canv, *GAME_FONT, border_x, border_y, msg.data());
-}
-
-}
-
 #if DXX_USE_MULTIPLAYER
 unsigned check_warn_local_player_can_control_guidebot(fvcobjptr &vcobjptr, const d_unique_buddy_state &BuddyState, const netgame_info &Netgame)
 {
@@ -2041,75 +1947,89 @@ void do_escort_menu(void)
 		next_goal = escort_set_goal_object(buddy, plrobj.ctype.player_info.powerup_flags);
 	}
 
-	const auto Buddy_messages_suppressed = BuddyState.Buddy_messages_suppressed
-		? "Enable"
-		: "Suppress";
-	auto wind = window_create<escort_menu>(next_goal, Buddy_messages_suppressed, grd_curscreen->sc_canvas);
-	(void)wind;
-}
+	const auto suppress_text = BuddyState.Buddy_messages_suppressed
+		? "Enable Messages"
+		: "Suppress Messages";
 
-namespace {
-
-escort_menu_items::escort_menu_items(const int next_goal, const char *Buddy_messages_suppressed, grs_canvas &src, gr_string_size &text_size) :
-	border_x(get_border_x(src)), border_y(get_border_y(src))
-{
-	std::array<char, 12> goal_str;
-	const char *goal_txt;
-	switch (next_goal) {
-		default:
-		case ESCORT_GOAL_UNSPECIFIED:
-			Int3();
-			goal_txt = "ERROR";
-			break;
-		case ESCORT_GOAL_BLUE_KEY:
-			goal_txt = "blue key";
-			break;
-		case ESCORT_GOAL_GOLD_KEY:
-			goal_txt = "yellow key";
-			break;
-		case ESCORT_GOAL_RED_KEY:
-			goal_txt = "red key";
-			break;
-		case ESCORT_GOAL_CONTROLCEN:
-			goal_txt = "reactor";
-			break;
-		case ESCORT_GOAL_BOSS:
-			goal_txt = "boss";
-			break;
-		case ESCORT_GOAL_EXIT:
-			goal_txt = "exit";
-			break;
-		case ESCORT_GOAL_MARKER1:
-		case ESCORT_GOAL_MARKER2:
-		case ESCORT_GOAL_MARKER3:
-		case ESCORT_GOAL_MARKER4:
-		case ESCORT_GOAL_MARKER5:
-		case ESCORT_GOAL_MARKER6:
-		case ESCORT_GOAL_MARKER7:
-		case ESCORT_GOAL_MARKER8:
-		case ESCORT_GOAL_MARKER9:
-			goal_txt = goal_str.data();
-			std::snprintf(goal_str.data(), goal_str.size(), "marker %i", next_goal - ESCORT_GOAL_MARKER1 + 1);
-			break;
+	std::array<char, 40> next_goal_text;
+	{
+		std::array<char, 12> goal_str;
+		const char *goal_txt;
+		switch (next_goal) {
+			default:
+			case ESCORT_GOAL_UNSPECIFIED: goal_txt = "ERROR"; break;
+			case ESCORT_GOAL_BLUE_KEY: goal_txt = "blue key"; break;
+			case ESCORT_GOAL_GOLD_KEY: goal_txt = "yellow key"; break;
+			case ESCORT_GOAL_RED_KEY: goal_txt = "red key"; break;
+			case ESCORT_GOAL_CONTROLCEN: goal_txt = "reactor"; break;
+			case ESCORT_GOAL_BOSS: goal_txt = "boss"; break;
+			case ESCORT_GOAL_EXIT: goal_txt = "exit"; break;
+			case ESCORT_GOAL_MARKER1: case ESCORT_GOAL_MARKER2:
+			case ESCORT_GOAL_MARKER3: case ESCORT_GOAL_MARKER4:
+			case ESCORT_GOAL_MARKER5: case ESCORT_GOAL_MARKER6:
+			case ESCORT_GOAL_MARKER7: case ESCORT_GOAL_MARKER8:
+			case ESCORT_GOAL_MARKER9:
+				goal_txt = goal_str.data();
+				std::snprintf(goal_str.data(), goal_str.size(), "marker %i", next_goal - ESCORT_GOAL_MARKER1 + 1);
+				break;
+		}
+		std::snprintf(next_goal_text.data(), next_goal_text.size(), "Next Goal: %s", goal_txt);
 	}
 
-	snprintf(msg.data(), msg.size(), "Select Guide-Bot Command:\n\n\n"
-						"0.  Next Goal: %s" CC_LSPACING_S "3\n\n"
-						"\x84.  Find Energy Powerup" CC_LSPACING_S "3\n\n"
-						"2.  Find Energy Center" CC_LSPACING_S "3\n\n"
-						"3.  Find Shield Powerup" CC_LSPACING_S "3\n\n"
-						"4.  Find Any Powerup" CC_LSPACING_S "3\n\n"
-						"5.  Find a Robot" CC_LSPACING_S "3\n\n"
-						"6.  Find a Hostage" CC_LSPACING_S "3\n\n"
-						"7.  Stay Away From Me" CC_LSPACING_S "3\n\n"
-						"8.  Find My Powerups" CC_LSPACING_S "3\n\n"
-						"9.  Find the exit\n\n"
-						"T.  %s Messages"
-						// -- "9.	Find the exit" CC_LSPACING_S "3\n"
-				, goal_txt, Buddy_messages_suppressed);
-	text_size = gr_get_string_size(*GAME_FONT, msg.data());
-}
+	enum {
+		escort_item_next_goal,
+		escort_item_energy_powerup,
+		escort_item_energy_center,
+		escort_item_shield_powerup,
+		escort_item_any_powerup,
+		escort_item_robot,
+		escort_item_hostage,
+		escort_item_scram,
+		escort_item_my_powerups,
+		escort_item_exit,
+		escort_item_suppress,
+		escort_item_max
+	};
 
+	// Map menu selection to KEY_0-KEY_9 for set_escort_special_goal
+	constexpr std::array<int, escort_item_max> selection_to_key{{
+		KEY_0, KEY_1, KEY_2, KEY_3, KEY_4,
+		KEY_5, KEY_6, KEY_7, KEY_8, KEY_9,
+		-1 // suppress toggle handled separately
+	}};
+
+	std::array<newmenu_item, escort_item_max> m{{
+		newmenu_item::nm_item_menu{next_goal_text.data()},
+		newmenu_item::nm_item_menu{"Find Energy Powerup"},
+		newmenu_item::nm_item_menu{"Find Energy Center"},
+		newmenu_item::nm_item_menu{"Find Shield Powerup"},
+		newmenu_item::nm_item_menu{"Find Any Powerup"},
+		newmenu_item::nm_item_menu{"Find a Robot"},
+		newmenu_item::nm_item_menu{"Find a Hostage"},
+		newmenu_item::nm_item_menu{"Stay Away From Me"},
+		newmenu_item::nm_item_menu{"Find My Powerups"},
+		newmenu_item::nm_item_menu{"Find the Exit"},
+		newmenu_item::nm_item_menu{suppress_text},
+	}};
+
+	const int choice = newmenu_do2(menu_title{nullptr}, menu_subtitle{"Guide-Bot Command"}, m, unused_newmenu_subfunction, unused_newmenu_userdata);
+
+	if (choice < 0)
+		return;
+
+	if (choice == escort_item_suppress)
+	{
+		const auto temp = std::exchange(BuddyState.Buddy_messages_suppressed, 0);
+		buddy_message("Messages %s.", temp ? "enabled" : "suppressed");
+		BuddyState.Buddy_messages_suppressed = ~temp;
+	}
+	else if (choice >= 0 && choice < escort_item_suppress)
+	{
+		BuddyState.Looking_for_marker = game_marker_index::None;
+		BuddyState.Last_buddy_key = -1;
+		set_escort_special_goal(BuddyState, selection_to_key[choice]);
+		BuddyState.Last_buddy_key = -1;
+	}
 }
 
 }

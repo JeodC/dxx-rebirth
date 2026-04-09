@@ -1014,11 +1014,12 @@ savegame_newmenu_items::savegame_newmenu_items(d_game_unique_state::savegame_des
 		const auto existing_savegame_found = read_savegame_properties(savegame_index, filename, &desc, &sc_bmp);
 		if (existing_savegame_found)
 			++nsaves;
-		else
-			/* Defer setting a default value to here.  This allows the
-			 * value to be written only if a better one was not
-			 * retrieved from a save game file.
+		else if (savegame_description)
+			/* Prefill empty save slots with a default description
+			 * so that gamepad users can save without typing.
 			 */
+			snprintf(desc.data(), desc.size(), "Level %d", Current_level_num);
+		else
 			strcpy(desc.data(), TXT_EMPTY);
 		mi.text = desc.data();
 		mi.type = savegame_description

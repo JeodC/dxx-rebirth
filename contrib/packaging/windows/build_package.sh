@@ -42,6 +42,9 @@ build_app() {
 
     # Copy other resources to the respective app directory
     cp --link "${name}/"*.ini "${outdir}/${prettyname}/"
+    if [ -f "contrib/gamecontrollerdb.txt" ]; then
+        cp --link "contrib/gamecontrollerdb.txt" "${outdir}/${prettyname}/"
+    fi
     cp --link "COPYING.txt" "${outdir}/${prettyname}/"
     cp --link "GPL-3.txt" "${outdir}/${prettyname}/"
     cp --link "README.md" "${outdir}/${prettyname}/"

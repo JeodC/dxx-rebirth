@@ -465,6 +465,12 @@ window_event_result pause_window::event_handler(const d_event &event)
 			game_flush_inputs(Controls);
 			break;
 
+#if DXX_MAX_BUTTONS_PER_JOYSTICK
+		case event_type::joystick_button_down:
+			joy_translate_menu_key(event);
+			return window_event_result::handled;
+#endif
+
 		case event_type::key_command:
 			switch (event_key_get(event))
 			{
@@ -2197,6 +2203,24 @@ window_event_result ReadControls(const d_level_shared_robot_info_state &LevelSha
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		update_vcr_state();
+
+#if DXX_MAX_BUTTONS_PER_JOYSTICK && SDL_MAJOR_VERSION == 2
+	// Translate Back (-> ESC, opens game menu) and L3 (-> Shift+F4, guidebot in D2)
+	// during gameplay, but only if the button is not already bound to a kconfig
+	// action.  This preserves user customization: if the user binds Back to a
+	// different control, it will not also open the menu.
+	if (event.type == event_type::joystick_button_down)
+	{
+		const auto button = event_joystick_get_button(event);
+		if (button == SDL_CONTROLLER_BUTTON_BACK ||
+			button == SDL_CONTROLLER_BUTTON_LEFTSTICK)
+		{
+			const auto &joy_settings = PlayerCfg.KeySettings.Joystick;
+			if (std::find(joy_settings.begin(), joy_settings.end(), button) == joy_settings.end())
+				joy_translate_menu_key(event);
+		}
+	}
+#endif
 
 	if (event.type == event_type::key_command)
 	{

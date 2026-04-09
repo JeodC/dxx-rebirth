@@ -73,4 +73,16 @@ window_event_result joy_axisbutton_handler(const SDL_JoyAxisEvent *jae);
 #define joy_axisbutton_handler(jbe) (static_cast<const SDL_JoyAxisEvent *const &>(jbe), window_event_result::ignored)
 #endif
 
+#if SDL_MAJOR_VERSION == 2
+// GameController axis-as-button indices for use in default key settings
+constexpr unsigned GC_AXIS_BUTTON(unsigned axis_id) { return SDL_CONTROLLER_BUTTON_MAX + (axis_id * 2); }
+constexpr unsigned GC_AXIS_BUTTON_NEG(unsigned axis_id) { return SDL_CONTROLLER_BUTTON_MAX + (axis_id * 2) + 1; }
+
+window_event_result gc_button_handler(const SDL_ControllerButtonEvent *cbe);
+window_event_result gc_axis_handler(const SDL_ControllerAxisEvent *cae);
+window_event_result gc_axisbutton_handler(const SDL_ControllerAxisEvent *cae);
+window_event_result gc_device_added(const SDL_ControllerDeviceEvent *cde);
+window_event_result gc_device_removed(const SDL_ControllerDeviceEvent *cde);
+#endif
+
 }

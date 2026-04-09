@@ -976,15 +976,17 @@ window_event_result do_new_game_menu()
 	{
 		struct items_type
 		{
-			std::array<char, 8> num_text{"1"};
 			std::array<char, 64> subtitle_text;
 			std::array<char, 68> info_text;
+			std::array<char, 16> level_label;
+			ntstring<NM_MAX_TEXT_LEN> slider_text;
 			std::array<newmenu_item, 2> m;
-			items_type(const char *const mission_name, const unsigned last_level, const int clamped_player_highest_level) :
-				m{{
-					newmenu_item::nm_item_text{info_text.data()},
-					newmenu_item::nm_item_input(num_text),
-				}}
+			void update_label()
+			{
+				std::snprintf(std::data(level_label), std::size(level_label), "Level: %d  ", m[1].value + 1);
+				m[1].text = level_label.data();
+			}
+			items_type(const char *const mission_name, const unsigned last_level, const int clamped_player_highest_level)
 			{
 				char buf[28];
 				std::snprintf(std::data(subtitle_text), std::size(subtitle_text), "%s\n\n%s", TXT_SELECT_START_LEV, mission_name);
@@ -992,32 +994,34 @@ window_event_result do_new_game_menu()
 					? (std::snprintf(buf, std::size(buf), "finished level %d", clamped_player_highest_level), buf)
 					: "not finished any level";
 				std::snprintf(std::data(info_text), std::size(info_text), "This mission has %u levels.\n\nYou have %s.", last_level, trailer);
+				nm_set_item_text(m[0], info_text.data());
+				nm_set_item_slider(m[1], "Level: 1", 0, 0, last_level - 1, slider_text);
+				update_label();
 			}
 		};
 		items_type menu_items{Current_mission->mission_name, last_level, clamped_player_highest_level};
-		for (;;)
 		{
-			struct select_start_level_menu : passive_newmenu
+			struct select_start_level_menu : newmenu
 			{
+				items_type &items;
 				select_start_level_menu(items_type &i) :
-					passive_newmenu(menu_title{nullptr}, menu_subtitle{i.subtitle_text.data()}, menu_filename{nullptr}, tiny_mode_flag::normal, tab_processing_flag::ignore, adjusted_citem::create(i.m, 1), grd_curscreen->sc_canvas)
+					newmenu(menu_title{nullptr}, menu_subtitle{i.subtitle_text.data()}, menu_filename{nullptr}, tiny_mode_flag::normal, tab_processing_flag::ignore, adjusted_citem::create(i.m, 1), grd_curscreen->sc_canvas),
+					items{i}
 				{
+				}
+				virtual window_event_result event_handler(const d_event &event) override
+				{
+					auto result = newmenu::event_handler(event);
+					items.update_label();
+					return result;
 				}
 			};
 			const int choice = run_blocking_newmenu<select_start_level_menu>(menu_items);
 
-			if (choice == -1 || !menu_items.num_text[0])
+			if (choice == -1)
 				return window_event_result::handled;
 
-			char *p = nullptr;
-			new_level_num = strtol(menu_items.num_text.data(), &p, 10);
-
-			if (*p || new_level_num <= 0 || new_level_num > last_level)
-			{
-				nm_messagebox(menu_title{TXT_INVALID_LEVEL}, {TXT_OK}, "You must enter a\npositive level number\nless than or\nequal to %u.\n", static_cast<unsigned>(Current_mission->last_level));
-			}
-			else
-				break;
+			new_level_num = menu_items.m[1].value + 1;
 		}
 	}
 

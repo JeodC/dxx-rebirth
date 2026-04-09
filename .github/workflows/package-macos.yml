@@ -24,6 +24,14 @@ jobs:
         working-directory: src
         run: brew bundle --verbose
 
+      - name: Update gamecontrollerdb.txt
+        working-directory: src
+        run: >-
+          curl --fail --silent --show-error --location
+          --output contrib/gamecontrollerdb.txt
+          https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt
+          || true
+
       - name: Configure and Build
         working-directory: src
         run: |
@@ -32,7 +40,13 @@ jobs:
           # For a idea of a fix see: https://superuser.com/a/1277306
           export PKG_CONFIG_PATH=/usr/local/opt/readline/lib/pkgconfig
           # run build
-          scons -j4 -k opengl=1 sdl2=1 macos_add_frameworks=0 macos_bundle_libs=1 build/D{1,2}X-Rebirth.app
+          scons -j4 opengl=1 sdl2=1 macos_add_frameworks=0 macos_bundle_libs=1 build/D{1,2}X-Rebirth.app
+          # Copy gamecontrollerdb.txt into app bundles
+          for app in build/D{1,2}X-Rebirth.app; do
+            if [ -d "$app" ] && [ -f "contrib/gamecontrollerdb.txt" ]; then
+              cp "contrib/gamecontrollerdb.txt" "$app/Contents/Resources/"
+            fi
+          done
           mv build/D{1,2}X-Rebirth.app ..
 
       - name: Upload SConf log

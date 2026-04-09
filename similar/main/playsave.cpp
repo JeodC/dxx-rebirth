@@ -246,7 +246,11 @@ void new_player_config()
 		i.name[0] = 0;
 #endif
 	InitWeaponOrdering (); //setup default weapon priorities
+#if DXX_MAX_JOYSTICKS && SDL_MAJOR_VERSION == 2
+	PlayerCfg.ControlType=CONTROL_USING_JOYSTICK; // Enable joystick by default for SDL2 GameController
+#else
 	PlayerCfg.ControlType=0; // Assume keyboard
+#endif
 	PlayerCfg.RespawnMode = RespawnPress::Any;
 	PlayerCfg.MouselookFlags = 0;
 	PlayerCfg.PitchLockFlags = 0;
@@ -269,7 +273,7 @@ void new_player_config()
 	}
 	{
 		auto &j = PlayerCfg.JoystickDead;
-		j[player_config_joystick_index::turn_lr] = j[player_config_joystick_index::pitch_ud] = j[player_config_joystick_index::slide_lr] = j[player_config_joystick_index::slide_ud] = j[player_config_joystick_index::bank_lr] = j[player_config_joystick_index::throttle] = 0;
+		j[player_config_joystick_index::turn_lr] = j[player_config_joystick_index::pitch_ud] = j[player_config_joystick_index::slide_lr] = j[player_config_joystick_index::slide_ud] = j[player_config_joystick_index::bank_lr] = j[player_config_joystick_index::throttle] = 4;
 	}
 	{
 		auto &j = PlayerCfg.JoystickLinear;

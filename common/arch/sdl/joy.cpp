@@ -24,7 +24,7 @@
 #include "kconfig.h"
 #include "compiler-range_for.h"
 
-#if DXX_MAX_JOYSTICKS
+#if DXX_MAX_JOYSTICKS && SDL_MAJOR_VERSION == 1
 #include "compiler-cf_assert.h"
 #include "d_enumerate.h"
 #include "d_range.h"

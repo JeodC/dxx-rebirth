@@ -23,9 +23,9 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-scons
             mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-SDL
-            mingw-w64-x86_64-SDL_image
-            mingw-w64-x86_64-SDL_mixer
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-SDL2_image
+            mingw-w64-x86_64-SDL2_mixer
             mingw-w64-x86_64-physfs
 
       - name: Clone Repository
@@ -38,6 +38,14 @@ jobs:
         run: |
           printf 'uname_m=%s\n' "$(uname -m)" >> "$GITHUB_OUTPUT"
 
+      - name: Update gamecontrollerdb.txt
+        working-directory: src
+        run: >-
+          curl --fail --silent --show-error --location
+          --output contrib/gamecontrollerdb.txt
+          https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt
+          || true
+
       - name: Configure and Build
         working-directory: src
         run: >-
@@ -45,6 +53,7 @@ jobs:
           -k
           CHOST=x86_64-w64-mingw32
           RC=windres
+          sdl2=1
 
       - name: Upload SConf log
         if: ${{ !cancelled() }}
@@ -70,5 +79,6 @@ jobs:
           -k
           CHOST=x86_64-w64-mingw32
           RC=windres
+          sdl2=1
           check_header_includes=1
           build/{common,d1x-rebirth,d2x-rebirth}/check_header_includes

@@ -4827,6 +4827,7 @@ class DXXArchive(DXXCommon):
 'common/3d/rod.cpp',
 'common/3d/setup.cpp',
 'common/arch/sdl/event.cpp',
+'common/arch/sdl/gamecontroller.cpp',
 'common/arch/sdl/joy.cpp',
 'common/arch/sdl/key.cpp',
 'common/arch/sdl/mouse.cpp',

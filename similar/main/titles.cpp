@@ -1710,25 +1710,39 @@ window_event_result briefing::event_handler(const d_event &event)
 
 #if DXX_MAX_BUTTONS_PER_JOYSTICK
 		case event_type::joystick_button_down:
-			// using joy_translate_menu_key doesn't work here for unclear
-			// reasons, so we build a reasonable facsimile right here
-			if (event_joystick_get_button(event) == 1)
+		{
+			// Convert joystick button to equivalent key action
+			const auto btn = event_joystick_get_button(event);
+			int key = 0;
+#if SDL_MAJOR_VERSION == 2
+			if (btn == SDL_CONTROLLER_BUTTON_A || btn == SDL_CONTROLLER_BUTTON_START)
+				key = KEY_ENTER;
+			else if (btn == SDL_CONTROLLER_BUTTON_B || btn == SDL_CONTROLLER_BUTTON_BACK)
+				key = KEY_ESC;
+#else
+			if (btn == 0)
+				key = KEY_ENTER;
+			else if (btn == 1)
+				key = KEY_ESC;
+#endif
+			if (key == KEY_ESC)
 				return window_event_result::close;
-			if (this->new_screen)
+			if (key == KEY_ENTER)
 			{
-				if (!new_briefing_screen(*grd_curcanv, this, 0))
+				this->delay_count = 0;
+				if (this->new_screen)
 				{
-					return window_event_result::close;
+					if (!new_briefing_screen(*grd_curcanv, this, 0))
+						return window_event_result::close;
+				}
+				else if (this->new_page)
+				{
+					if (!init_new_page(*grd_curcanv, this))
+						return window_event_result::close;
 				}
 			}
-			else if (this->new_page)
-			{
-				if (!init_new_page(*grd_curcanv, this))
-					return window_event_result::close;
-			}
-			else
-				this->delay_count = 0;
-			return window_event_result::handled;
+			break;
+		}
 #endif
 
 		case event_type::key_command:
@@ -1738,7 +1752,7 @@ window_event_result briefing::event_handler(const d_event &event)
 			switch (key)
 			{
 #if DXX_BUILD_DESCENT == 1
-				case KEY_ALTED + KEY_B: // B - ALTED... BALT... BALD... get it? 
+				case KEY_ALTED + KEY_B: // B - ALTED... BALT... BALD... get it?
 					cheats.baldguy = !cheats.baldguy;
 					break;
 #endif
