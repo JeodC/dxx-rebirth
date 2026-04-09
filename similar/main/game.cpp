@@ -99,10 +99,10 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "playsave.h"
 #include "maths.h"
 #include "hudmsg.h"
+#include "movie.h"
 #if DXX_BUILD_DESCENT == 2
 #include <climits>
 #include "gamepal.h"
-#include "movie.h"
 #endif
 #include "event.h"
 #include "window.h"
@@ -498,7 +498,6 @@ int set_screen_mode(int sm)
 		}
 			break;
 #endif
-#if DXX_BUILD_DESCENT == 2
 		case SCREEN_MOVIE:
 		{
 			const screen_mode movie_mode{MOVIE_WIDTH, MOVIE_HEIGHT};
@@ -510,7 +509,6 @@ int set_screen_mode(int sm)
 			}
 		}
 			break;
-#endif
 		default:
 			Error("Invalid screen mode %d",sm);
 	}

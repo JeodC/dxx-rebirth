@@ -21,7 +21,7 @@
 #include "d_uspan.h"
 #include "physfsrwops.h"
 
-namespace d2x {
+namespace dsx {
 
 enum class mve_opcode : uint8_t
 {

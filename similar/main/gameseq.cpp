@@ -111,6 +111,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #if DXX_BUILD_DESCENT == 1
 #include "custom.h"
+#include "movie.h"
 #define GLITZ_BACKGROUND	Menu_pcx_name
 
 namespace d1x {
@@ -1740,7 +1741,10 @@ static void DoEndGame()
 
 	if (PLAYING_BUILTIN_MISSION && !(Game_mode & GM_MULTI))
 	{ //only built-in mission, & not multi
-#if DXX_BUILD_DESCENT == 2
+#if DXX_BUILD_DESCENT == 1
+		auto played = PlayMovie({}, "final.mve", play_movie_warn_missing::verbose);
+		if (played == movie_play_status::skipped)
+#elif DXX_BUILD_DESCENT == 2
 		auto played = PlayMovie(ENDMOVIE ".tex", ENDMOVIE ".mve", play_movie_warn_missing::urgent);
 		if (played == movie_play_status::skipped)
 #endif
@@ -2215,7 +2219,14 @@ window_event_result StartNewLevel(int level_num)
 
 #if DXX_BUILD_DESCENT == 1
 	if (!(Game_mode & GM_MULTI)) {
-		do_briefing_screens(Current_mission->briefing_text_filename, level_num);
+		auto dominated_by_movie = movie_play_status::skipped;
+		if (PLAYING_BUILTIN_MISSION && level_num == 1) {
+			if (PlayMovie({}, "briefa.mve", play_movie_warn_missing::verbose) == movie_play_status::started)
+				dominated_by_movie = movie_play_status::started;
+			PlayMovie({}, "briefb.mve", play_movie_warn_missing::verbose);
+		}
+		if (dominated_by_movie == movie_play_status::skipped)
+			do_briefing_screens(Current_mission->briefing_text_filename, level_num);
 	}
 #elif DXX_BUILD_DESCENT == 2
 	if (level_num > 0) {

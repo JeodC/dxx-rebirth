@@ -288,8 +288,8 @@ namespace dsx {
 #elif DXX_BUILD_DESCENT == 2
 #define DXX_SDL_WINDOW_CAPTION	"Descent II"
 #define DXX_SDL_WINDOW_ICON_BITMAP	"d2x-rebirth.bmp"
-void gr_copy_palette(palette_array_t &gr_palette, const palette_array_t &pal);
 #endif
+void gr_copy_palette(palette_array_t &gr_palette, const palette_array_t &pal);
 
 }
 #endif

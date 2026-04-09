@@ -153,8 +153,8 @@ struct Arg : prohibit_void_ptr<Arg>
 #if DXX_BUILD_DESCENT == 1
 	bool EdiNoBm;
 #endif
-#if DXX_BUILD_DESCENT == 2
 	bool SysNoMovies;
+#if DXX_BUILD_DESCENT == 2
 	bool GfxSkipHiresMovie;
 	bool GfxSkipHiresGFX;
 	sound_sample_rate SndDigiSampleRate;

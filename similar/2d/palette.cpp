@@ -174,14 +174,12 @@ RAIIPHYSFS_File gr_open_palette_file(const char *const filename)
 
 }
 
-#if DXX_BUILD_DESCENT == 2
 void gr_copy_palette(palette_array_t &gr_palette, const palette_array_t &pal)
 {
 	gr_palette = pal;
 
 	        Num_computed_colors = 0;
 }
-#endif
 
 void gr_use_palette_table(const char * filename )
 {

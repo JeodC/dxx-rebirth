@@ -21,7 +21,7 @@
 
 using namespace dcx;
 
-namespace d2x {
+namespace dsx {
 
 static void dispatchDecoder(const uint8_t *vBackBuf1, const uint8_t *vBackBuf2, std::size_t width, std::size_t height, unsigned char **pFrame, unsigned char codeType, const unsigned char **pData, int *pDataRemain, int *curXb, int *curYb);
 

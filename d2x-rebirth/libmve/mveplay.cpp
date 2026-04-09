@@ -42,7 +42,7 @@
 #include "console.h"
 #include "u_mem.h"
 
-namespace d2x {
+namespace dsx {
 
 int g_spdFactorNum{0};
 static int g_spdFactorDenom=10;
@@ -115,7 +115,7 @@ int gettimeofday(struct timeval *tv, void *)
 }
 #endif //  defined(_WIN32) || defined(macintosh)
 
-namespace d2x {
+namespace dsx {
 
 MVESTREAM::handle_result MVESTREAM::handle_mve_segment_createtimer(const unsigned char *data)
 {

@@ -34,9 +34,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define SCREEN_GAME		1	// viewing the menu screen
 #define SCREEN_EDITOR		2	// viewing the editor screen
 #ifdef DXX_BUILD_DESCENT
-#if DXX_BUILD_DESCENT == 2
 #define SCREEN_MOVIE		3	// viewing a movie
-#endif
 
 //from game.c
 namespace dsx {

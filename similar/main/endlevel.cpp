@@ -67,9 +67,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "text.h"
 #include "digi.h"
 #include "songs.h"
-#if DXX_BUILD_DESCENT == 2
 #include "movie.h"
-#endif
 #include "render.h"
 #include "hudmsg.h"
 #if DXX_USE_OGL
@@ -497,7 +495,48 @@ static void do_endlevel_flythrough(d_level_unique_object_state &LevelUniqueObjec
 
 #define DEFAULT_SPEED i2f(16)
 
-#if DXX_BUILD_DESCENT == 2
+#if DXX_BUILD_DESCENT == 1
+// D1X PSX exit movies: exita.mve through exitg.mve
+// Map 27 levels to 7 exit movies (groups of ~4 levels each)
+constexpr std::array<const char, 27> d1_exit_movie_table{{
+	'a','a','a','a',
+	'b','b','b','b',
+	'c','c','c','c',
+	'd','d','d','d',
+	'e','e','e','e',
+	'f','f','f',
+	'g','g','g','g'
+}};
+static auto endlevel_movie_played = movie_play_status::skipped;
+
+//returns movie played status.  see movie.h
+static movie_play_status start_endlevel_movie()
+{
+	const auto current_level_num{Current_level_num};
+
+	if (current_level_num == Current_mission->last_level)
+		return movie_play_status::started;   //don't play exit movie on last level
+
+	if (!(current_level_num > 0))
+		return movie_play_status::skipped;       //no escapes for secret level
+
+	if (current_level_num > static_cast<int>(d1_exit_movie_table.size()))
+		return movie_play_status::skipped;
+
+	palette_array_t save_pal;
+	char movie_name[] = "exita.mve";
+	movie_name[4] = d1_exit_movie_table[current_level_num - 1];
+
+	save_pal = gr_palette;
+
+	const auto r{PlayMovie({}, movie_name, play_movie_warn_missing::verbose)};
+	if (Newdemo_state == ND_STATE_PLAYBACK) {
+		set_screen_mode(SCREEN_GAME);
+		gr_palette = save_pal;
+	}
+	return (r);
+}
+#elif DXX_BUILD_DESCENT == 2
 constexpr std::array<const char, 24> movie_table{{
 	'A','B','C','A',
 	'D','F','D','F',
@@ -662,7 +701,6 @@ window_event_result start_endlevel_sequence()
 		Newdemo_state = ND_STATE_PAUSED;
 
 	if (Newdemo_state == ND_STATE_PLAYBACK) {		// don't do this if in playback mode
-#if DXX_BUILD_DESCENT == 2
 		if (PLAYING_BUILTIN_MISSION) // only play movie for built-in mission
 		{
 			const auto g{Game_wind};
@@ -670,6 +708,7 @@ window_event_result start_endlevel_sequence()
 			start_endlevel_movie();
 			g->set_visible(1);
 		}
+#if DXX_BUILD_DESCENT == 2
 		strcpy(last_palette_loaded,"");		//force palette load next time
 #endif
 		return window_event_result::ignored;
@@ -699,10 +738,6 @@ window_event_result start_endlevel_sequence()
 		multi::dispatch->do_protocol_frame(1, 1);
 	}
 
-#if DXX_BUILD_DESCENT == 1
-	if (!endlevel_data_loaded)
-#elif DXX_BUILD_DESCENT == 2
-
 	if (PLAYING_BUILTIN_MISSION) // only play movie for built-in mission
 		if (!(Game_mode & GM_MULTI))
 		{
@@ -713,7 +748,6 @@ window_event_result start_endlevel_sequence()
 		}
 
 	if (!(!(Game_mode & GM_MULTI) && (endlevel_movie_played == movie_play_status::skipped) && endlevel_data_loaded))
-#endif
 	{
 		return PlayerFinishedLevel(next_level_request_secret_flag::only_normal_level);		//done with level
 	}
@@ -923,11 +957,9 @@ window_event_result do_endlevel_frame(const d_level_shared_robot_info_state &Lev
 
 			if (ConsoleObject->segnum == PlayerUniqueEndlevelState.transition_segnum)
 			{
-#if DXX_BUILD_DESCENT == 2
 				if (PLAYING_BUILTIN_MISSION && endlevel_movie_played != movie_play_status::skipped)
 					result = std::max(stop_endlevel_sequence(), result);
 				else
-#endif
 				{
 
 					//songs_play_song(song_number::endlevel, 0);

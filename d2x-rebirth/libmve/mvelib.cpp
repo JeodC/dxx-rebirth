@@ -15,7 +15,7 @@
 #include "mvelib.h"
 #include <memory>
 
-namespace d2x {
+namespace dsx {
 
 namespace {
 

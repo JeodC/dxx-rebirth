@@ -5619,8 +5619,18 @@ class D1XProgram(DXXProgram):
 		__get_dxx_objects_common=DXXProgram.get_objects_common, \
 		__get_dsx_objects_common=DXXCommon.create_lazy_object_states_getter((LazyObjectState(sources=(
 'd1x-rebirth/main/custom.cpp',
+'d1x-rebirth/main/movie.cpp',
 'd1x-rebirth/main/snddecom.cpp',
 ),
+	),
+	LazyObjectState(sources=(
+'d2x-rebirth/libmve/decoder8.cpp',
+'d2x-rebirth/libmve/decoder16.cpp',
+'d2x-rebirth/libmve/mve_audio.cpp',
+'d2x-rebirth/libmve/mvelib.cpp',
+'d2x-rebirth/libmve/mveplay.cpp',
+),
+		transform_target=DXXProgram._apply_target_name,
 	),
 	LazyObjectState(sources=(
 			# In Descent 1, bmread.cpp is used for both the regular

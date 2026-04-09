@@ -21,7 +21,7 @@
 
 using namespace dcx;
 
-namespace d2x {
+namespace dsx {
 
 namespace {
 

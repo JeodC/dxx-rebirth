@@ -247,10 +247,8 @@ static void ReadCmdArgs(Inilist &ini, Arglist &&Args)
 			CGameArg.SysNoBorders = true;
 		else if (!d_stricmp(p, "-notitles"))
 			CGameArg.SysNoTitles = true;
-#if DXX_BUILD_DESCENT == 2
 		else if (!d_stricmp(p, "-nomovies"))
 			GameArg.SysNoMovies 		= 1;
-#endif
 		else if (!d_stricmp(p, "-autodemo"))
 			CGameArg.SysAutoDemo = true;
 

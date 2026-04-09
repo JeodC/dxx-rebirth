@@ -82,9 +82,7 @@ enum class descent_hog_size : int
 
 }
 
-#if DXX_BUILD_DESCENT == 2
 #include "movie.h"
-#endif
 
 #endif
 

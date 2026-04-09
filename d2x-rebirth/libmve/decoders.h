@@ -13,8 +13,9 @@
 #pragma once
 #include <cstdint>
 #include <span>
+#include "dsx-ns.h"
 
-namespace d2x {
+namespace dsx {
 
 void decodeFrame8(const uint8_t *vBackBuf2, std::size_t width, std::size_t height, unsigned char *pFrame, std::span<const uint8_t> pMap, const unsigned char *pData, int dataRemain);
 void decodeFrame16(const uint16_t *backBuf2, std::size_t width, std::size_t height, unsigned char *pFrame, std::span<const uint8_t> pMap, const unsigned char *pData, int dataRemain);

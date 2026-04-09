@@ -54,9 +54,10 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "text.h"
 #include "piggy.h"
 #include "songs.h"
-#if DXX_BUILD_DESCENT == 2
 #include "movie.h"
 #include "physfsrwops.h"
+#if DXX_USE_SDLMIXER
+#include <SDL_mixer.h>
 #endif
 #include "mission.h"
 #include "mouse.h"
@@ -247,16 +248,25 @@ void show_titles(void)
 		return;
 #if DXX_BUILD_DESCENT == 1
 
-	show_first_found_title_screen(
-		"macplay.pcx",	// Mac Shareware
-		"mplaycd.pcx",	// Mac Registered
-		"iplogo1.pcx"	// PC. Only down here because it's lowres ;-)
-	);
-	const bool resolution_at_least_640_480 = (SWIDTH >= 640 && SHEIGHT >= 480);
-	auto &logo_hires_pcx = "logoh.pcx";
-	auto &descent_hires_pcx = "descenth.pcx";
-	show_title_screen((resolution_at_least_640_480 && PHYSFS_exists(logo_hires_pcx)) ? logo_hires_pcx : "logo.pcx", title_load_location::from_hog_only);
-	show_title_screen((resolution_at_least_640_480 && PHYSFS_exists(descent_hires_pcx)) ? descent_hires_pcx : "descent.pcx", title_load_location::from_hog_only);
+	// Try to play PSX intro movies if present (from extra1-h.mvl)
+	if (PlayMovie({}, "starta.mve", play_movie_warn_missing::verbose) == movie_play_status::skipped)
+	{
+		// No movie, fall back to static title screens
+		show_first_found_title_screen(
+			"macplay.pcx",	// Mac Shareware
+			"mplaycd.pcx",	// Mac Registered
+			"iplogo1.pcx"	// PC. Only down here because it's lowres ;-)
+		);
+	}
+
+	if (PlayMovie({}, "startb.mve", play_movie_warn_missing::verbose) == movie_play_status::skipped)
+	{
+		const bool resolution_at_least_640_480 = (SWIDTH >= 640 && SHEIGHT >= 480);
+		auto &logo_hires_pcx = "logoh.pcx";
+		auto &descent_hires_pcx = "descenth.pcx";
+		show_title_screen((resolution_at_least_640_480 && PHYSFS_exists(logo_hires_pcx)) ? logo_hires_pcx : "logo.pcx", title_load_location::from_hog_only);
+		show_title_screen((resolution_at_least_640_480 && PHYSFS_exists(descent_hires_pcx)) ? descent_hires_pcx : "descent.pcx", title_load_location::from_hog_only);
+	}
 #elif DXX_BUILD_DESCENT == 2
 	int song_playing{0};
 
@@ -594,6 +604,10 @@ struct briefing : window
 	MVESTREAM_ptr_t pMovie;
 	RWops_ptr RoboFile;
 #endif
+#if DXX_BUILD_DESCENT == 1 && DXX_USE_SDLMIXER
+	Mix_Chunk *briefing_audio{nullptr};
+	int briefing_audio_channel{-1};
+#endif
 	std::unique_ptr<char[]>	text;
 	const char	*message;
 	int		text_x, text_y;
@@ -608,6 +622,57 @@ struct briefing : window
 	std::array<char, 16> background_name;
 	std::array<msgstream, 2048> messagestream;
 };
+
+#if DXX_BUILD_DESCENT == 1 && DXX_USE_SDLMIXER
+static void briefing_audio_stop(briefing *br)
+{
+	if (br->briefing_audio_channel >= 0)
+	{
+		Mix_HaltChannel(br->briefing_audio_channel);
+		br->briefing_audio_channel = -1;
+	}
+	if (br->briefing_audio)
+	{
+		Mix_FreeChunk(br->briefing_audio);
+		br->briefing_audio = nullptr;
+		// Restore music volume
+		Mix_VolumeMusic(MIX_MAX_VOLUME);
+	}
+}
+
+static void briefing_audio_play(briefing *br, const char *filename)
+{
+	briefing_audio_stop(br);
+	RAIIPHYSFS_File fp{PHYSFS_openRead(filename)};
+	if (!fp)
+	{
+		con_printf(CON_NORMAL, "D1X: briefing audio <%s> not found", filename);
+		return;
+	}
+	const auto len{PHYSFS_fileLength(fp)};
+	if (len <= 0)
+		return;
+	auto buf{std::make_unique<uint8_t[]>(len)};
+	if (PHYSFSX_readBytes(fp, buf.get(), len) != len)
+		return;
+	fp.reset();
+	SDL_RWops *rw = SDL_RWFromMem(buf.get(), len);
+	if (!rw)
+		return;
+	br->briefing_audio = Mix_LoadWAV_RW(rw, 1);
+	// Mix_LoadWAV_RW decodes the audio, so our buffer can be freed
+	buf.reset();
+	if (!br->briefing_audio)
+	{
+		con_printf(CON_NORMAL, "D1X: briefing audio <%s> failed to load: %s", filename, Mix_GetError());
+		return;
+	}
+	// Lower music volume while voiceover plays
+	Mix_VolumeMusic(MIX_MAX_VOLUME / 2);
+	br->briefing_audio_channel = Mix_PlayChannel(-1, br->briefing_audio, 0);
+	con_printf(CON_NORMAL, "D1X: playing briefing audio <%s> on channel %d", filename, br->briefing_audio_channel);
+}
+#endif
 
 static void briefing_init(briefing *br, short level_num)
 {
@@ -781,6 +846,13 @@ static int briefing_process_char(grs_canvas &canvas, briefing *const br)
 			if (EMULATING_D1) {
 				init_spinning_robot(canvas, *br);
 				br->robot_num = get_message_num(br->message);
+#if DXX_BUILD_DESCENT == 1 && DXX_USE_SDLMIXER
+				{
+					char audio_filename[16];
+					snprintf(audio_filename, sizeof(audio_filename), "enemy%02d.wav", br->robot_num);
+					briefing_audio_play(br, audio_filename);
+				}
+#endif
 #if DXX_BUILD_DESCENT == 2
 				while (*br->message++ != 10)
 					;
@@ -1472,6 +1544,9 @@ static int load_briefing_screen(grs_canvas &canvas, briefing *const br, const ch
 static void free_briefing_screen(briefing *br)
 {
 	br->background.reset();
+#if DXX_BUILD_DESCENT == 1 && DXX_USE_SDLMIXER
+	briefing_audio_stop(br);
+#endif
 #if DXX_BUILD_DESCENT == 2
 	if (auto &RoboFile = br->RoboFile)
 	{
@@ -1521,6 +1596,14 @@ static int new_briefing_screen(grs_canvas &canvas, briefing *br, int first)
 		return 0;
 
 	br->message = get_briefing_message(br, d1_briefing_screens[br->cur_screen].message_num);
+#if DXX_USE_SDLMIXER
+	{
+		const auto msg_num = d1_briefing_screens[br->cur_screen].message_num;
+		char audio_filename[16];
+		snprintf(audio_filename, sizeof(audio_filename), "brf%02d.wav", msg_num);
+		briefing_audio_play(br, audio_filename);
+	}
+#endif
 #elif DXX_BUILD_DESCENT == 2
 	br->got_z = 0;
 

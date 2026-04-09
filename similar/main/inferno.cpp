@@ -81,9 +81,9 @@ char copyright[] = "DESCENT II  COPYRIGHT (C) 1994-1996 PARALLAX SOFTWARE CORPOR
 #include "config.h"
 #include "multi.h"
 #include "gameseq.h"
+#include "movie.h"
 #if DXX_BUILD_DESCENT == 2
 #include "gamepal.h"
-#include "movie.h"
 #endif
 #include "playsave.h"
 #include "newdemo.h"
@@ -192,9 +192,7 @@ static void print_commandline_help()
 	DXX_COMMAND_LINE_HELP_D1(	\
 		VERB("  -notitles                     Skip title screens\n")	\
 	)	\
-	DXX_COMMAND_LINE_HELP_D2(	\
-		VERB("  -nomovies                     Don't play movies\n")	\
-	)	\
+	VERB("  -nomovies                     Don't play movies\n")	\
 	VERB("\n Controls:\n\n")	\
 	VERB("  -nocursor                     Hide mouse cursor\n")	\
 	VERB("  -nomouse                      Deactivate mouse\n")	\
@@ -639,7 +637,6 @@ static int main(int argc, char *argv[])
 	gr_set_mode(Game_screen_mode);
 #endif
 
-#if DXX_BUILD_DESCENT == 2
 	con_puts(CON_DEBUG, "Initializing movie libraries...");
 	auto &&loaded_builtin_movies = init_movies();		//init movie libraries
 	/* clang does not recognize that creating the variable for the
@@ -648,7 +645,6 @@ static int main(int argc, char *argv[])
 	 * warning.
 	 */
 	(void)loaded_builtin_movies;
-#endif
 
 	show_titles();
 
