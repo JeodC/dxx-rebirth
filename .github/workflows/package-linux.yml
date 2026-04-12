@@ -36,6 +36,7 @@ jobs:
 
           scons
           "-j$nproc"
+          -k
           CXX=g++-14
           "CXXFLAGS=-flto=$(( $nproc + 1 / 2 ))"
 
@@ -66,6 +67,7 @@ jobs:
 
           scons
           "-j$nproc"
+          -k
           CXX=g++-14
           "CXXFLAGS=-flto=$(( $nproc + 1 / 2 ))"
           check_header_includes=1
