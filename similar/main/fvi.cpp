@@ -815,7 +815,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 				continue;
 			if (objnum->flags & OF_SHOULD_BE_DEAD)
 				continue;
-			if (collision_result{CollisionResult[this_collision_upper_bits | static_cast<unsigned>(objnum->type)]} == collision_result::ignore)
+			if (collision_result{bool{CollisionResult[this_collision_upper_bits | static_cast<unsigned>(objnum->type)]}} == collision_result::ignore)
 				continue;
 			if (laser_are_related(objnum, thisobjnum))
 				continue;
@@ -876,7 +876,7 @@ static fvi_hit_type fvi_sub(const fvi_query &fq, vms_vector &intp, segnum_t &int
 	 * it is kept for consistency with other uses where both terms need to be
 	 * used.  The compiler should optimize out the resulting `0 |` in this case.
 	 */
-	if (fq.thisobjnum != object_none && collision_result{CollisionResult[(object_type::OBJ_WALL << 4) | static_cast<unsigned>(fq.thisobjnum->type)]} == collision_result::ignore)
+	if (fq.thisobjnum != object_none && collision_result{bool{CollisionResult[(object_type::OBJ_WALL << 4) | static_cast<unsigned>(fq.thisobjnum->type)]}} == collision_result::ignore)
 		rad = 0;		//HACK - ignore when edges hit walls
 
 	//now, check segment walls
