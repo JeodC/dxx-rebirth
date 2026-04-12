@@ -11,9 +11,9 @@
  *
  */
 
+#include <cmath>           // for abs, sqrt
 #include <stdlib.h>
 #include <stdint.h>
-#include <math.h>           // for sqrt
 
 #include "d_construct.h"
 #include "maths.h"
