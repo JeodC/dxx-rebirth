@@ -69,19 +69,6 @@ struct movie_pause_window : window
 	virtual window_event_result event_handler(const d_event &) override;
 };
 
-static constexpr bool valid_palette_color_range(const unsigned start, const unsigned count)
-{
-	if (start == 0)
-		return false;
-	if (start > 254)
-		return false;
-	if (count > 254)
-		return false;
-	if (start + count > 255)
-		return false;
-	return true;
-}
-
 }
 
 unsigned MovieFileRead(SDL_RWops *const handle, const std::span<uint8_t> buf)
