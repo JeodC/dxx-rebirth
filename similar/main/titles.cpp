@@ -242,11 +242,11 @@ static int DefineBriefingBox(const grs_bitmap &, const char *&buf);
 void show_titles(void)
 {
 #if DXX_BUILD_DESCENT == 1
-	songs_play_song(song_number::title, 1);
-#endif
 	if (CGameArg.SysNoTitles)
+	{
+		songs_play_song(song_number::title, 1);
 		return;
-#if DXX_BUILD_DESCENT == 1
+	}
 
 	// Try to play PSX intro movies if present (from extra1-h.mvl)
 	if (PlayMovie({}, "starta.mve", play_movie_warn_missing::verbose) == movie_play_status::skipped)
@@ -267,6 +267,7 @@ void show_titles(void)
 		show_title_screen((resolution_at_least_640_480 && PHYSFS_exists(logo_hires_pcx)) ? logo_hires_pcx : "logo.pcx", title_load_location::from_hog_only);
 		show_title_screen((resolution_at_least_640_480 && PHYSFS_exists(descent_hires_pcx)) ? descent_hires_pcx : "descent.pcx", title_load_location::from_hog_only);
 	}
+	songs_play_song(song_number::title, 1);
 #elif DXX_BUILD_DESCENT == 2
 	int song_playing{0};
 
