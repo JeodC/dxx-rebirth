@@ -1,9 +1,6 @@
 #pragma once
 
-#if DXX_HAVE_POISON
 #include <algorithm>
-#endif
-
 #include <cstdint>
 #include <memory>
 #include <span>
