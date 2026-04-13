@@ -131,20 +131,12 @@ void MovieShowFrame(const uint8_t *buf, int dstx, int dsty, int bufw, int bufh, 
 	source_bm.clear_flags();
 	source_bm.bm_data = buf;
 
-	if (dstx == -1 && dsty == -1) // Fullscreen movie so set scale to fit the actual screen size
-	{
-		if ((static_cast<float>(SWIDTH)/SHEIGHT) < (static_cast<float>(sw)/bufh))
-			scale = (static_cast<float>(SWIDTH)/sw);
-		else
-			scale = (static_cast<float>(SHEIGHT)/bufh);
-	}
-	else // Other movie so set scale to min. screen dimension
-	{
-		if ((static_cast<float>(SWIDTH)/bufw) < (static_cast<float>(SHEIGHT)/bufh))
-			scale = (static_cast<float>(SWIDTH)/sw);
-		else
-			scale = (static_cast<float>(SHEIGHT)/sh);
-	}
+	(void)sw;
+	(void)sh;
+	if ((static_cast<float>(SWIDTH) / bufw) < (static_cast<float>(SHEIGHT) / bufh))
+		scale = static_cast<float>(SWIDTH) / bufw;
+	else
+		scale = static_cast<float>(SHEIGHT) / bufh;
 
 	if (dstx == -1) // center it
 		dstx = (SWIDTH/2)-((bufw*scale)/2);
@@ -166,7 +158,16 @@ void MovieShowFrame(const uint8_t *buf, int dstx, int dsty, int bufw, int bufh, 
 
 	glEnable (GL_BLEND);
 #else
-	gr_bm_ubitbltm(*grd_curcanv, bufw, bufh, dstx, dsty, 0, 0, source_bm);
+	{
+		const int dstw = static_cast<int>(bufw * scale);
+		const int dsth = static_cast<int>(bufh * scale);
+		const std::array<grs_point, 3> vertbuf{{
+			{i2f(dstx), i2f(dsty)},
+			{0, 0},
+			{i2f(dstx + dstw), i2f(dsty + dsth)}
+		}};
+		scale_bitmap(source_bm, vertbuf, 0, grd_curcanv->cv_bitmap);
+	}
 #endif
 }
 
