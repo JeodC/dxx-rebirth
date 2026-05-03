@@ -286,7 +286,24 @@ void joy_init()
 
 	// Controllers will be opened via SDL_CONTROLLERDEVICEADDED events
 	// which SDL2 fires for already-connected devices on first pump
-	con_printf(CON_NORMAL, "gamecontroller: %d joystick(s) detected", SDL_NumJoysticks());
+	const auto n_js = SDL_NumJoysticks();
+	con_printf(CON_NORMAL, "gamecontroller: %d joystick(s) detected", n_js);
+	for (int i = 0; i < n_js; i++)
+	{
+		char guid_str[33] = {0};
+		SDL_JoystickGetGUIDString(SDL_JoystickGetDeviceGUID(i), guid_str, sizeof(guid_str));
+		const char *name = SDL_JoystickNameForIndex(i);
+		const auto is_gc = SDL_IsGameController(i);
+		con_printf(CON_NORMAL, "  joystick %d: name='%s' guid=%s is_gamecontroller=%d",
+			i, name ? name : "(null)", guid_str, is_gc ? 1 : 0);
+		if (is_gc)
+		{
+			const char *mapping = SDL_GameControllerMappingForDeviceIndex(i);
+			con_printf(CON_NORMAL, "    mapping: %s", mapping ? mapping : "(null)");
+			if (mapping)
+				SDL_free(const_cast<char *>(mapping));
+		}
+	}
 }
 
 void joy_close()
