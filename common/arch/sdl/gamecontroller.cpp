@@ -284,9 +284,13 @@ void joy_init()
 	}
 #endif
 
-	// Controllers will be opened via SDL_CONTROLLERDEVICEADDED events
-	// which SDL2 fires for already-connected devices on first pump
-	con_printf(CON_NORMAL, "gamecontroller: %d joystick(s) detected", SDL_NumJoysticks());
+	const auto n_js = SDL_NumJoysticks();
+	con_printf(CON_NORMAL, "gamecontroller: %d joystick(s) detected", n_js);
+	for (int i = 0; i < n_js; i++)
+	{
+		if (SDL_IsGameController(i))
+			gc_open_controller(i);
+	}
 }
 
 void joy_close()
