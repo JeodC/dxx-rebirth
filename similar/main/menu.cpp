@@ -1011,7 +1011,9 @@ window_event_result do_new_game_menu()
 				}
 				virtual window_event_result event_handler(const d_event &event) override
 				{
-					auto result = newmenu::event_handler(event);
+					const auto result = newmenu::event_handler(event);
+					if (result == window_event_result::close || result == window_event_result::deleted)
+						return result;
 					items.update_label();
 					return result;
 				}
