@@ -482,12 +482,12 @@ public:
 	}
 };
 
-static hud_x_scale_float HUD_SCALE_X(const unsigned screen_width, const local_multires_gauge_graphic multires_gauge_graphic)
+constexpr hud_x_scale_float HUD_SCALE_X(const unsigned screen_width, const local_multires_gauge_graphic multires_gauge_graphic)
 {
 	return static_cast<double>(screen_width) / BASE_WIDTH(multires_gauge_graphic);
 }
 
-static hud_y_scale_float HUD_SCALE_Y(const unsigned screen_height, const local_multires_gauge_graphic multires_gauge_graphic)
+constexpr hud_y_scale_float HUD_SCALE_Y(const unsigned screen_height, const local_multires_gauge_graphic multires_gauge_graphic)
 {
 	return static_cast<double>(screen_height) / BASE_HEIGHT(multires_gauge_graphic);
 }
