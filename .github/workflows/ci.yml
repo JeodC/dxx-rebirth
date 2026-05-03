@@ -15,6 +15,10 @@ jobs:
     name: Package Linux
     uses: ./.github/workflows/package-linux.yml
 
+  debian:
+    name: Package Debian
+    uses: ./.github/workflows/package-deb.yml
+
   windows:
     name: Package Windows
     uses: ./.github/workflows/package-windows.yml
