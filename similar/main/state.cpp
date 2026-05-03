@@ -1014,12 +1014,11 @@ savegame_newmenu_items::savegame_newmenu_items(d_game_unique_state::savegame_des
 		const auto existing_savegame_found = read_savegame_properties(savegame_index, filename, &desc, &sc_bmp);
 		if (existing_savegame_found)
 			++nsaves;
-		else if (savegame_description)
-			/* Prefill empty save slots with a default description
-			 * so that gamepad users can save without typing.
-			 */
-			snprintf(desc.data(), desc.size(), "Level %d", Current_level_num);
 		else
+			/* Defer setting a default value to here.  This allows the
+			 * value to be written only if a better one was not
+			 * retrieved from a save game file.
+			 */
 			strcpy(desc.data(), TXT_EMPTY);
 		mi.text = desc.data();
 		mi.type = savegame_description
@@ -1035,7 +1034,17 @@ savegame_newmenu_items::savegame_newmenu_items(d_game_unique_state::savegame_des
 				? nm_type::menu
 				: nm_type::text);
 		if (user_entered_savegame_descriptions)
-			mi.initialize_imenu(desc, (*user_entered_savegame_descriptions)[savegame_index]);
+		{
+			auto &saved_text = (*user_entered_savegame_descriptions)[savegame_index];
+			/* For empty slots in save mode, seed the per-slot editable
+			 * buffer with a default description so gamepad users can
+			 * accept it without typing.  The slot still shows
+			 * "[empty slot]" until the user activates it.
+			 */
+			if (!existing_savegame_found && savegame_description)
+				snprintf(saved_text.data(), saved_text.size(), "Level %d", Current_level_num);
+			mi.initialize_imenu(desc, saved_text);
+		}
 	}
 	if (!savegame_description && nsaves < 1)
 		throw error_no_saves_found();

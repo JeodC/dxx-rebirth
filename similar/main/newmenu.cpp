@@ -1015,9 +1015,16 @@ static window_event_result newmenu_mouse(const d_event &event, newmenu *menu, co
 				{
 					auto &im = citem.imenu();
 					im.group = 1;
-					if (!d_stricmp(im.saved_text, TXT_EMPTY))
+					if (!d_stricmp(citem.text, TXT_EMPTY))
 					{
-						citem.text[0] = 0;
+						/* Empty placeholder: seed the input from
+						 * saved_text if the caller pre-populated it,
+						 * otherwise clear.
+						 */
+						if (im.saved_text[0])
+							strcpy(citem.text, im.saved_text);
+						else
+							citem.text[0] = 0;
 						citem.value = -1;
 					} else {
 						strip_end_whitespace(citem.text);
@@ -1166,9 +1173,16 @@ static window_event_result newmenu_key_command(const d_event &event, newmenu *co
 			{
 				auto &im = citem.imenu();
 				im.group = 1;
-				if (!d_stricmp(im.saved_text, TXT_EMPTY))
+				if (!d_stricmp(citem.text, TXT_EMPTY))
 				{
-					citem.text[0] = 0;
+					/* Empty placeholder: seed the input from
+					 * saved_text if the caller pre-populated it,
+					 * otherwise clear.
+					 */
+					if (im.saved_text[0])
+						strcpy(citem.text, im.saved_text);
+					else
+						citem.text[0] = 0;
 					citem.value = -1;
 				} else {
 					strip_end_whitespace(citem.text);
